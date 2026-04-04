@@ -1,0 +1,37 @@
+import api from "./axios";
+import type { ApiResponse, PaginatedResponse } from "../types";
+
+export interface CompanySettingsData {
+  companyName: string;
+  logo?: string;
+  timezone: string;
+  fiscalYearStart: string;
+  workingDays: string[];
+  designations: { name: string; level: number; grade: string }[];
+  roles: { name: string; permissions: string[] }[];
+  leavePolicy: Record<string, { total: number; carryForward: boolean; maxCarry?: number }>;
+  emailTemplates: { key: string; subject: string; body: string }[];
+}
+
+export interface AuditLogEntry {
+  _id: string;
+  userId: { _id: string; name: string; email: string };
+  action: string;
+  module: string;
+  details?: string;
+  createdAt: string;
+}
+
+export const adminSettingsApi = {
+  getCompanySettings: () => api.get<ApiResponse<CompanySettingsData>>("/admin/settings/company"),
+  updateCompanySettings: (data: Partial<CompanySettingsData>) => api.put<ApiResponse<CompanySettingsData>>("/admin/settings/company", data),
+  getDesignations: () => api.get<ApiResponse<CompanySettingsData["designations"]>>("/admin/settings/designations"),
+  updateDesignations: (designations: CompanySettingsData["designations"]) => api.put<ApiResponse>("/admin/settings/designations", { designations }),
+  getRoles: () => api.get<ApiResponse<CompanySettingsData["roles"]>>("/admin/settings/roles"),
+  updateRoles: (roles: CompanySettingsData["roles"]) => api.put<ApiResponse>("/admin/settings/roles", { roles }),
+  getLeavePolicy: () => api.get<ApiResponse<CompanySettingsData["leavePolicy"]>>("/admin/settings/leave-policy"),
+  updateLeavePolicy: (data: CompanySettingsData["leavePolicy"]) => api.put<ApiResponse>("/admin/settings/leave-policy", data),
+  getEmailTemplates: () => api.get<ApiResponse<CompanySettingsData["emailTemplates"]>>("/admin/settings/email-templates"),
+  updateEmailTemplates: (templates: CompanySettingsData["emailTemplates"]) => api.put<ApiResponse>("/admin/settings/email-templates", { templates }),
+  getAuditLogs: (params?: Record<string, string | number>) => api.get<PaginatedResponse<AuditLogEntry>>("/admin/settings/audit-logs", { params }),
+};
