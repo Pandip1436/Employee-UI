@@ -45,4 +45,7 @@ export const chatApi = {
 
   getUnreadCount: () =>
     api.get<ApiResponse<{ total: number }>>("/chat/unread-count"),
+
+  deleteMessage: (messageId: string) =>
+    api.delete<ApiResponse>(`/chat/messages/${messageId}`),
 };

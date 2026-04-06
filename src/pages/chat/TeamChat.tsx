@@ -9,6 +9,7 @@ import {
   Hash,
   User as UserIcon,
   ChevronLeft,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { chatApi, type ConversationData, type MessageData } from "../../api/chatApi";
@@ -62,7 +63,7 @@ function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" | "lg"
   const sz = size === "sm" ? "h-8 w-8 text-xs" : size === "lg" ? "h-12 w-12 text-base" : "h-10 w-10 text-sm";
   return (
     <div
-      className={`${sz} flex-shrink-0 rounded-full bg-indigo-500/15 dark:bg-indigo-500/25 text-indigo-600 dark:text-indigo-400 font-semibold flex items-center justify-center`}
+      className={`${sz} flex-shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 font-semibold flex items-center justify-center`}
     >
       {getInitials(name)}
     </div>
@@ -191,7 +192,7 @@ function NewChatModal({ open, onClose, onSelectDirect, onCreateGroup, currentUse
               onClick={() => (tab === "direct" ? onSelectDirect(u._id) : toggleUser(u._id))}
               className={`w-full flex items-center gap-3 rounded-xl px-3 py-2.5 text-left transition-colors ${
                 tab === "group" && selected.includes(u._id)
-                  ? "bg-indigo-50 dark:bg-indigo-500/15 ring-1 ring-indigo-400/40"
+                  ? "bg-indigo-50 dark:bg-indigo-100 ring-1 ring-indigo-400/40"
                   : "hover:bg-gray-50 dark:hover:bg-gray-800"
               }`}
             >
@@ -314,6 +315,16 @@ export default function TeamChat() {
       /* interceptor */
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleDeleteMessage = async (msgId: string) => {
+    try {
+      await chatApi.deleteMessage(msgId);
+      setMessages((prev) => prev.filter((m) => m._id !== msgId));
+      fetchConversations();
+    } catch {
+      /* interceptor */
     }
   };
 
@@ -457,7 +468,7 @@ export default function TeamChat() {
                   {/* avatar */}
                   <div className="relative flex-shrink-0">
                     {c.type === "group" ? (
-                      <div className="h-10 w-10 rounded-full bg-indigo-500/15 dark:bg-indigo-500/25 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                      <div className="h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-500/25 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
                         <Hash className="h-5 w-5" />
                       </div>
                     ) : (
@@ -519,7 +530,7 @@ export default function TeamChat() {
                   <ChevronLeft className="h-5 w-5" />
                 </button>
                 {activeConvo.type === "group" ? (
-                  <div className="h-10 w-10 rounded-full bg-indigo-500/15 dark:bg-indigo-500/25 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
+                  <div className="h-10 w-10 rounded-full bg-indigo-100 dark:bg-indigo-500/25 flex items-center justify-center text-indigo-600 dark:text-indigo-400 flex-shrink-0">
                     <Hash className="h-5 w-5" />
                   </div>
                 ) : (
@@ -581,14 +592,27 @@ export default function TeamChat() {
                             </p>
                           )}
                           {/* bubble */}
-                          <div
-                            className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                              isOwn
-                                ? "bg-indigo-600 text-white rounded-br-md"
-                                : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-md"
-                            }`}
-                          >
-                            <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                          <div className="group/msg relative">
+                            <div
+                              className={`rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                                isOwn
+                                  ? "bg-indigo-600 text-white rounded-br-md"
+                                  : "bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white rounded-bl-md"
+                              }`}
+                            >
+                              <p className="whitespace-pre-wrap break-words">{msg.text}</p>
+                            </div>
+                            {isOwn && (
+                              <button
+                                onClick={() => handleDeleteMessage(msg._id)}
+                                className={`absolute top-1/2 -translate-y-1/2 ${
+                                  isOwn ? "-left-8" : "-right-8"
+                                } opacity-0 group-hover/msg:opacity-100 transition-opacity rounded-lg p-1 text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10`}
+                                title="Delete message"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
                           </div>
                           {/* timestamp */}
                           <p
