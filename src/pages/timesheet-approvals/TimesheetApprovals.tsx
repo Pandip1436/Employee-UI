@@ -9,10 +9,11 @@ import {
   FileText,
   X,
   Users,
+  Eye,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
-import type { WeeklyTimesheetData, Pagination, User } from "../../types";
+import type { WeeklyTimesheetData, Pagination, User, Project } from "../../types";
 
 /* ─── Helpers ─── */
 const formatDate = (iso: string) =>
@@ -26,6 +27,13 @@ const getUserName = (userId: User | string): string => {
   if (typeof userId === "object" && userId !== null) return (userId as User).name;
   return String(userId);
 };
+
+const getProjectName = (p: Project | string): string => {
+  if (typeof p === "object" && p !== null) return (p as Project).name;
+  return String(p);
+};
+
+const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const labelClasses =
   "text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500";
@@ -41,6 +49,10 @@ export default function TimesheetApprovals() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectComment, setRejectComment] = useState("");
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Preview modal
+  const [previewSheet, setPreviewSheet] = useState<WeeklyTimesheetData | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
 
   // Bulk select
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -122,6 +134,15 @@ export default function TimesheetApprovals() {
   const toggleAll = () => {
     if (selected.size === timesheets.length) setSelected(new Set());
     else setSelected(new Set(timesheets.map((t) => t._id)));
+  };
+
+  const handlePreview = (id: string) => {
+    setPreviewLoading(true);
+    weeklyTimesheetApi
+      .getDetail(id)
+      .then((res) => setPreviewSheet(res.data.data))
+      .catch(() => toast.error("Failed to load timesheet details"))
+      .finally(() => setPreviewLoading(false));
   };
 
   return (
@@ -226,6 +247,14 @@ export default function TimesheetApprovals() {
                     <td className="px-5 py-4">
                       <div className="flex items-center justify-end gap-2">
                         <button
+                          onClick={() => handlePreview(ts._id)}
+                          title="Preview timesheet"
+                          className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-600/20 dark:ring-indigo-500/20 transition-all hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Preview
+                        </button>
+                        <button
                           onClick={() => handleApprove(ts._id)}
                           disabled={actionLoading === ts._id}
                           className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-600/20 dark:ring-emerald-500/20 transition-all hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-40"
@@ -290,6 +319,12 @@ export default function TimesheetApprovals() {
 
                 <div className="flex items-center gap-2">
                   <button
+                    onClick={() => handlePreview(ts._id)}
+                    className="inline-flex items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-600/20 dark:ring-indigo-500/20 transition-all hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                  </button>
+                  <button
                     onClick={() => handleApprove(ts._id)}
                     disabled={actionLoading === ts._id}
                     className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-600/20 dark:ring-emerald-500/20 transition-all hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-40"
@@ -345,6 +380,159 @@ export default function TimesheetApprovals() {
               <span className="hidden sm:inline">Next</span>
               <ChevronRight className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Preview Modal ── */}
+      {(previewSheet || previewLoading) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-3xl max-h-[85vh] overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Timesheet Preview
+                </h2>
+                {previewSheet && (
+                  <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                    {getUserName(previewSheet.userId)} &middot;{" "}
+                    {formatDate(previewSheet.weekStart)} &mdash; {formatDate(previewSheet.weekEnd)}
+                  </p>
+                )}
+              </div>
+              <button
+                onClick={() => setPreviewSheet(null)}
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto px-6 py-4">
+              {previewLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600" />
+                </div>
+              ) : previewSheet && previewSheet.entries.length === 0 ? (
+                <p className="text-center text-sm text-gray-500 dark:text-gray-400 py-12">
+                  No entries in this timesheet.
+                </p>
+              ) : previewSheet ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200 dark:border-gray-800">
+                        <th className={`${labelClasses} py-2 pr-3 text-left`}>Project</th>
+                        <th className={`${labelClasses} py-2 pr-3 text-left`}>Task</th>
+                        <th className={`${labelClasses} py-2 pr-3 text-left`}>Activity</th>
+                        {DAY_LABELS.map((d) => (
+                          <th key={d} className={`${labelClasses} py-2 px-2 text-center w-12`}>
+                            {d}
+                          </th>
+                        ))}
+                        <th className={`${labelClasses} py-2 pl-2 text-right`}>Total</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {previewSheet.entries.map((entry, idx) => {
+                        const rowTotal = (entry.hours || []).reduce((s, h) => s + h, 0);
+                        return (
+                          <tr key={idx}>
+                            <td className="py-2.5 pr-3 font-medium text-gray-700 dark:text-gray-300">
+                              {getProjectName(entry.projectId)}
+                            </td>
+                            <td className="py-2.5 pr-3 text-gray-600 dark:text-gray-400">
+                              {entry.task || "—"}
+                            </td>
+                            <td className="py-2.5 pr-3 text-gray-600 dark:text-gray-400">
+                              {entry.activityType || "—"}
+                            </td>
+                            {DAY_LABELS.map((_, di) => (
+                              <td key={di} className="py-2.5 px-2 text-center text-gray-600 dark:text-gray-400">
+                                {entry.hours?.[di] || 0}
+                              </td>
+                            ))}
+                            <td className="py-2.5 pl-2 text-right font-semibold text-gray-700 dark:text-gray-300">
+                              {rowTotal}h
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr className="border-t border-gray-200 dark:border-gray-700">
+                        <td colSpan={3} className="py-2.5 pr-3 text-right font-semibold text-gray-700 dark:text-gray-300">
+                          Total
+                        </td>
+                        {DAY_LABELS.map((_, di) => {
+                          const dayTotal = previewSheet.entries.reduce(
+                            (s, e) => s + (e.hours?.[di] || 0), 0
+                          );
+                          return (
+                            <td key={di} className="py-2.5 px-2 text-center font-semibold text-gray-700 dark:text-gray-300">
+                              {dayTotal}
+                            </td>
+                          );
+                        })}
+                        <td className="py-2.5 pl-2 text-right font-bold text-indigo-600 dark:text-indigo-400">
+                          {previewSheet.totalHours}h
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                  {previewSheet.entries.some((e) => e.notes) && (
+                    <div className="mt-4 space-y-2">
+                      <p className={labelClasses}>Notes</p>
+                      {previewSheet.entries
+                        .filter((e) => e.notes)
+                        .map((e, i) => (
+                          <div key={i} className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-600 dark:text-gray-400">
+                            <span className="font-medium text-gray-700 dark:text-gray-300">
+                              {getProjectName(e.projectId)}:
+                            </span>{" "}
+                            {e.notes}
+                          </div>
+                        ))}
+                    </div>
+                  )}
+                </div>
+              ) : null}
+            </div>
+
+            {/* Footer actions */}
+            {previewSheet && (
+              <div className="flex items-center justify-end gap-2 border-t border-gray-200 dark:border-gray-800 px-6 py-4">
+                <button
+                  onClick={() => setPreviewSheet(null)}
+                  className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition-all hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => {
+                    handleApprove(previewSheet._id);
+                    setPreviewSheet(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-emerald-700"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Approve
+                </button>
+                <button
+                  onClick={() => {
+                    setRejectId(previewSheet._id);
+                    setRejectComment("");
+                    setPreviewSheet(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-rose-700"
+                >
+                  <XCircle className="h-4 w-4" />
+                  Reject
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
