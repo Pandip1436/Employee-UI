@@ -140,7 +140,7 @@ export default function TimesheetApprovals() {
     setPreviewLoading(true);
     weeklyTimesheetApi
       .getDetail(id)
-      .then((res) => setPreviewSheet(res.data.data))
+      .then((res) => setPreviewSheet(res.data.data ?? null))
       .catch(() => toast.error("Failed to load timesheet details"))
       .finally(() => setPreviewLoading(false));
   };
