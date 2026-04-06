@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
+import { projectApi } from "../../api/projectApi";
 import type { WeeklyTimesheetData, Pagination, User, Project } from "../../types";
 
 /* ─── Helpers ─── */
@@ -35,6 +36,24 @@ const getProjectName = (p: Project | string): string => {
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
+const statusConfig: Record<string, { dot: string; badge: string; label: string }> = {
+  active: {
+    dot: "bg-emerald-500",
+    badge: "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20",
+    label: "Active",
+  },
+  completed: {
+    dot: "bg-gray-400 dark:bg-gray-500",
+    badge: "bg-gray-50 text-gray-600 ring-gray-500/10 dark:bg-gray-400/10 dark:text-gray-400 dark:ring-gray-400/20",
+    label: "Completed",
+  },
+  "on-hold": {
+    dot: "bg-amber-500",
+    badge: "bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20",
+    label: "On Hold",
+  },
+};
+
 const labelClasses =
   "text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500";
 
@@ -53,6 +72,10 @@ export default function TimesheetApprovals() {
   // Preview modal
   const [previewSheet, setPreviewSheet] = useState<WeeklyTimesheetData | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+
+  // Project detail modal
+  const [projectDetail, setProjectDetail] = useState<Project | null>(null);
+  const [projectLoading, setProjectLoading] = useState(false);
 
   // Bulk select
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -143,6 +166,16 @@ export default function TimesheetApprovals() {
       .then((res) => setPreviewSheet(res.data.data ?? null))
       .catch(() => toast.error("Failed to load timesheet details"))
       .finally(() => setPreviewLoading(false));
+  };
+
+  const handleProjectClick = (projectId: Project | string) => {
+    const id = typeof projectId === "object" ? projectId._id : projectId;
+    setProjectLoading(true);
+    projectApi
+      .getById(id)
+      .then((res) => setProjectDetail(res.data.data ?? null))
+      .catch(() => toast.error("Failed to load project details"))
+      .finally(() => setProjectLoading(false));
   };
 
   return (
@@ -440,8 +473,13 @@ export default function TimesheetApprovals() {
                         const rowTotal = (entry.hours || []).reduce((s, h) => s + h, 0);
                         return (
                           <tr key={idx}>
-                            <td className="py-2.5 pr-3 font-medium text-gray-700 dark:text-gray-300">
-                              {getProjectName(entry.projectId)}
+                            <td className="py-2.5 pr-3 font-medium">
+                              <button
+                                onClick={() => handleProjectClick(entry.projectId)}
+                                className="text-indigo-600 dark:text-indigo-400 hover:underline text-left"
+                              >
+                                {getProjectName(entry.projectId)}
+                              </button>
                             </td>
                             <td className="py-2.5 pr-3 text-gray-600 dark:text-gray-400">
                               {entry.task || "—"}
@@ -533,6 +571,125 @@ export default function TimesheetApprovals() {
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Project Detail Modal ── */}
+      {(projectDetail || projectLoading) && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-md rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-xl">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-800 px-6 py-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                Project Details
+              </h2>
+              <button
+                onClick={() => setProjectDetail(null)}
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5">
+              {projectLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600" />
+                </div>
+              ) : projectDetail ? (
+                <div className="space-y-4">
+                  {/* Name & Status */}
+                  <div className="flex items-start justify-between gap-3">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                      {projectDetail.name}
+                    </h3>
+                    {(() => {
+                      const cfg = statusConfig[projectDetail.status] || statusConfig.active;
+                      return (
+                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset whitespace-nowrap ${cfg.badge}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                          {cfg.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Client */}
+                  <div>
+                    <p className={labelClasses}>Client</p>
+                    <p className="mt-1 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {projectDetail.client}
+                    </p>
+                  </div>
+
+                  {/* Description */}
+                  {projectDetail.description && (
+                    <div>
+                      <p className={labelClasses}>Description</p>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                        {projectDetail.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Assigned Members */}
+                  {projectDetail.assignedUsers && projectDetail.assignedUsers.length > 0 && (
+                    <div>
+                      <p className={labelClasses}>
+                        Members ({projectDetail.assignedUsers.length})
+                      </p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {projectDetail.assignedUsers.map((u) => {
+                          const user = typeof u === "object" ? u : null;
+                          if (!user) return null;
+                          return (
+                            <span
+                              key={user._id}
+                              className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-2.5 py-1 text-xs font-medium text-gray-700 dark:text-gray-300"
+                            >
+                              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-500/20 text-[10px] font-bold text-indigo-700 dark:text-indigo-400">
+                                {user.name?.charAt(0).toUpperCase()}
+                              </span>
+                              {user.name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Created */}
+                  <div className="flex items-center gap-4 pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <div>
+                      <p className={labelClasses}>Created By</p>
+                      <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">
+                        {typeof projectDetail.createdBy === "object"
+                          ? projectDetail.createdBy.name
+                          : "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className={labelClasses}>Created</p>
+                      <p className="mt-0.5 text-sm text-gray-600 dark:text-gray-400">
+                        {formatDate(projectDetail.createdAt)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end border-t border-gray-200 dark:border-gray-800 px-6 py-4">
+              <button
+                onClick={() => setProjectDetail(null)}
+                className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition-all hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
