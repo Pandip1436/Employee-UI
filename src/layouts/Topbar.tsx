@@ -18,7 +18,7 @@ interface SearchItem {
 
 const searchItems: SearchItem[] = [
   { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard, keywords: ["dashboard", "home", "overview", "analytics"] },
-  { label: "Timesheets", path: "/timesheets", icon: Clock, keywords: ["timesheet", "hours", "log", "time entry"] },
+  { label: "Timesheet", path: "/timesheet", icon: Clock, keywords: ["timesheet", "hours", "log", "time entry", "weekly"] },
   { label: "Projects", path: "/projects", icon: FolderKanban, keywords: ["project", "client", "assign"] },
   { label: "Attendance", path: "/attendance", icon: UserCheck, keywords: ["attendance", "clock in", "clock out", "punch", "check in"] },
   { label: "Leaves", path: "/leaves", icon: CalendarDays, keywords: ["leave", "vacation", "sick", "casual", "time off", "apply leave"] },

@@ -11,55 +11,56 @@ import { useAuth } from "../context/AuthContext";
 import clsx from "clsx";
 
 const links = [
+  // ── Main ──
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [], section: "Main" },
   { to: "/dashboard/manager", label: "Team Dashboard", icon: UsersRound, roles: ["admin", "manager"], section: "Main" },
   { to: "/dashboard/hr", label: "HR Dashboard", icon: BarChart3, roles: ["admin"], section: "Main" },
   { to: "/employees", label: "Employees", icon: UsersRound, roles: ["admin", "manager"], section: "Main" },
+
+  // ── Timesheet (visible to ALL) ──
+  { to: "/timesheet", label: "Timesheet", icon: Clock, roles: [], section: "Timesheet" },
+  { to: "/timesheet/weekly", label: "Weekly Grid", icon: Grid3X3, roles: [], section: "Timesheet" },
+  { to: "/timesheet/daily", label: "Daily Log", icon: CalendarClock, roles: [], section: "Timesheet" },
+  { to: "/timesheet/history", label: "History", icon: History, roles: [], section: "Timesheet" },
+  { to: "/timesheet/approvals", label: "TS Approvals", icon: FileCheck, roles: ["admin", "manager"], section: "Timesheet" },
+  { to: "/timesheet/team/projects", label: "Project Hours", icon: BarChart3, roles: ["admin", "manager"], section: "Timesheet" },
+  { to: "/projects", label: "Projects", icon: FolderKanban, roles: [], section: "Timesheet" },
+
+  // ── Attendance ──
   { to: "/attendance", label: "My Attendance", icon: UserCheck, roles: [], section: "Attendance" },
   { to: "/attendance/calendar", label: "Calendar", icon: CalendarRange, roles: [], section: "Attendance" },
   { to: "/attendance/team", label: "Team View", icon: TeamIcon, roles: ["admin", "manager"], section: "Attendance" },
   { to: "/attendance/holidays", label: "Holidays", icon: PartyPopper, roles: [], section: "Attendance" },
   { to: "/attendance/reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"], section: "Attendance" },
-  { to: "/timesheet", label: "Timesheet Home", icon: Clock, roles: [], section: "Timesheet" },
-  { to: "/timesheet/weekly", label: "Weekly Grid", icon: Grid3X3, roles: [], section: "Timesheet" },
-  { to: "/timesheet/daily", label: "Daily Log", icon: CalendarClock, roles: [], section: "Timesheet" },
-  { to: "/timesheet/history", label: "History", icon: History, roles: [], section: "Timesheet" },
-  { to: "/timesheet/approvals", label: "Approvals", icon: FileCheck, roles: ["admin", "manager"], section: "Timesheet" },
-  { to: "/timesheet/team/projects", label: "Project Hours", icon: BarChart3, roles: ["admin", "manager"], section: "Timesheet" },
-  { to: "/admin/timesheet", label: "TS Dashboard", icon: LayoutDashboard, roles: ["admin"], section: "Timesheet" },
-  { to: "/admin/timesheet/missing", label: "Missing", icon: AlertTriangle, roles: ["admin"], section: "Timesheet" },
-  { to: "/admin/timesheet/reports/overtime", label: "Overtime", icon: Clock, roles: ["admin"], section: "Timesheet" },
-  { to: "/admin/timesheet/export", label: "Export", icon: Download, roles: ["admin"], section: "Timesheet" },
-  { to: "/admin/timesheet/config", label: "Config", icon: Settings, roles: ["admin"], section: "Timesheet" },
-  { to: "/timesheets", label: "Old Timesheets", icon: Clock, roles: [], section: "Time" },
-  { to: "/projects", label: "Projects", icon: FolderKanban, roles: [], section: "Time" },
-  { to: "/leaves", label: "Leave Dashboard", icon: CalendarDays, roles: [], section: "Leave" },
+
+  // ── Leave ──
+  { to: "/leaves", label: "Leaves", icon: CalendarDays, roles: [], section: "Leave" },
   { to: "/leave/apply", label: "Apply Leave", icon: ClipboardList, roles: [], section: "Leave" },
   { to: "/leave/approvals", label: "Leave Approvals", icon: CheckSquare, roles: ["admin", "manager"], section: "Leave" },
-  { to: "/attendance/wfh", label: "WFH Requests", icon: Laptop, roles: [], section: "Leave" },
+  { to: "/attendance/wfh", label: "WFH", icon: Laptop, roles: [], section: "Leave" },
   { to: "/attendance/compoff", label: "Comp-Off", icon: Gift, roles: [], section: "Leave" },
-  { to: "/documents", label: "Documents", icon: FileText, roles: [], section: "HR" },
+
+  // ── Engage ──
   { to: "/announcements", label: "Announcements", icon: Megaphone, roles: [], section: "Engage" },
   { to: "/recognition", label: "Recognition", icon: Award, roles: [], section: "Engage" },
   { to: "/surveys", label: "Surveys", icon: ClipboardCheck, roles: [], section: "Engage" },
-  { to: "/approvals", label: "Approvals", icon: CheckSquare, roles: ["admin", "manager"], section: "Management" },
-  { to: "/users", label: "User Mgmt", icon: Users, roles: ["admin"], section: "Management" },
-  { to: "/admin/announcements", label: "Post Manager", icon: Megaphone, roles: ["admin", "manager"], section: "Admin" },
-  { to: "/admin/settings/company", label: "Company", icon: Building, roles: ["admin"], section: "Admin" },
-  { to: "/admin/settings/designations", label: "Designations", icon: Shield, roles: ["admin"], section: "Admin" },
-  { to: "/admin/settings/roles", label: "Roles", icon: Shield, roles: ["admin"], section: "Admin" },
-  { to: "/admin/settings/leave", label: "Leave Policy", icon: CalendarDays, roles: ["admin"], section: "Admin" },
-  { to: "/admin/settings/emails", label: "Email Templates", icon: Mail, roles: ["admin"], section: "Admin" },
-  { to: "/admin/audit", label: "Audit Log", icon: ScrollText, roles: ["admin"], section: "Admin" },
+  { to: "/documents", label: "Documents", icon: FileText, roles: [], section: "Engage" },
+
+  // ── Performance ──
   { to: "/performance/goals", label: "My Goals", icon: Target, roles: [], section: "Performance" },
   { to: "/performance/feedback", label: "Feedback", icon: MessageCircle, roles: [], section: "Performance" },
-  { to: "/performance/reviews/my", label: "My Reviews", icon: Star, roles: [], section: "Performance" },
-  { to: "/admin/performance/cycles", label: "Cycles", icon: TrendingUp, roles: ["admin"], section: "Performance" },
-  { to: "/admin/performance/calibrate", label: "Calibration", icon: BarChart3, roles: ["admin"], section: "Performance" },
+
+  // ── Learning ──
   { to: "/learning", label: "Learning Hub", icon: BookOpen, roles: [], section: "Learning" },
   { to: "/learning/certifications", label: "Certifications", icon: GraduationCap, roles: [], section: "Learning" },
-  { to: "/learning/teaching", label: "Teaching", icon: Presentation, roles: [], section: "Learning" },
-  { to: "/learning/calendar", label: "Calendar", icon: CalendarDays, roles: [], section: "Learning" },
+
+  // ── Admin ──
+  { to: "/admin/timesheet", label: "TS Admin", icon: Clock, roles: ["admin"], section: "Admin" },
+  { to: "/admin/announcements", label: "Post Manager", icon: Megaphone, roles: ["admin", "manager"], section: "Admin" },
+  { to: "/users", label: "User Mgmt", icon: Users, roles: ["admin"], section: "Admin" },
+  { to: "/admin/settings/company", label: "Settings", icon: Settings, roles: ["admin"], section: "Admin" },
+  { to: "/admin/audit", label: "Audit Log", icon: ScrollText, roles: ["admin"], section: "Admin" },
+  { to: "/admin/performance/cycles", label: "Review Cycles", icon: TrendingUp, roles: ["admin"], section: "Admin" },
 ];
 
 interface Props {

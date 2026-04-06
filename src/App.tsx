@@ -6,7 +6,6 @@ import Register from "./pages/auth/Register";
 import Dashboard from "./pages/dashboard/Dashboard";
 import ManagerDashboard from "./pages/dashboard-manager/ManagerDashboard";
 import HrDashboard from "./pages/dashboard-hr/HrDashboard";
-import Timesheets from "./pages/timesheets/Timesheets";
 import Projects from "./pages/projects/Projects";
 import Approvals from "./pages/approvals/Approvals";
 import Users from "./pages/users/Users";
@@ -90,7 +89,6 @@ export default function App() {
           <Route path="/attendance/holidays" element={<HolidayCalendar />} />
           <Route path="/attendance/wfh" element={<WFHRequests />} />
           <Route path="/attendance/compoff" element={<CompOff />} />
-          <Route path="/timesheets" element={<Timesheets />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/leaves" element={<Leaves />} />
           <Route path="/leave/apply" element={<LeaveApply />} />
