@@ -8,9 +8,20 @@ import {
   Target, Star, MessageCircle, TrendingUp, BookOpen, GraduationCap, Presentation,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import type { UserRole } from "../types";
 import clsx from "clsx";
+import type { LucideIcon } from "lucide-react";
 
-const links = [
+interface SidebarLink {
+  to: string;
+  label: string;
+  icon: LucideIcon;
+  roles: UserRole[];
+  excludeRoles?: UserRole[];
+  section: string;
+}
+
+const links: SidebarLink[] = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [], section: "Main" },
   { to: "/dashboard/manager", label: "Team Dashboard", icon: UsersRound, roles: ["admin", "manager"], section: "Main" },
   { to: "/dashboard/hr", label: "HR Dashboard", icon: BarChart3, roles: ["admin"], section: "Main" },
@@ -20,10 +31,10 @@ const links = [
   { to: "/attendance/team", label: "Team View", icon: TeamIcon, roles: ["admin", "manager"], section: "Attendance" },
   { to: "/attendance/holidays", label: "Holidays", icon: PartyPopper, roles: [], section: "Attendance" },
   { to: "/attendance/reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"], section: "Attendance" },
-  { to: "/timesheet", label: "Timesheet Home", icon: Clock, roles: [], section: "Timesheet" },
-  { to: "/timesheet/weekly", label: "Weekly Grid", icon: Grid3X3, roles: [], section: "Timesheet" },
-  { to: "/timesheet/daily", label: "Daily Log", icon: CalendarClock, roles: [], section: "Timesheet" },
-  { to: "/timesheet/history", label: "History", icon: History, roles: [], section: "Timesheet" },
+  { to: "/timesheet", label: "Timesheet Home", icon: Clock, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
+  { to: "/timesheet/weekly", label: "Weekly Grid", icon: Grid3X3, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
+  { to: "/timesheet/daily", label: "Daily Log", icon: CalendarClock, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
+  { to: "/timesheet/history", label: "History", icon: History, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
   { to: "/timesheet/approvals", label: "Approvals", icon: FileCheck, roles: ["admin", "manager"], section: "Timesheet" },
   { to: "/timesheet/team/projects", label: "Project Hours", icon: BarChart3, roles: ["admin", "manager"], section: "Timesheet" },
   { to: "/admin/timesheet", label: "TS Dashboard", icon: LayoutDashboard, roles: ["admin"], section: "Timesheet" },
@@ -69,8 +80,11 @@ interface Props {
 export default function Sidebar({ open, onClose }: Props) {
   const { user } = useAuth();
 
+  const role = user?.role ?? "employee";
   const filtered = links.filter(
-    (l) => l.roles.length === 0 || l.roles.includes(user?.role || "")
+    (l) =>
+      (l.roles.length === 0 || l.roles.includes(role)) &&
+      !(l.excludeRoles?.includes(role))
   );
 
   // Group by section
