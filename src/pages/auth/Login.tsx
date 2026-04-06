@@ -37,7 +37,7 @@ export default function Login() {
             <img src="/logo.png" alt="Logo" className="h-12 w-12 rounded-xl object-contain dark:invert" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">United Nexa Tech</h1>
           </div>
-          <p className="text-gray-500 dark:text-gray-400">Sign in to manage your timesheets</p>
+          <p className="text-gray-500 dark:text-gray-400">Sign in to manage your conversations</p>
         </div>
 
         <form
