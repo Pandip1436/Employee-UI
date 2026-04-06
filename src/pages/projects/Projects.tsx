@@ -184,17 +184,15 @@ export default function Projects() {
             return (
               <div
                 key={p._id}
-                className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md dark:hover:shadow-gray-800/30"
+                onClick={() => openDetail(p._id)}
+                className="group cursor-pointer rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-500/30 dark:hover:shadow-gray-800/30"
               >
                 {/* Top row */}
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <button
-                      onClick={() => openDetail(p._id)}
-                      className="truncate text-[15px] font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left"
-                    >
+                    <h3 className="truncate text-[15px] font-semibold text-gray-900 dark:text-white">
                       {p.name}
-                    </button>
+                    </h3>
                     <p className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
                       {p.client}
                     </p>
@@ -229,14 +227,14 @@ export default function Projects() {
                   {canEdit && (
                     <div className="flex gap-0.5">
                       <button
-                        onClick={() => openEdit(p)}
+                        onClick={(e) => { e.stopPropagation(); openEdit(p); }}
                         className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                       >
                         <Pencil className="h-4 w-4" />
                       </button>
                       {isAdmin && (
                         <button
-                          onClick={() => handleDelete(p._id)}
+                          onClick={(e) => { e.stopPropagation(); handleDelete(p._id); }}
                           className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:text-gray-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
                         >
                           <Trash2 className="h-4 w-4" />
