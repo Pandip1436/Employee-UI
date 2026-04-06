@@ -23,7 +23,7 @@ interface SidebarLink {
 }
 
 const links: SidebarLink[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [],excludeRoles: ["admin"],  section: "Main" },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [],  section: "Main" },
   { to: "/dashboard/manager", label: "Team Dashboard", icon: UsersRound, roles: ["manager"], section: "Main" },
   { to: "/dashboard/hr", label: "HR Dashboard", icon: BarChart3, roles: ["admin"], section: "Main" },
   { to: "/employees", label: "Employees", icon: UsersRound, roles: ["admin", "manager"], section: "Main" },
