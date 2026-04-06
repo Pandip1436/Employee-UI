@@ -1,5 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
-import { ChevronLeft, ChevronRight, Clock, LogIn, LogOut, Info } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  LogIn,
+  LogOut,
+  Info,
+  CalendarDays,
+  AlertCircle,
+  X,
+} from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { holidayApi } from "../../api/holidayApi";
 import type { AttendanceRecord, Holiday } from "../../types";
@@ -7,53 +17,61 @@ import type { AttendanceRecord, Holiday } from "../../types";
 /* ── Status style map ── */
 const statusStyles: Record<
   string,
-  { bg: string; dot: string; text: string; label: string }
+  { bg: string; dot: string; text: string; label: string; ring: string }
 > = {
   present: {
     bg: "bg-emerald-50 dark:bg-emerald-500/10",
     dot: "bg-emerald-500",
     text: "text-emerald-700 dark:text-emerald-400",
+    ring: "ring-emerald-500/30",
     label: "Present",
   },
   late: {
     bg: "bg-amber-50 dark:bg-amber-500/10",
     dot: "bg-amber-500",
     text: "text-amber-700 dark:text-amber-400",
+    ring: "ring-amber-500/30",
     label: "Late",
   },
   absent: {
     bg: "bg-red-50 dark:bg-red-500/10",
     dot: "bg-red-500",
     text: "text-red-700 dark:text-red-400",
+    ring: "ring-red-500/30",
     label: "Absent",
   },
   "half-day": {
     bg: "bg-orange-50 dark:bg-orange-500/10",
     dot: "bg-orange-500",
     text: "text-orange-700 dark:text-orange-400",
+    ring: "ring-orange-500/30",
     label: "Half Day",
   },
   "on-leave": {
     bg: "bg-blue-50 dark:bg-blue-500/10",
     dot: "bg-blue-500",
     text: "text-blue-700 dark:text-blue-400",
+    ring: "ring-blue-500/30",
     label: "On Leave",
   },
   holiday: {
     bg: "bg-purple-50 dark:bg-purple-500/10",
     dot: "bg-purple-500",
     text: "text-purple-700 dark:text-purple-400",
+    ring: "ring-purple-500/30",
     label: "Holiday",
   },
   weekend: {
-    bg: "bg-gray-100 dark:bg-gray-800",
-    dot: "bg-gray-400",
+    bg: "bg-gray-50 dark:bg-gray-800/50",
+    dot: "bg-gray-400 dark:bg-gray-500",
     text: "text-gray-500 dark:text-gray-500",
+    ring: "ring-gray-400/30",
     label: "Weekend",
   },
 };
 
-const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WEEKDAYS_SHORT = ["S", "M", "T", "W", "T", "F", "S"];
+const WEEKDAYS_FULL = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 /* ── Helpers ── */
 function pad(n: number) {
@@ -85,16 +103,18 @@ function isSameDate(a: string, b: string) {
   return a.slice(0, 10) === b.slice(0, 10);
 }
 
+const labelClasses =
+  "text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500";
+
 /* ── Component ── */
 export default function AttendanceCalendar() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
-  const [month, setMonth] = useState(today.getMonth()); // 0-indexed
+  const [month, setMonth] = useState(today.getMonth());
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
-  const [hoveredDay, setHoveredDay] = useState<string | null>(null);
 
   /* ── Data fetching ── */
   const fetchData = useCallback(() => {
@@ -144,27 +164,19 @@ export default function AttendanceCalendar() {
   const goToToday = () => {
     setYear(today.getFullYear());
     setMonth(today.getMonth());
-    setSelectedDay(null);
+    setSelectedDay(toDateKey(today));
   };
 
   /* ── Build calendar grid ── */
-  const firstDay = new Date(year, month, 1).getDay(); // 0=Sun
+  const firstDay = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
 
-  // Index records by date key
   const recordMap = new Map<string, AttendanceRecord>();
-  records.forEach((r) => {
-    const key = r.date.slice(0, 10);
-    recordMap.set(key, r);
-  });
+  records.forEach((r) => recordMap.set(r.date.slice(0, 10), r));
 
-  // Index holidays by date key
   const holidayMap = new Map<string, Holiday>();
-  holidays.forEach((h) => {
-    const key = h.date.slice(0, 10);
-    holidayMap.set(key, h);
-  });
+  holidays.forEach((h) => holidayMap.set(h.date.slice(0, 10), h));
 
   /* ── Resolve cell status ── */
   function getCellInfo(dayNum: number) {
@@ -186,258 +198,386 @@ export default function AttendanceCalendar() {
     return { key, isToday, isFuture, isWeekend, holiday, record, status };
   }
 
-  /* ── Detail card data ── */
-  const detailKey = selectedDay ?? hoveredDay;
-  const detailRecord = detailKey ? recordMap.get(detailKey) : null;
-  const detailHoliday = detailKey ? holidayMap.get(detailKey) : null;
+  /* ── Monthly summary stats ── */
+  const stats = {
+    present: 0,
+    late: 0,
+    absent: 0,
+    leaves: 0,
+    holidays: 0,
+  };
+  for (let d = 1; d <= daysInMonth; d++) {
+    const { status } = getCellInfo(d);
+    if (status === "present") stats.present++;
+    else if (status === "late") stats.late++;
+    else if (status === "absent") stats.absent++;
+    else if (status === "on-leave" || status === "half-day") stats.leaves++;
+    else if (status === "holiday") stats.holidays++;
+  }
+
+  /* ── Detail panel data ── */
+  const detailRecord = selectedDay ? recordMap.get(selectedDay) : null;
+  const detailHoliday = selectedDay ? holidayMap.get(selectedDay) : null;
+
+  /* ── Detail panel renderer (shared between desktop sidebar & mobile sheet) ── */
+  const renderDetail = (showClose: boolean) => {
+    if (!selectedDay) return null;
+    const dateObj = new Date(selectedDay + "T00:00:00");
+    const dayInfo = getCellInfo(dateObj.getDate());
+
+    return (
+      <div className="flex flex-col h-full">
+        {/* Detail header */}
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <p className={labelClasses}>Selected Date</p>
+            <h3 className="mt-1 text-lg font-bold text-gray-900 dark:text-white">
+              {dateObj.toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "long",
+                day: "numeric",
+              })}
+            </h3>
+            {detailHoliday && (
+              <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-purple-50 dark:bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-400 ring-1 ring-purple-600/20 dark:ring-purple-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
+                {detailHoliday.name}
+              </div>
+            )}
+          </div>
+          {showClose && (
+            <button
+              onClick={() => setSelectedDay(null)}
+              className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        {/* Status badge */}
+        {dayInfo.status && (
+          <div className="mb-4">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ring-1 ring-inset ${
+                statusStyles[dayInfo.status]?.bg ?? ""
+              } ${statusStyles[dayInfo.status]?.text ?? ""} ${
+                statusStyles[dayInfo.status]?.ring ?? ""
+              }`}
+            >
+              <span
+                className={`h-1.5 w-1.5 rounded-full ${
+                  statusStyles[dayInfo.status]?.dot ?? ""
+                }`}
+              />
+              {statusStyles[dayInfo.status]?.label ?? dayInfo.status}
+            </span>
+          </div>
+        )}
+
+        {/* Time details */}
+        {detailRecord ? (
+          <div className="space-y-3 flex-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800/80 p-3.5">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <LogIn className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className={labelClasses}>Clock In</span>
+                </div>
+                <p className="text-base font-bold text-gray-900 dark:text-white">
+                  {formatTime(detailRecord.clockIn)}
+                </p>
+              </div>
+              <div className="rounded-xl bg-gray-50 dark:bg-gray-800/80 p-3.5">
+                <div className="flex items-center gap-1.5 mb-2">
+                  <LogOut className="h-3.5 w-3.5 text-rose-500" />
+                  <span className={labelClasses}>Clock Out</span>
+                </div>
+                <p className="text-base font-bold text-gray-900 dark:text-white">
+                  {formatTime(detailRecord.clockOut)}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/80 p-3.5">
+              <div className="flex items-center gap-1.5 mb-2">
+                <Clock className="h-3.5 w-3.5 text-indigo-500" />
+                <span className={labelClasses}>Total Hours</span>
+              </div>
+              <p className="text-base font-bold text-gray-900 dark:text-white">
+                {detailRecord.totalHours != null
+                  ? `${detailRecord.totalHours.toFixed(1)} hours`
+                  : "Not available"}
+              </p>
+            </div>
+
+            {detailRecord.isLate && detailRecord.lateByMinutes && (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 px-3.5 py-3">
+                <AlertCircle className="h-4 w-4 shrink-0 text-amber-500" />
+                <p className="text-sm font-medium text-amber-700 dark:text-amber-400">
+                  Late by {detailRecord.lateByMinutes} minute
+                  {detailRecord.lateByMinutes > 1 ? "s" : ""}
+                </p>
+              </div>
+            )}
+
+            {detailRecord.notes && (
+              <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 px-3.5 py-3">
+                <Info className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {detailRecord.notes}
+                </p>
+              </div>
+            )}
+          </div>
+        ) : !detailHoliday ? (
+          <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
+            <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-3 mb-3">
+              <CalendarDays className="h-6 w-6 text-gray-300 dark:text-gray-600" />
+            </div>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              No attendance data
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+              {dayInfo.isFuture ? "This date is in the future" : "No record for this date"}
+            </p>
+          </div>
+        ) : null}
+      </div>
+    );
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       {/* ── Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-            Attendance Calendar
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            Monthly attendance overview
-          </p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/20">
+            <CalendarDays className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+              Attendance Calendar
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Monthly attendance overview
+            </p>
+          </div>
         </div>
         <button
           onClick={goToToday}
-          className="self-start rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+          className="hidden sm:inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98]"
         >
+          <CalendarDays className="h-4 w-4" />
           Today
         </button>
       </div>
 
-      {/* ── Calendar Card ── */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6">
-        {/* Month navigation */}
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={prevMonth}
-            className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
+      {/* ── Summary Stats ── */}
+      <div className="grid grid-cols-5 gap-2 sm:gap-3">
+        {[
+          { label: "Present", value: stats.present, cls: "text-emerald-600 dark:text-emerald-400" },
+          { label: "Late", value: stats.late, cls: "text-amber-600 dark:text-amber-400" },
+          { label: "Absent", value: stats.absent, cls: "text-red-600 dark:text-red-400" },
+          { label: "Leaves", value: stats.leaves, cls: "text-blue-600 dark:text-blue-400" },
+          { label: "Holidays", value: stats.holidays, cls: "text-purple-600 dark:text-purple-400" },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-2.5 sm:p-4 text-center"
           >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-            {fmtMonth(year, month)}
-          </h2>
-          <button
-            onClick={nextMonth}
-            className="rounded-lg p-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
-
-        {/* Loading overlay */}
-        {loading && (
-          <div className="flex justify-center py-8">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+            <p className={`text-lg sm:text-2xl font-bold ${s.cls}`}>
+              {s.value}
+            </p>
+            <p className="text-[10px] sm:text-xs font-medium text-gray-500 dark:text-gray-400 mt-0.5">
+              {s.label}
+            </p>
           </div>
-        )}
+        ))}
+      </div>
 
-        {!loading && (
-          <>
-            {/* Weekday headers */}
-            <div className="grid grid-cols-7 mb-2">
-              {WEEKDAYS.map((d) => (
-                <div
-                  key={d}
-                  className="text-center text-xs font-semibold text-gray-500 dark:text-gray-400 py-2"
-                >
-                  {d}
+      {/* ── Main Layout: Calendar + Detail Panel ── */}
+      <div className="flex gap-5">
+        {/* Calendar Card */}
+        <div className="flex-1 min-w-0 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-6">
+          {/* Month navigation */}
+          <div className="flex items-center justify-between mb-5">
+            <button
+              onClick={prevMonth}
+              className="rounded-xl p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="text-center">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                {fmtMonth(year, month)}
+              </h2>
+              <button
+                onClick={goToToday}
+                className="sm:hidden text-xs font-medium text-indigo-600 dark:text-indigo-400 mt-0.5"
+              >
+                Go to Today
+              </button>
+            </div>
+            <button
+              onClick={nextMonth}
+              className="rounded-xl p-2.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-700"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+
+          {/* Loading */}
+          {loading && (
+            <div className="flex justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600" />
+            </div>
+          )}
+
+          {!loading && (
+            <>
+              {/* Weekday headers — full on desktop, single letter on mobile */}
+              <div className="grid grid-cols-7 mb-2">
+                {WEEKDAYS_FULL.map((d, i) => (
+                  <div
+                    key={d}
+                    className="text-center text-xs font-semibold text-gray-400 dark:text-gray-500 py-2"
+                  >
+                    <span className="hidden sm:inline">{d}</span>
+                    <span className="sm:hidden">{WEEKDAYS_SHORT[i]}</span>
+                  </div>
+                ))}
+              </div>
+
+              {/* Day cells */}
+              <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
+                {Array.from({ length: totalCells }, (_, i) => {
+                  const dayNum = i - firstDay + 1;
+                  const isOutside = dayNum < 1 || dayNum > daysInMonth;
+
+                  if (isOutside) {
+                    return <div key={`empty-${i}`} className="aspect-square" />;
+                  }
+
+                  const { key, isToday, isFuture, status, holiday } =
+                    getCellInfo(dayNum);
+                  const style = status ? statusStyles[status] : null;
+                  const isActive = selectedDay === key;
+
+                  return (
+                    <button
+                      key={key}
+                      onClick={() =>
+                        setSelectedDay(selectedDay === key ? null : key)
+                      }
+                      className={`
+                        relative aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 transition-all text-sm border
+                        ${
+                          isActive
+                            ? "border-indigo-500 dark:border-indigo-400 bg-indigo-50 dark:bg-indigo-500/10 shadow-sm shadow-indigo-500/10"
+                            : style
+                              ? `${style.bg} border-transparent`
+                              : "border-transparent hover:bg-gray-50 dark:hover:bg-gray-800/50"
+                        }
+                        ${
+                          isToday && !isActive
+                            ? "ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-gray-900"
+                            : ""
+                        }
+                        ${isFuture ? "text-gray-300 dark:text-gray-600" : "text-gray-700 dark:text-gray-300"}
+                      `}
+                      title={
+                        holiday
+                          ? holiday.name
+                          : status
+                            ? statusStyles[status]?.label
+                            : ""
+                      }
+                    >
+                      <span
+                        className={`font-semibold text-xs sm:text-sm ${
+                          isToday
+                            ? "text-indigo-600 dark:text-indigo-400"
+                            : isActive
+                              ? "text-indigo-700 dark:text-indigo-300"
+                              : ""
+                        }`}
+                      >
+                        {dayNum}
+                      </span>
+                      {style && !isFuture && (
+                        <span
+                          className={`h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full ${style.dot}`}
+                        />
+                      )}
+                      {/* Holiday name on desktop */}
+                      {holiday && (
+                        <span className="hidden lg:block absolute bottom-1 left-1 right-1 truncate text-[9px] font-medium text-purple-600 dark:text-purple-400 leading-none">
+                          {holiday.name}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {/* Legend — inline below calendar */}
+          <div className="mt-5 pt-4 border-t border-gray-100 dark:border-gray-800">
+            <div className="flex flex-wrap gap-x-4 gap-y-2">
+              {Object.entries(statusStyles).map(([key, s]) => (
+                <div key={key} className="flex items-center gap-1.5">
+                  <span className={`h-2 w-2 rounded-full ${s.dot}`} />
+                  <span className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                    {s.label}
+                  </span>
                 </div>
               ))}
             </div>
+          </div>
+        </div>
 
-            {/* Day cells */}
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: totalCells }, (_, i) => {
-                const dayNum = i - firstDay + 1;
-                const isOutside = dayNum < 1 || dayNum > daysInMonth;
-
-                if (isOutside) {
-                  return (
-                    <div
-                      key={`empty-${i}`}
-                      className="aspect-square rounded-lg"
-                    />
-                  );
-                }
-
-                const {
-                  key,
-                  isToday,
-                  isFuture,
-                  status,
-                  holiday,
-                } = getCellInfo(dayNum);
-                const style = status ? statusStyles[status] : null;
-                const isActive = selectedDay === key;
-
-                return (
-                  <button
-                    key={key}
-                    onClick={() =>
-                      setSelectedDay(selectedDay === key ? null : key)
-                    }
-                    onMouseEnter={() => setHoveredDay(key)}
-                    onMouseLeave={() => setHoveredDay(null)}
-                    className={`
-                      relative aspect-square rounded-lg flex flex-col items-center justify-center gap-0.5 transition-all text-sm
-                      ${style ? style.bg : "hover:bg-gray-50 dark:hover:bg-gray-800/50"}
-                      ${isToday ? "ring-2 ring-indigo-500 ring-offset-1 dark:ring-offset-gray-900" : ""}
-                      ${isActive ? "ring-2 ring-indigo-400 shadow-lg scale-105" : ""}
-                      ${isFuture ? "text-gray-400 dark:text-gray-600" : "text-gray-700 dark:text-gray-300"}
-                    `}
-                    title={
-                      holiday
-                        ? holiday.name
-                        : status
-                          ? statusStyles[status]?.label
-                          : ""
-                    }
-                  >
-                    <span
-                      className={`font-medium text-xs sm:text-sm ${
-                        isToday
-                          ? "text-indigo-600 dark:text-indigo-400 font-bold"
-                          : ""
-                      }`}
-                    >
-                      {dayNum}
-                    </span>
-                    {style && !isFuture && (
-                      <span
-                        className={`h-1.5 w-1.5 sm:h-2 sm:w-2 rounded-full ${style.dot}`}
-                      />
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* ── Detail Card (on hover/click) ── */}
-      {detailKey && (detailRecord || detailHoliday) && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 transition-all animate-in fade-in duration-200">
-          <div className="flex items-start justify-between mb-3">
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-                {new Date(detailKey + "T00:00:00").toLocaleDateString("en-US", {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </h3>
-              {detailHoliday && (
-                <p className="text-xs text-purple-600 dark:text-purple-400 mt-0.5 font-medium">
-                  {detailHoliday.name}
-                  {detailHoliday.type && (
-                    <span className="ml-1 text-gray-400 dark:text-gray-500">
-                      ({detailHoliday.type})
-                    </span>
-                  )}
+        {/* ── Desktop Detail Sidebar ── */}
+        <div className="hidden lg:block w-80 shrink-0">
+          <div className="sticky top-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+            {selectedDay ? (
+              renderDetail(true)
+            ) : (
+              <div className="flex flex-col items-center justify-center text-center py-12">
+                <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-4 mb-4">
+                  <CalendarDays className="h-7 w-7 text-gray-300 dark:text-gray-600" />
+                </div>
+                <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                  Select a date
                 </p>
-              )}
-            </div>
-            {detailRecord && (
-              <span
-                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${
-                  statusStyles[detailRecord.status]?.bg ?? ""
-                } ${statusStyles[detailRecord.status]?.text ?? ""}`}
-              >
-                <span
-                  className={`h-1.5 w-1.5 rounded-full ${
-                    statusStyles[detailRecord.status]?.dot ?? ""
-                  }`}
-                />
-                {statusStyles[detailRecord.status]?.label ??
-                  detailRecord.status}
-              </span>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                  Click on a day to view attendance details
+                </p>
+              </div>
             )}
           </div>
-
-          {detailRecord && (
-            <div className="grid grid-cols-3 gap-3">
-              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
-                <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 mb-1">
-                  <LogIn className="h-3.5 w-3.5" />
-                  <span className="text-xs">Clock In</span>
-                </div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {formatTime(detailRecord.clockIn)}
-                </p>
-              </div>
-              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
-                <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 mb-1">
-                  <LogOut className="h-3.5 w-3.5" />
-                  <span className="text-xs">Clock Out</span>
-                </div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {formatTime(detailRecord.clockOut)}
-                </p>
-              </div>
-              <div className="rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
-                <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 mb-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  <span className="text-xs">Hours</span>
-                </div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {detailRecord.totalHours != null
-                    ? `${detailRecord.totalHours.toFixed(1)}h`
-                    : "--"}
-                </p>
-              </div>
-            </div>
-          )}
-
-          {detailRecord?.notes && (
-            <div className="mt-3 flex items-start gap-2 rounded-lg bg-gray-50 dark:bg-gray-800 p-3">
-              <Info className="h-3.5 w-3.5 text-gray-400 mt-0.5 flex-shrink-0" />
-              <p className="text-xs text-gray-600 dark:text-gray-400">
-                {detailRecord.notes}
-              </p>
-            </div>
-          )}
-
-          {detailRecord?.isLate && detailRecord.lateByMinutes && (
-            <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-              Late by {detailRecord.lateByMinutes} minute
-              {detailRecord.lateByMinutes > 1 ? "s" : ""}
-            </p>
-          )}
-        </div>
-      )}
-
-      {/* ── Legend ── */}
-      <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5">
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-          Legend
-        </h3>
-        <div className="flex flex-wrap gap-x-5 gap-y-2">
-          {Object.entries(statusStyles).map(([key, s]) => (
-            <div key={key} className="flex items-center gap-2">
-              <span className={`h-2.5 w-2.5 rounded-full ${s.dot}`} />
-              <span className="text-xs text-gray-600 dark:text-gray-400">
-                {s.label}
-              </span>
-            </div>
-          ))}
-          <div className="flex items-center gap-2">
-            <span className="h-2.5 w-2.5 rounded-full bg-transparent border border-gray-300 dark:border-gray-600" />
-            <span className="text-xs text-gray-600 dark:text-gray-400">
-              Future / No Data
-            </span>
-          </div>
         </div>
       </div>
+
+      {/* ── Mobile Detail Bottom Sheet ── */}
+      {selectedDay && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setSelectedDay(null)}
+          />
+          {/* Sheet */}
+          <div className="absolute bottom-0 left-0 right-0 rounded-t-2xl bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-xl p-5 pb-8 max-h-[70vh] overflow-y-auto animate-in slide-in-from-bottom duration-200">
+            {/* Drag handle */}
+            <div className="flex justify-center mb-4">
+              <div className="h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
+            </div>
+            {renderDetail(true)}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
