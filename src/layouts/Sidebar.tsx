@@ -63,7 +63,7 @@ const links: SidebarLink[] = [
   { to: "/learning/certifications", label: "Certifications", icon: GraduationCap, roles: [], section: "Learning" },
   { to: "/learning/teaching", label: "Teaching", icon: Presentation, roles: [], section: "Learning" },
   { to: "/learning/calendar", label: "Calendar", icon: CalendarDays, roles: [], section: "Learning" },
-    { to: "/admin/announcements", label: "Post Manager", icon: Megaphone, roles: ["admin", "manager"], section: " Settings" },
+  { to: "/admin/announcements", label: "Post Manager", icon: Megaphone, roles: ["admin", "manager"], section: "Settings" },
   { to: "/admin/settings/company", label: "Company", icon: Building, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/designations", label: "Designations", icon: Shield, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/roles", label: "Roles", icon: Shield, roles: ["admin"], section: "Settings" },
