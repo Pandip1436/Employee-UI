@@ -6,6 +6,7 @@ import {
   Grid3X3, CalendarClock, History, FileCheck, Settings, AlertTriangle, Download,
   Megaphone, Award, ClipboardCheck, Building, Shield, Mail, ScrollText,
   Target, Star, MessageCircle, TrendingUp, BookOpen, GraduationCap, Presentation,
+  NotebookPen,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import type { UserRole } from "../types";
@@ -27,6 +28,7 @@ const links: SidebarLink[] = [
   { to: "/dashboard/hr", label: "HR Dashboard", icon: BarChart3, roles: ["admin"], section: "Main" },
   { to: "/employees", label: "Employees", icon: UsersRound, roles: ["admin", "manager"], section: "Main" },
   { to: "/projects", label: "Projects", icon: FolderKanban, roles: [], section: "Main" },
+  { to: "/documents", label: "Documents", icon: FileText, roles: [], section: "Main" },
   { to: "/attendance", label: "My Attendance", icon: UserCheck, roles: [], section: "Attendance" },
   { to: "/attendance/calendar", label: "Calendar", icon: CalendarRange, roles: [], section: "Attendance" },
   { to: "/attendance/team", label: "Team View", icon: TeamIcon, roles: ["admin", "manager"], section: "Attendance" },
@@ -48,7 +50,8 @@ const links: SidebarLink[] = [
   { to: "/leave/approvals", label: "Leave Approvals", icon: CheckSquare, roles: ["admin", "manager"], section: "Leave" },
   { to: "/attendance/wfh", label: "WFH Requests", icon: Laptop, roles: [], section: "Leave" },
   { to: "/attendance/compoff", label: "Comp-Off", icon: Gift, roles: [], section: "Leave" },
-  { to: "/documents", label: "Documents", icon: FileText, roles: [], section: "HR" },
+  { to: "/daily-updates", label: "My Updates", icon: NotebookPen, roles: [], section: "Daily Updates" },
+  { to: "/daily-updates/team", label: "Team Updates", icon: NotebookPen, roles: ["admin", "manager"], section: "Daily Updates" },
   { to: "/announcements", label: "Announcements", icon: Megaphone, roles: [], section: "Engage" },
   { to: "/recognition", label: "Recognition", icon: Award, roles: [], section: "Engage" },
   { to: "/surveys", label: "Surveys", icon: ClipboardCheck, roles: [], section: "Engage" },

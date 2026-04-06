@@ -67,6 +67,10 @@ import PIPDetail from "./pages/perf-pip/PIPDetail";
 import Calibration from "./pages/perf-calibrate/Calibration";
 import ReviewCycles from "./pages/perf-cycles/ReviewCycles";
 
+// Daily Updates Module
+import DailyUpdates from "./pages/daily-updates/DailyUpdates";
+import TeamDailyUpdates from "./pages/daily-updates/TeamDailyUpdates";
+
 // Learning Module
 import LearningHub from "./pages/learning-hub/LearningHub";
 import MyCertifications from "./pages/learning-certs/MyCertifications";
@@ -116,6 +120,9 @@ export default function App() {
           <Route path="/learning/teaching" element={<Teaching />} />
           <Route path="/learning/calendar" element={<LearningCalendar />} />
 
+          {/* Daily Updates */}
+          <Route path="/daily-updates" element={<DailyUpdates />} />
+
           {/* Engagement */}
           <Route path="/announcements" element={<AnnouncementsFeed />} />
           <Route path="/announcements/:id" element={<AnnouncementDetail />} />
@@ -136,6 +143,7 @@ export default function App() {
           <Route path="/leave/approvals" element={<LeaveApprovals />} />
           <Route path="/timesheet/approvals" element={<TimesheetApprovals />} />
           <Route path="/timesheet/team/projects" element={<TimesheetProjectSummary />} />
+          <Route path="/daily-updates/team" element={<TeamDailyUpdates />} />
           <Route path="/dashboard/manager" element={<ManagerDashboard />} />
           <Route path="/admin/announcements" element={<AdminAnnouncements />} />
           <Route path="/admin/surveys/:id/results" element={<SurveyResults />} />
