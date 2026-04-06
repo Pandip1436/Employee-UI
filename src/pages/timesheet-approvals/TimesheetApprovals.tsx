@@ -421,6 +421,30 @@ export default function TimesheetApprovals() {
                   </div>
                 </div>
 
+                {/* Projects */}
+                {ts.entries.length > 0 && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <span className={`${labelClasses} mr-0.5`}>Projects:</span>
+                    {[...new Map(
+                      ts.entries.map((e) => {
+                        const id = typeof e.projectId === "object" ? (e.projectId as Project)._id : e.projectId;
+                        return [id, e.projectId];
+                      })
+                    ).values()].map((proj, i) => {
+                      const id = typeof proj === "object" ? (proj as Project)._id : proj;
+                      return (
+                        <button
+                          key={id || i}
+                          onClick={() => handleProjectClick(proj)}
+                          className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-600/20 dark:ring-indigo-500/20 transition-all hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
+                        >
+                          {getProjectName(proj)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
                 {/* Manager comment (rejected) */}
                 {ts.managerComment && (
                   <div className="mt-3 flex items-start gap-2 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 px-3 py-2.5">

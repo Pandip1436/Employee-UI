@@ -1,5 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { Plus, Pencil, Trash2, X, Users, FolderKanban, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Pencil, Trash2, X, Users, FolderKanban, ChevronLeft, ChevronRight, CalendarDays, UserCircle } from "lucide-react";
 import { projectApi } from "../../api/projectApi";
 import { userApi } from "../../api/userApi";
 import { useAuth } from "../../context/AuthContext";
@@ -49,6 +49,19 @@ export default function Projects() {
   const [status, setStatus] = useState("active");
   const [assignedUsers, setAssignedUsers] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+
+  // Detail modal
+  const [detailProject, setDetailProject] = useState<Project | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+
+  const openDetail = (id: string) => {
+    setDetailLoading(true);
+    projectApi
+      .getById(id)
+      .then((res) => setDetailProject(res.data.data ?? null))
+      .catch(() => toast.error("Failed to load project"))
+      .finally(() => setDetailLoading(false));
+  };
 
   const fetchProjects = () => {
     projectApi.getAll({ page, limit: 10 }).then((res) => {
@@ -176,9 +189,12 @@ export default function Projects() {
                 {/* Top row */}
                 <div className="mb-3 flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <h3 className="truncate text-[15px] font-semibold text-gray-900 dark:text-white">
+                    <button
+                      onClick={() => openDetail(p._id)}
+                      className="truncate text-[15px] font-semibold text-gray-900 dark:text-white hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors text-left"
+                    >
                       {p.name}
-                    </h3>
+                    </button>
                     <p className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
                       {p.client}
                     </p>
@@ -259,6 +275,161 @@ export default function Projects() {
               Next
               <ChevronRight className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Detail Modal */}
+      {(detailProject || detailLoading) && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm dark:bg-black/60 px-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setDetailProject(null);
+          }}
+        >
+          <div className="w-full max-w-lg rounded-2xl bg-white shadow-xl dark:bg-gray-900 dark:shadow-gray-950/50">
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-4">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                Project Details
+              </h2>
+              <button
+                onClick={() => setDetailProject(null)}
+                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:text-gray-500 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5">
+              {detailLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600" />
+                </div>
+              ) : detailProject ? (
+                <div className="space-y-5">
+                  {/* Name & Status */}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                        {detailProject.name}
+                      </h3>
+                      <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">
+                        {detailProject.client}
+                      </p>
+                    </div>
+                    {(() => {
+                      const cfg = statusConfig[detailProject.status] || statusConfig.active;
+                      return (
+                        <span
+                          className={clsx(
+                            "inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ring-1 ring-inset",
+                            cfg.badge
+                          )}
+                        >
+                          <span className={clsx("h-1.5 w-1.5 rounded-full", cfg.dot)} />
+                          {cfg.label}
+                        </span>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Description */}
+                  {detailProject.description && (
+                    <div>
+                      <p className={labelClass}>Description</p>
+                      <p className="mt-1 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+                        {detailProject.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Members */}
+                  {detailProject.assignedUsers && detailProject.assignedUsers.length > 0 && (
+                    <div>
+                      <p className={labelClass}>
+                        Members ({detailProject.assignedUsers.length})
+                      </p>
+                      <div className="mt-2 space-y-1.5">
+                        {detailProject.assignedUsers.map((u) => {
+                          const user = typeof u === "object" ? u : null;
+                          if (!user) return null;
+                          return (
+                            <div
+                              key={user._id}
+                              className="flex items-center gap-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2"
+                            >
+                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white">
+                                {user.name?.charAt(0).toUpperCase()}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-sm font-medium text-gray-700 dark:text-gray-300">
+                                  {user.name}
+                                </p>
+                                <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                                  {user.email}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Meta */}
+                  <div className="grid grid-cols-2 gap-3 border-t border-gray-100 dark:border-gray-800 pt-4">
+                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                      <p className={labelClass}>Created By</p>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <UserCircle className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {typeof detailProject.createdBy === "object"
+                            ? detailProject.createdBy.name
+                            : "—"}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                      <p className={labelClass}>Created</p>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <CalendarDays className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
+                        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                          {new Date(detailProject.createdAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            {/* Footer */}
+            <div className="flex justify-end gap-2 border-t border-gray-100 dark:border-gray-800 px-6 py-4">
+              {canEdit && detailProject && (
+                <button
+                  onClick={() => {
+                    openEdit(detailProject);
+                    setDetailProject(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+              )}
+              <button
+                onClick={() => setDetailProject(null)}
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-indigo-700"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
