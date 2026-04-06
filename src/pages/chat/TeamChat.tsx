@@ -13,8 +13,6 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { chatApi, type ConversationData, type MessageData } from "../../api/chatApi";
-import { userApi } from "../../api/userApi";
-import type { User } from "../../types";
 
 /* ─── helpers ─── */
 
@@ -82,7 +80,7 @@ interface NewChatModalProps {
 
 function NewChatModal({ open, onClose, onSelectDirect, onCreateGroup, currentUserId }: NewChatModalProps) {
   const [tab, setTab] = useState<"direct" | "group">("direct");
-  const [users, setUsers] = useState<User[]>([]);
+  const [users, setUsers] = useState<{ _id: string; name: string; email: string; department?: string }[]>([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
   const [groupName, setGroupName] = useState("");
@@ -91,9 +89,9 @@ function NewChatModal({ open, onClose, onSelectDirect, onCreateGroup, currentUse
   useEffect(() => {
     if (!open) return;
     setLoading(true);
-    userApi
-      .getAll({ limit: 200 })
-      .then((r) => setUsers(r.data.data.filter((u) => u._id !== currentUserId && u.isActive)))
+    chatApi
+      .getChatUsers()
+      .then((r) => setUsers(r.data.data ?? []))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [open, currentUserId]);

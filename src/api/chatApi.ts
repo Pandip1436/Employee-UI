@@ -43,6 +43,9 @@ export const chatApi = {
   markAsRead: (conversationId: string) =>
     api.patch<ApiResponse>(`/chat/${conversationId}/read`),
 
+  getChatUsers: () =>
+    api.get<ApiResponse<{ _id: string; name: string; email: string; department?: string }[]>>("/chat/users"),
+
   getUnreadCount: () =>
     api.get<ApiResponse<{ total: number }>>("/chat/unread-count"),
 
