@@ -4,8 +4,8 @@ import {
   UserCheck, CalendarDays, FileText, UsersRound, CalendarRange,
   ClipboardList, UsersRound as TeamIcon, PartyPopper, Laptop, Gift, BarChart3,
   Grid3X3, CalendarClock, History, FileCheck, Settings, AlertTriangle, Download,
-  Megaphone, Award, ClipboardCheck, Building, Shield, Mail, ScrollText,
-  Target, Star, MessageCircle, TrendingUp, BookOpen, GraduationCap, Presentation,
+  Megaphone, Award, ClipboardCheck, ScrollText,
+  Target, MessageCircle, TrendingUp, BookOpen, GraduationCap,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import clsx from "clsx";
