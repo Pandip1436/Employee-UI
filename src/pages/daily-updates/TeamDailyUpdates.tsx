@@ -94,6 +94,9 @@ export default function TeamDailyUpdates() {
   const [loading, setLoading] = useState(true);
   const [filterDate, setFilterDate] = useState(todayISO());
 
+  // Detail modal
+  const [detailUpdate, setDetailUpdate] = useState<DailyUpdateData | null>(null);
+
   // Review modal
   const [reviewTarget, setReviewTarget] = useState<DailyUpdateData | null>(null);
   const [reviewStatus, setReviewStatus] = useState<"reviewed" | "needs-improvement">("reviewed");
@@ -267,7 +270,8 @@ export default function TeamDailyUpdates() {
             return (
               <div
                 key={u._id}
-                className={`rounded-xl border bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md ${
+                onClick={() => setDetailUpdate(u)}
+                className={`cursor-pointer rounded-xl border bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-500/30 ${
                   isReviewed
                     ? "border-gray-200 dark:border-gray-800"
                     : "border-amber-200 dark:border-amber-500/30 border-l-4"
@@ -289,26 +293,19 @@ export default function TeamDailyUpdates() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {/* Work status badge */}
                     <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${sConfig.badge}`}>
                       <StatusIcon className="h-3 w-3" />
                       {sConfig.label}
                     </span>
-                    {/* Review status badge */}
                     {rConfig && (
                       <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${rConfig.badge}`}>
-                        {u.reviewStatus === "reviewed" ? (
-                          <Eye className="h-3 w-3" />
-                        ) : (
-                          <AlertTriangle className="h-3 w-3" />
-                        )}
+                        {u.reviewStatus === "reviewed" ? <Eye className="h-3 w-3" /> : <AlertTriangle className="h-3 w-3" />}
                         {rConfig.label}
                       </span>
                     )}
-                    {/* Review actions */}
                     {!isReviewed && (
                       <button
-                        onClick={() => quickReview(u._id)}
+                        onClick={(e) => { e.stopPropagation(); quickReview(u._id); }}
                         title="Mark as reviewed"
                         className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white transition-all hover:bg-emerald-700 active:scale-[0.98]"
                       >
@@ -317,7 +314,7 @@ export default function TeamDailyUpdates() {
                       </button>
                     )}
                     <button
-                      onClick={() => openReview(u)}
+                      onClick={(e) => { e.stopPropagation(); openReview(u); }}
                       title={isReviewed ? "Update review" : "Review with comment"}
                       className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition-all hover:bg-gray-50 dark:hover:bg-gray-800"
                     >
@@ -327,122 +324,38 @@ export default function TeamDailyUpdates() {
                   </div>
                 </div>
 
-                {/* Tasks */}
-                <div className="mt-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-                    Tasks Worked On
-                  </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                    {u.tasks}
-                  </p>
-                </div>
+                {/* Tasks preview (truncated) */}
+                <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                  {u.tasks}
+                </p>
 
-                {/* Links */}
-                {linksList.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-                      Links / References
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {linksList.map((link, i) => {
-                        const isUrl = link.startsWith("http");
-                        return isUrl ? (
-                          <a
-                            key={i}
-                            href={link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-600/20 dark:ring-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors truncate max-w-[280px]"
-                          >
-                            <ExternalLink className="h-3 w-3 shrink-0" />
-                            {link.replace(/^https?:\/\//, "").slice(0, 40)}
-                          </a>
-                        ) : (
-                          <span key={i} className="inline-flex items-center rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400">
-                            {link}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Proof */}
-                {u.proof && (
-                  <div className="mt-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-                      Proof / Screenshot
-                    </p>
-                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400">
-                      <Image className="h-3.5 w-3.5" />
-                      {u.proof.startsWith("http") ? (
-                        <a href={u.proof} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline truncate max-w-[200px]">
-                          {u.proof.replace(/^https?:\/\//, "").slice(0, 40)}
-                        </a>
-                      ) : (
-                        <span>{u.proof}</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Plan */}
-                <div className="mt-3 flex items-start gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/80 px-4 py-3">
-                  <ArrowRight className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
-                      Plan for Tomorrow
-                    </p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                      {u.planForTomorrow}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Review comment (if exists) */}
-                {u.reviewComment && (
-                  <div className={`mt-3 flex items-start gap-2 rounded-xl px-4 py-3 ${
-                    u.reviewStatus === "needs-improvement"
-                      ? "bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20"
-                      : "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20"
-                  }`}>
-                    <MessageSquare className={`h-4 w-4 mt-0.5 shrink-0 ${
-                      u.reviewStatus === "needs-improvement"
-                        ? "text-orange-500"
-                        : "text-emerald-500"
-                    }`} />
-                    <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
-                        Review by {getReviewerName(u.reviewedBy)}
-                      </p>
-                      <p className={`text-sm leading-relaxed ${
-                        u.reviewStatus === "needs-improvement"
-                          ? "text-orange-700 dark:text-orange-300"
-                          : "text-emerald-700 dark:text-emerald-300"
-                      }`}>
-                        {u.reviewComment}
-                      </p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Reviewed by (no comment) */}
-                {u.reviewedBy && !u.reviewComment && (
-                  <div className="mt-3 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-                    <Eye className="h-3.5 w-3.5" />
-                    <span>
-                      Reviewed by{" "}
-                      <span className="font-medium text-gray-600 dark:text-gray-300">
-                        {getReviewerName(u.reviewedBy)}
-                      </span>
-                      {u.reviewedAt && (
-                        <span className="ml-1">
-                          on {new Date(u.reviewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        </span>
-                      )}
+                {/* Bottom meta row */}
+                <div className="mt-3 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+                  {linksList.length > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" />
+                      {linksList.length} link{linksList.length !== 1 ? "s" : ""}
                     </span>
-                  </div>
-                )}
+                  )}
+                  {u.proof && (
+                    <span className="inline-flex items-center gap-1">
+                      <Image className="h-3 w-3" />
+                      Proof
+                    </span>
+                  )}
+                  {u.reviewComment && (
+                    <span className="inline-flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      Feedback
+                    </span>
+                  )}
+                  {u.reviewedBy && !u.reviewComment && (
+                    <span className="inline-flex items-center gap-1">
+                      <Eye className="h-3 w-3" />
+                      Reviewed by {getReviewerName(u.reviewedBy)}
+                    </span>
+                  )}
+                </div>
               </div>
             );
           })}
@@ -471,6 +384,208 @@ export default function TeamDailyUpdates() {
             >
               <ChevronRight className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Detail Modal ── */}
+      {detailUpdate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm dark:bg-black/60 px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setDetailUpdate(null); }}
+        >
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-4 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
+                  {getInitials(getUserName(detailUpdate.userId))}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    {getUserName(detailUpdate.userId)}
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {getUserEmail(detailUpdate.userId)} &middot; {formatDate(detailUpdate.date)}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setDetailUpdate(null)}
+                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-5">
+              {/* Status badges */}
+              <div className="flex flex-wrap items-center gap-2">
+                {(() => {
+                  const cfg = statusConfig[detailUpdate.status] || statusConfig.completed;
+                  const Icon = cfg.icon;
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${cfg.badge}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                      {cfg.label}
+                    </span>
+                  );
+                })()}
+                {detailUpdate.reviewStatus && (() => {
+                  const rc = reviewStatusConfig[detailUpdate.reviewStatus];
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${rc.badge}`}>
+                      {detailUpdate.reviewStatus === "reviewed" ? <Eye className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />}
+                      {rc.label}
+                    </span>
+                  );
+                })()}
+              </div>
+
+              {/* Tasks */}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                  Tasks Worked On Today
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                  {detailUpdate.tasks}
+                </p>
+              </div>
+
+              {/* Links */}
+              {(() => {
+                const ll = parseLinks(detailUpdate.links);
+                return ll.length > 0 ? (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                      Links / References
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {ll.map((link, i) => {
+                        const isUrl = link.startsWith("http");
+                        return isUrl ? (
+                          <a
+                            key={i}
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-600/20 dark:ring-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                          >
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                            {link.replace(/^https?:\/\//, "").slice(0, 50)}
+                          </a>
+                        ) : (
+                          <span key={i} className="inline-flex items-center rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400">
+                            {link}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Proof */}
+              {detailUpdate.proof && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                    Proof / Screenshot
+                  </p>
+                  <div className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs text-gray-600 dark:text-gray-400">
+                    <Image className="h-3.5 w-3.5" />
+                    {detailUpdate.proof.startsWith("http") ? (
+                      <a href={detailUpdate.proof} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                        {detailUpdate.proof.replace(/^https?:\/\//, "").slice(0, 50)}
+                      </a>
+                    ) : (
+                      <span>{detailUpdate.proof}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Plan for Tomorrow */}
+              <div className="flex items-start gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/80 px-4 py-3">
+                <ArrowRight className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+                    Plan for Tomorrow
+                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                    {detailUpdate.planForTomorrow}
+                  </p>
+                </div>
+              </div>
+
+              {/* Review comment */}
+              {detailUpdate.reviewComment && (
+                <div className={`flex items-start gap-2 rounded-xl px-4 py-3 ${
+                  detailUpdate.reviewStatus === "needs-improvement"
+                    ? "bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20"
+                    : "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20"
+                }`}>
+                  <MessageSquare className={`h-4 w-4 mt-0.5 shrink-0 ${
+                    detailUpdate.reviewStatus === "needs-improvement" ? "text-orange-500" : "text-emerald-500"
+                  }`} />
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+                      Review by {getReviewerName(detailUpdate.reviewedBy)}
+                    </p>
+                    <p className={`text-sm leading-relaxed ${
+                      detailUpdate.reviewStatus === "needs-improvement"
+                        ? "text-orange-700 dark:text-orange-300"
+                        : "text-emerald-700 dark:text-emerald-300"
+                    }`}>
+                      {detailUpdate.reviewComment}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {detailUpdate.reviewedBy && !detailUpdate.reviewComment && (
+                <div className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                  <Eye className="h-3.5 w-3.5" />
+                  <span>
+                    Reviewed by{" "}
+                    <span className="font-medium text-gray-600 dark:text-gray-300">
+                      {getReviewerName(detailUpdate.reviewedBy)}
+                    </span>
+                    {detailUpdate.reviewedAt && (
+                      <span className="ml-1">
+                        on {new Date(detailUpdate.reviewedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      </span>
+                    )}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer actions */}
+            <div className="flex items-center justify-end gap-2 border-t border-gray-100 dark:border-gray-800 px-6 py-4">
+              <button
+                onClick={() => setDetailUpdate(null)}
+                className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Close
+              </button>
+              {!detailUpdate.reviewStatus && (
+                <button
+                  onClick={() => { quickReview(detailUpdate._id); setDetailUpdate(null); }}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  Mark Reviewed
+                </button>
+              )}
+              <button
+                onClick={() => { openReview(detailUpdate); setDetailUpdate(null); }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700 transition-colors"
+              >
+                <MessageSquare className="h-4 w-4" />
+                {detailUpdate.reviewStatus ? "Edit Review" : "Review"}
+              </button>
+            </div>
           </div>
         </div>
       )}
