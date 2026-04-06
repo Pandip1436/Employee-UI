@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import {
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   ExternalLink,

@@ -1,7 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import {
   Plus,
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   X,
@@ -60,8 +59,6 @@ const todayISO = () => {
 const getUserName = (u: DailyUpdateData["userId"]): string =>
   typeof u === "object" ? u.name : String(u);
 
-const getUserEmail = (u: DailyUpdateData["userId"]): string =>
-  typeof u === "object" ? u.email : "";
 
 const getInitials = (name: string) =>
   name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
@@ -93,8 +90,6 @@ export default function DailyUpdates() {
   const [proof, setProof] = useState("");
   const [planForTomorrow, setPlanForTomorrow] = useState("");
 
-  // Detail view
-  const [detailUpdate, setDetailUpdate] = useState<DailyUpdateData | null>(null);
 
   /* ── Fetch ── */
   const fetchUpdates = () => {
