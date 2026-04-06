@@ -71,6 +71,9 @@ import ReviewCycles from "./pages/perf-cycles/ReviewCycles";
 import DailyUpdates from "./pages/daily-updates/DailyUpdates";
 import TeamDailyUpdates from "./pages/daily-updates/TeamDailyUpdates";
 
+// Chat Module
+import TeamChat from "./pages/chat/TeamChat";
+
 // Learning Module
 import LearningHub from "./pages/learning-hub/LearningHub";
 import MyCertifications from "./pages/learning-certs/MyCertifications";
@@ -119,6 +122,9 @@ export default function App() {
           <Route path="/learning/certifications" element={<MyCertifications />} />
           <Route path="/learning/teaching" element={<Teaching />} />
           <Route path="/learning/calendar" element={<LearningCalendar />} />
+
+          {/* Chat */}
+          <Route path="/chat" element={<TeamChat />} />
 
           {/* Daily Updates */}
           <Route path="/daily-updates" element={<DailyUpdates />} />
