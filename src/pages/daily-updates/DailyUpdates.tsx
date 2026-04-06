@@ -13,6 +13,8 @@ import {
   FileText,
   ArrowRight,
   Image,
+  Eye,
+  MessageSquare,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { dailyUpdateApi } from "../../api/dailyUpdateApi";
@@ -89,6 +91,9 @@ export default function DailyUpdates() {
   const [status, setStatus] = useState<string>("completed");
   const [proof, setProof] = useState("");
   const [planForTomorrow, setPlanForTomorrow] = useState("");
+
+  // Detail modal
+  const [detailUpdate, setDetailUpdate] = useState<DailyUpdateData | null>(null);
 
 
   /* ── Fetch ── */
@@ -225,7 +230,8 @@ export default function DailyUpdates() {
             return (
               <div
                 key={u._id}
-                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md"
+                onClick={() => setDetailUpdate(u)}
+                className="cursor-pointer rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-500/30"
               >
                 {/* Top row */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -235,10 +241,10 @@ export default function DailyUpdates() {
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-900 dark:text-white">
-                        {getUserName(u.userId)}
+                        {formatDate(u.date)}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {formatDate(u.date)}
+                        {getUserName(u.userId)}
                       </p>
                     </div>
                   </div>
@@ -247,14 +253,26 @@ export default function DailyUpdates() {
                       <StatusIcon className="h-3 w-3" />
                       {sConfig.label}
                     </span>
+                    {u.reviewStatus === "reviewed" && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20 px-2.5 py-1 text-xs font-semibold">
+                        <Eye className="h-3 w-3" />
+                        Reviewed
+                      </span>
+                    )}
+                    {u.reviewStatus === "needs-improvement" && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 text-orange-700 ring-1 ring-orange-600/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-500/20 px-2.5 py-1 text-xs font-semibold">
+                        <AlertTriangle className="h-3 w-3" />
+                        Needs Improvement
+                      </span>
+                    )}
                     <button
-                      onClick={() => openEdit(u)}
+                      onClick={(e) => { e.stopPropagation(); openEdit(u); }}
                       className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300 transition-colors"
                     >
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
                     <button
-                      onClick={() => handleDelete(u._id)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(u._id); }}
                       className="rounded-lg p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -262,79 +280,31 @@ export default function DailyUpdates() {
                   </div>
                 </div>
 
-                {/* Tasks */}
-                <div className="mt-4">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-                    Tasks Worked On
-                  </p>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                    {u.tasks}
-                  </p>
-                </div>
+                {/* Tasks preview (truncated) */}
+                <p className="mt-3 text-sm text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed">
+                  {u.tasks}
+                </p>
 
-                {/* Links */}
-                {linksList.length > 0 && (
-                  <div className="mt-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-                      Links / References
-                    </p>
-                    <div className="flex flex-wrap gap-2">
-                      {linksList.map((link, i) => {
-                        const isUrl = link.startsWith("http");
-                        return isUrl ? (
-                          <a
-                            key={i}
-                            href={link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-600/20 dark:ring-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors truncate max-w-[280px]"
-                          >
-                            <ExternalLink className="h-3 w-3 shrink-0" />
-                            {link.replace(/^https?:\/\//, "").slice(0, 40)}
-                          </a>
-                        ) : (
-                          <span
-                            key={i}
-                            className="inline-flex items-center rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400"
-                          >
-                            {link}
-                          </span>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Proof */}
-                {u.proof && (
-                  <div className="mt-3">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
-                      Proof / Screenshot
-                    </p>
-                    <div className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-400">
-                      <Image className="h-3.5 w-3.5" />
-                      {u.proof.startsWith("http") ? (
-                        <a href={u.proof} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline truncate max-w-[200px]">
-                          {u.proof.replace(/^https?:\/\//, "").slice(0, 40)}
-                        </a>
-                      ) : (
-                        <span>{u.proof}</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Plan for Tomorrow */}
-                <div className="mt-3 flex items-start gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/80 px-4 py-3">
-                  <ArrowRight className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
-                      Plan for Tomorrow
-                    </p>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
-                      {u.planForTomorrow}
-                    </p>
-                  </div>
+                {/* Bottom meta row */}
+                <div className="mt-3 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500">
+                  {linksList.length > 0 && (
+                    <span className="inline-flex items-center gap-1">
+                      <ExternalLink className="h-3 w-3" />
+                      {linksList.length} link{linksList.length !== 1 ? "s" : ""}
+                    </span>
+                  )}
+                  {u.proof && (
+                    <span className="inline-flex items-center gap-1">
+                      <Image className="h-3 w-3" />
+                      Proof attached
+                    </span>
+                  )}
+                  {u.reviewComment && (
+                    <span className="inline-flex items-center gap-1">
+                      <MessageSquare className="h-3 w-3" />
+                      Feedback
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -368,6 +338,195 @@ export default function DailyUpdates() {
               <span className="hidden sm:inline">Next</span>
               <ChevronRight className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Detail Modal ── */}
+      {detailUpdate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm dark:bg-black/60 px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setDetailUpdate(null); }}
+        >
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800">
+            {/* Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-4 rounded-t-2xl">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
+                  {getInitials(getUserName(detailUpdate.userId))}
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    {formatDate(detailUpdate.date)}
+                  </h2>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    {getUserName(detailUpdate.userId)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => { openEdit(detailUpdate); setDetailUpdate(null); }}
+                  className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => setDetailUpdate(null)}
+                  className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-5">
+              {/* Status badges */}
+              <div className="flex flex-wrap items-center gap-2">
+                {(() => {
+                  const cfg = statusConfig[detailUpdate.status] || statusConfig.completed;
+                  const Icon = cfg.icon;
+                  return (
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${cfg.badge}`}>
+                      <Icon className="h-3.5 w-3.5" />
+                      {cfg.label}
+                    </span>
+                  );
+                })()}
+                {detailUpdate.reviewStatus === "reviewed" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20 px-3 py-1 text-xs font-semibold">
+                    <Eye className="h-3.5 w-3.5" />
+                    Reviewed
+                  </span>
+                )}
+                {detailUpdate.reviewStatus === "needs-improvement" && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-50 text-orange-700 ring-1 ring-orange-600/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-500/20 px-3 py-1 text-xs font-semibold">
+                    <AlertTriangle className="h-3.5 w-3.5" />
+                    Needs Improvement
+                  </span>
+                )}
+              </div>
+
+              {/* Tasks */}
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                  Tasks Worked On Today
+                </p>
+                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                  {detailUpdate.tasks}
+                </p>
+              </div>
+
+              {/* Links */}
+              {(() => {
+                const ll = parseLinks(detailUpdate.links);
+                return ll.length > 0 ? (
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                      Links / References
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {ll.map((link, i) => {
+                        const isUrl = link.startsWith("http");
+                        return isUrl ? (
+                          <a
+                            key={i}
+                            href={link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-600/20 dark:ring-indigo-500/20 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                          >
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                            {link.replace(/^https?:\/\//, "").slice(0, 50)}
+                          </a>
+                        ) : (
+                          <span key={i} className="inline-flex items-center rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-1 text-xs text-gray-600 dark:text-gray-400">
+                            {link}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              {/* Proof */}
+              {detailUpdate.proof && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5">
+                    Proof / Screenshot
+                  </p>
+                  <div className="inline-flex items-center gap-1.5 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2 text-xs text-gray-600 dark:text-gray-400">
+                    <Image className="h-3.5 w-3.5" />
+                    {detailUpdate.proof.startsWith("http") ? (
+                      <a href={detailUpdate.proof} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline">
+                        {detailUpdate.proof.replace(/^https?:\/\//, "").slice(0, 50)}
+                      </a>
+                    ) : (
+                      <span>{detailUpdate.proof}</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Plan for Tomorrow */}
+              <div className="flex items-start gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/80 px-4 py-3">
+                <ArrowRight className="h-4 w-4 text-indigo-500 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+                    Plan for Tomorrow
+                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed whitespace-pre-line">
+                    {detailUpdate.planForTomorrow}
+                  </p>
+                </div>
+              </div>
+
+              {/* Manager Review Feedback */}
+              {detailUpdate.reviewComment && (
+                <div className={`flex items-start gap-2 rounded-xl px-4 py-3 ${
+                  detailUpdate.reviewStatus === "needs-improvement"
+                    ? "bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20"
+                    : "bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20"
+                }`}>
+                  <MessageSquare className={`h-4 w-4 mt-0.5 shrink-0 ${
+                    detailUpdate.reviewStatus === "needs-improvement" ? "text-orange-500" : "text-emerald-500"
+                  }`} />
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-0.5">
+                      Manager Feedback
+                    </p>
+                    <p className={`text-sm leading-relaxed ${
+                      detailUpdate.reviewStatus === "needs-improvement"
+                        ? "text-orange-700 dark:text-orange-300"
+                        : "text-emerald-700 dark:text-emerald-300"
+                    }`}>
+                      {detailUpdate.reviewComment}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-end gap-2 border-t border-gray-100 dark:border-gray-800 px-6 py-4">
+              <button
+                onClick={() => { handleDelete(detailUpdate._id); setDetailUpdate(null); }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-rose-300 dark:border-rose-500/30 px-4 py-2 text-sm font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </button>
+              <button
+                onClick={() => { openEdit(detailUpdate); setDetailUpdate(null); }}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+              >
+                <Pencil className="h-3.5 w-3.5" />
+                Edit Update
+              </button>
+            </div>
           </div>
         </div>
       )}

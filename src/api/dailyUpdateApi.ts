@@ -10,6 +10,10 @@ export interface DailyUpdateData {
   status: "completed" | "in-progress" | "blocked";
   proof?: string;
   planForTomorrow: string;
+  reviewedBy?: { _id: string; name: string; email: string } | string;
+  reviewedAt?: string;
+  reviewComment?: string;
+  reviewStatus?: "reviewed" | "needs-improvement";
   createdAt: string;
   updatedAt: string;
 }
@@ -38,4 +42,7 @@ export const dailyUpdateApi = {
 
   getById: (id: string) =>
     api.get<ApiResponse<DailyUpdateData>>(`/daily-updates/${id}`),
+
+  review: (id: string, data: { reviewStatus: "reviewed" | "needs-improvement"; reviewComment?: string }) =>
+    api.patch<ApiResponse<DailyUpdateData>>(`/daily-updates/${id}/review`, data),
 };
