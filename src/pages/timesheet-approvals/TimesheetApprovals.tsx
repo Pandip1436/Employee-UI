@@ -1,6 +1,6 @@
+/* eslint-disable react-hooks/set-state-in-effect */
 import { useState, useEffect } from "react";
 import {
-  CalendarDays,
   Clock,
   ChevronLeft,
   ChevronRight,
@@ -206,10 +206,6 @@ export default function TimesheetApprovals() {
     });
   };
 
-  const toggleAll = () => {
-    if (selected.size === timesheets.length) setSelected(new Set());
-    else setSelected(new Set(timesheets.map((t) => t._id)));
-  };
 
   const handlePreview = (id: string) => {
     setPreviewLoading(true);
