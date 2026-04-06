@@ -10,6 +10,8 @@ import {
   X,
   Users,
   Eye,
+  MessageSquare,
+  AlertTriangle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
@@ -29,6 +31,19 @@ const getUserName = (userId: User | string): string => {
   return String(userId);
 };
 
+const getUserEmail = (userId: User | string): string => {
+  if (typeof userId === "object" && userId !== null) return (userId as User).email;
+  return "";
+};
+
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
 const getProjectName = (p: Project | string): string => {
   if (typeof p === "object" && p !== null) return (p as Project).name;
   return String(p);
@@ -36,7 +51,27 @@ const getProjectName = (p: Project | string): string => {
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-const statusConfig: Record<string, { dot: string; badge: string; label: string }> = {
+/* ─── Config ─── */
+
+const tsStatusConfig: Record<string, { dot: string; badge: string; label: string }> = {
+  submitted: {
+    dot: "bg-amber-500",
+    badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20",
+    label: "Pending",
+  },
+  approved: {
+    dot: "bg-emerald-500",
+    badge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20",
+    label: "Approved",
+  },
+  rejected: {
+    dot: "bg-rose-500",
+    badge: "bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20",
+    label: "Rejected",
+  },
+};
+
+const projectStatusConfig: Record<string, { dot: string; badge: string; label: string }> = {
   active: {
     dot: "bg-emerald-500",
     badge: "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20",
@@ -54,11 +89,20 @@ const statusConfig: Record<string, { dot: string; badge: string; label: string }
   },
 };
 
+type Tab = "submitted" | "approved" | "rejected";
+
+const tabs: { key: Tab; label: string }[] = [
+  { key: "submitted", label: "Pending" },
+  { key: "approved", label: "Approved" },
+  { key: "rejected", label: "Rejected" },
+];
+
 const labelClasses =
-  "text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500";
+  "text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500";
 
 /* ─── Component ─── */
 export default function TimesheetApprovals() {
+  const [tab, setTab] = useState<Tab>("submitted");
   const [timesheets, setTimesheets] = useState<WeeklyTimesheetData[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
@@ -77,13 +121,15 @@ export default function TimesheetApprovals() {
   const [projectDetail, setProjectDetail] = useState<Project | null>(null);
   const [projectLoading, setProjectLoading] = useState(false);
 
-  // Bulk select
+  // Bulk select (pending tab only)
   const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  /* ── Data fetching ── */
 
   const fetchApprovals = () => {
     setLoading(true);
     weeklyTimesheetApi
-      .getPendingApprovals({ page, limit: 10 })
+      .getPendingApprovals({ page, limit: 10, status: tab })
       .then((res) => {
         setTimesheets(res.data.data);
         setPagination(res.data.pagination);
@@ -94,8 +140,14 @@ export default function TimesheetApprovals() {
   };
 
   useEffect(() => {
+    setPage(1);
+  }, [tab]);
+
+  useEffect(() => {
     fetchApprovals();
-  }, [page]);
+  }, [page, tab]);
+
+  /* ── Actions ── */
 
   const handleApprove = (id: string) => {
     setActionLoading(id);
@@ -178,20 +230,27 @@ export default function TimesheetApprovals() {
       .finally(() => setProjectLoading(false));
   };
 
+  const isPending = tab === "submitted";
+
   return (
     <div className="space-y-6">
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Timesheet Approvals
-          </h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Review and approve submitted timesheets from your team
-          </p>
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/20">
+            <Clock className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+              Timesheet Approvals
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Review and manage employee timesheet submissions
+            </p>
+          </div>
         </div>
 
-        {timesheets.length > 0 && (
+        {isPending && timesheets.length > 0 && (
           <button
             onClick={handleBulkApprove}
             disabled={selected.size === 0 || actionLoading === "bulk"}
@@ -203,184 +262,195 @@ export default function TimesheetApprovals() {
         )}
       </div>
 
+      {/* ── Tabs ── */}
+      <div className="rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
+        <div className="flex overflow-x-auto scrollbar-hide">
+          {tabs.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex-1 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+                tab === t.key
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── Content ── */}
       {loading ? (
-        <div className="flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-20">
+        <div className="flex items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-20">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600" />
         </div>
       ) : timesheets.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-20 px-4 text-center">
+        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-20 px-4 text-center">
           <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-4 mb-4">
             <FileText className="h-8 w-8 text-gray-300 dark:text-gray-600" />
           </div>
           <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            No pending timesheets
+            No {tabs.find((t) => t.key === tab)?.label.toLowerCase()} timesheets
           </p>
           <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-            All submitted timesheets have been reviewed
+            {isPending
+              ? "All submitted timesheets have been reviewed"
+              : `Timesheets will appear here once ${tab}`}
           </p>
         </div>
       ) : (
-        <>
-          {/* ── Desktop Table ── */}
-          <div className="hidden md:block overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-gray-200 dark:border-gray-800">
-                  <th className="px-4 py-3">
-                    <input
-                      type="checkbox"
-                      checked={selected.size === timesheets.length && timesheets.length > 0}
-                      onChange={toggleAll}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                  </th>
-                  <th className={`${labelClasses} px-5 py-3 text-left`}>Employee</th>
-                  <th className={`${labelClasses} px-5 py-3 text-left`}>Week Range</th>
-                  <th className={`${labelClasses} px-5 py-3 text-left`}>Total Hours</th>
-                  <th className={`${labelClasses} px-5 py-3 text-left`}>Submitted</th>
-                  <th className={`${labelClasses} px-5 py-3 text-right`}>Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {timesheets.map((ts) => (
-                  <tr
-                    key={ts._id}
-                    className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
-                  >
-                    <td className="px-4 py-4">
+        <div className="space-y-3">
+          {timesheets.map((ts) => {
+            const userName = getUserName(ts.userId);
+            const userEmail = getUserEmail(ts.userId);
+            const sConfig = tsStatusConfig[ts.status] || tsStatusConfig.submitted;
+
+            return (
+              <div
+                key={ts._id}
+                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 transition-all hover:shadow-md"
+              >
+                {/* Top: avatar + info + actions */}
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  {/* Avatar + user info */}
+                  <div className="flex items-center gap-3">
+                    {isPending && (
                       <input
                         type="checkbox"
                         checked={selected.has(ts._id)}
                         onChange={() => toggleSelect(ts._id)}
                         className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                       />
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300">
-                        <Users className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                        {getUserName(ts.userId)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400">
-                        <CalendarDays className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                        {formatDate(ts.weekStart)} &mdash; {formatDate(ts.weekEnd)}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        <Clock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                        {ts.totalHours}h
-                      </span>
-                    </td>
-                    <td className="px-5 py-4 text-sm text-gray-500 dark:text-gray-400">
-                      {ts.submittedAt ? formatDate(ts.submittedAt) : "—"}
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => handlePreview(ts._id)}
-                          title="Preview timesheet"
-                          className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-600/20 dark:ring-indigo-500/20 transition-all hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          Preview
-                        </button>
-                        <button
-                          onClick={() => handleApprove(ts._id)}
-                          disabled={actionLoading === ts._id}
-                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1.5 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-600/20 dark:ring-emerald-500/20 transition-all hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-40"
-                        >
-                          <CheckCircle2 className="h-3.5 w-3.5" />
-                          Approve
-                        </button>
-                        <button
-                          onClick={() => {
-                            setRejectId(ts._id);
-                            setRejectComment("");
-                          }}
-                          disabled={actionLoading === ts._id}
-                          className="inline-flex items-center gap-1 rounded-lg bg-rose-50 dark:bg-rose-500/10 px-3 py-1.5 text-xs font-semibold text-rose-700 dark:text-rose-400 ring-1 ring-rose-600/20 dark:ring-rose-500/20 transition-all hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-40"
-                        >
-                          <XCircle className="h-3.5 w-3.5" />
-                          Reject
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* ── Mobile Cards ── */}
-          <div className="space-y-3 md:hidden">
-            {timesheets.map((ts) => (
-              <div
-                key={ts._id}
-                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(ts._id)}
-                      onChange={() => toggleSelect(ts._id)}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {getUserName(ts.userId)}
-                    </span>
+                    )}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
+                      {getInitials(userName)}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold text-gray-900 dark:text-white">
+                        {userName}
+                      </p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                        {userEmail}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-sm font-bold text-gray-900 dark:text-white">
-                    {ts.totalHours}h
-                  </span>
-                </div>
 
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500 dark:text-gray-400 mb-3">
-                  <span className="inline-flex items-center gap-1.5">
-                    <CalendarDays className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                    {formatDate(ts.weekStart)} &mdash; {formatDate(ts.weekEnd)}
-                  </span>
-                  {ts.submittedAt && (
-                    <span className="text-xs text-gray-400">
-                      Submitted {formatDate(ts.submittedAt)}
-                    </span>
+                  {/* Action buttons (pending tab only) */}
+                  {isPending && (
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        onClick={() => handlePreview(ts._id)}
+                        title="Preview timesheet"
+                        className="flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        <Eye className="h-4 w-4" />
+                        Preview
+                      </button>
+                      <button
+                        onClick={() => handleApprove(ts._id)}
+                        disabled={actionLoading === ts._id}
+                        className="flex items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-40"
+                      >
+                        <CheckCircle2 className="h-4 w-4" />
+                        Approve
+                      </button>
+                      <button
+                        onClick={() => {
+                          setRejectId(ts._id);
+                          setRejectComment("");
+                        }}
+                        disabled={actionLoading === ts._id}
+                        className="flex items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 disabled:opacity-40"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Reject
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Status badge + preview (approved / rejected tabs) */}
+                  {!isPending && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handlePreview(ts._id)}
+                        title="Preview timesheet"
+                        className="flex items-center justify-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        Preview
+                      </button>
+                      <span
+                        className={`inline-flex items-center gap-1.5 self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${sConfig.badge}`}
+                      >
+                        <span className={`h-1.5 w-1.5 rounded-full ${sConfig.dot}`} />
+                        {sConfig.label}
+                      </span>
+                    </div>
                   )}
                 </div>
 
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => handlePreview(ts._id)}
-                    className="inline-flex items-center justify-center rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-3 py-2 text-xs font-semibold text-indigo-700 dark:text-indigo-400 ring-1 ring-indigo-600/20 dark:ring-indigo-500/20 transition-all hover:bg-indigo-100 dark:hover:bg-indigo-500/20"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleApprove(ts._id)}
-                    disabled={actionLoading === ts._id}
-                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-50 dark:bg-emerald-500/10 px-3 py-2 text-xs font-semibold text-emerald-700 dark:text-emerald-400 ring-1 ring-emerald-600/20 dark:ring-emerald-500/20 transition-all hover:bg-emerald-100 dark:hover:bg-emerald-500/20 disabled:opacity-40"
-                  >
-                    <CheckCircle2 className="h-3.5 w-3.5" />
-                    Approve
-                  </button>
-                  <button
-                    onClick={() => {
-                      setRejectId(ts._id);
-                      setRejectComment("");
-                    }}
-                    disabled={actionLoading === ts._id}
-                    className="flex-1 inline-flex items-center justify-center gap-1 rounded-lg bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-700 dark:text-rose-400 ring-1 ring-rose-600/20 dark:ring-rose-500/20 transition-all hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-40"
-                  >
-                    <XCircle className="h-3.5 w-3.5" />
-                    Reject
-                  </button>
+                {/* Detail chips */}
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                    <p className={labelClasses}>Week Range</p>
+                    <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">
+                      {formatDate(ts.weekStart)} &mdash; {formatDate(ts.weekEnd)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                    <p className={labelClasses}>Total Hours</p>
+                    <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">
+                      {ts.totalHours}h
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                    <p className={labelClasses}>Submitted</p>
+                    <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">
+                      {ts.submittedAt ? formatDate(ts.submittedAt) : "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
+                    <p className={labelClasses}>
+                      {ts.status === "approved" ? "Approved" : ts.status === "rejected" ? "Rejected" : "Entries"}
+                    </p>
+                    <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">
+                      {ts.status === "approved" || ts.status === "rejected"
+                        ? ts.approvedAt
+                          ? formatDate(ts.approvedAt)
+                          : "—"
+                        : `${ts.entries.length} row${ts.entries.length !== 1 ? "s" : ""}`}
+                    </p>
+                  </div>
                 </div>
+
+                {/* Manager comment (rejected) */}
+                {ts.managerComment && (
+                  <div className="mt-3 flex items-start gap-2 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 px-3 py-2.5">
+                    <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" />
+                    <p className="text-sm text-rose-700 dark:text-rose-300">
+                      {ts.managerComment}
+                    </p>
+                  </div>
+                )}
+
+                {/* Approved by info */}
+                {ts.approvedBy && !isPending && (
+                  <div className="mt-3 flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                    <Users className="h-3.5 w-3.5" />
+                    <span>
+                      {ts.status === "approved" ? "Approved" : "Reviewed"} by{" "}
+                      <span className="font-medium text-gray-600 dark:text-gray-300">
+                        {getUserName(ts.approvedBy)}
+                      </span>
+                    </span>
+                  </div>
+                )}
               </div>
-            ))}
-          </div>
-        </>
+            );
+          })}
+        </div>
       )}
 
       {/* ── Pagination ── */}
@@ -388,11 +458,11 @@ export default function TimesheetApprovals() {
         <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Page{" "}
-            <span className="font-medium text-gray-700 dark:text-gray-200">
+            <span className="font-semibold text-gray-900 dark:text-white">
               {pagination.page}
             </span>{" "}
             of{" "}
-            <span className="font-medium text-gray-700 dark:text-gray-200">
+            <span className="font-semibold text-gray-900 dark:text-white">
               {pagination.pages}
             </span>
           </p>
@@ -400,7 +470,7 @@ export default function TimesheetApprovals() {
             <button
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-all hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Previous</span>
@@ -408,7 +478,7 @@ export default function TimesheetApprovals() {
             <button
               disabled={page >= pagination.pages}
               onClick={() => setPage(page + 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-all hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               <span className="hidden sm:inline">Next</span>
               <ChevronRight className="h-4 w-4" />
@@ -548,27 +618,31 @@ export default function TimesheetApprovals() {
                 >
                   Close
                 </button>
-                <button
-                  onClick={() => {
-                    handleApprove(previewSheet._id);
-                    setPreviewSheet(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-emerald-700"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  Approve
-                </button>
-                <button
-                  onClick={() => {
-                    setRejectId(previewSheet._id);
-                    setRejectComment("");
-                    setPreviewSheet(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-rose-700"
-                >
-                  <XCircle className="h-4 w-4" />
-                  Reject
-                </button>
+                {previewSheet.status === "submitted" && (
+                  <>
+                    <button
+                      onClick={() => {
+                        handleApprove(previewSheet._id);
+                        setPreviewSheet(null);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-emerald-700"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Approve
+                    </button>
+                    <button
+                      onClick={() => {
+                        setRejectId(previewSheet._id);
+                        setRejectComment("");
+                        setPreviewSheet(null);
+                      }}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-rose-700"
+                    >
+                      <XCircle className="h-4 w-4" />
+                      Reject
+                    </button>
+                  </>
+                )}
               </div>
             )}
           </div>
@@ -606,7 +680,7 @@ export default function TimesheetApprovals() {
                       {projectDetail.name}
                     </h3>
                     {(() => {
-                      const cfg = statusConfig[projectDetail.status] || statusConfig.active;
+                      const cfg = projectStatusConfig[projectDetail.status] || projectStatusConfig.active;
                       return (
                         <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ring-inset whitespace-nowrap ${cfg.badge}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
@@ -696,40 +770,52 @@ export default function TimesheetApprovals() {
 
       {/* ── Reject Modal ── */}
       {rejectId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="w-full max-w-md rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-xl">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Reject Timesheet
-              </h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm dark:bg-black/60 px-4">
+          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-2xl dark:shadow-black/40 border border-gray-200 dark:border-gray-800">
+            {/* Modal header */}
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-500/20">
+                  <AlertTriangle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                    Reject Timesheet
+                  </h2>
+                  <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
+                    The employee will see this comment
+                  </p>
+                </div>
+              </div>
               <button
                 onClick={() => setRejectId(null)}
-                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              Please provide a reason for rejecting this timesheet. The employee will see this comment.
-            </p>
+
+            {/* Textarea */}
             <textarea
+              rows={3}
+              placeholder="Enter rejection reason..."
               value={rejectComment}
               onChange={(e) => setRejectComment(e.target.value)}
-              placeholder="Enter rejection reason..."
-              rows={3}
-              className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+              className="mb-5 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20 resize-none"
             />
-            <div className="flex justify-end gap-2 mt-4">
+
+            {/* Modal actions */}
+            <div className="flex gap-3">
               <button
                 onClick={() => setRejectId(null)}
-                className="rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 transition-all hover:bg-gray-50 dark:hover:bg-gray-800"
+                className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
               <button
                 onClick={handleReject}
                 disabled={actionLoading === rejectId}
-                className="rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white transition-all hover:bg-rose-700 disabled:opacity-40"
+                className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 disabled:opacity-40"
               >
                 Reject Timesheet
               </button>
