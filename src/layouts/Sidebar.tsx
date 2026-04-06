@@ -3,7 +3,7 @@ import {
   LayoutDashboard, Clock, FolderKanban, CheckSquare, Users, X,
   UserCheck, CalendarDays, FileText, UsersRound, CalendarRange,
   ClipboardList, UsersRound as TeamIcon, PartyPopper, Laptop, Gift, BarChart3,
-  Grid3X3, CalendarClock, History, FileCheck, Settings, AlertTriangle, Download,
+  Grid3X3, CalendarClock, History, FileCheck, Settings,
   Megaphone, Award, ClipboardCheck, ScrollText,
   Target, MessageCircle, TrendingUp, BookOpen, GraduationCap,
 } from "lucide-react";
