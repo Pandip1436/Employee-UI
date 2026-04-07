@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, Save, Loader2, Mail, Eye, EyeOff, FileText } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Mail, Eye, EyeOff, FileText, Info, Code } from "lucide-react";
 import { adminSettingsApi } from "../../api/adminSettingsApi";
 import toast from "react-hot-toast";
 
@@ -10,6 +10,59 @@ interface EmailTemplate {
   key: string;
   subject: string;
   body: string;
+}
+
+/* ─── Available template keys & their variables ─── */
+const TEMPLATE_REGISTRY: Record<
+  string,
+  { label: string; description: string; variables: { name: string; sample: string; description: string }[] }
+> = {
+  clock_in_notification: {
+    label: "Clock In Notification",
+    description: "Sent to admins when an employee clocks in for the day",
+    variables: [
+      { name: "employeeName", sample: "John Doe", description: "Full name of the employee" },
+      { name: "employeeEmail", sample: "john@example.com", description: "Employee's email address" },
+      { name: "date", sample: "Monday, October 21, 2025", description: "Formatted date of clock-in" },
+      { name: "clockInTime", sample: "09:12:45 AM", description: "Time the employee clocked in" },
+    ],
+  },
+  clock_out_notification: {
+    label: "Clock Out Notification",
+    description: "Sent to admins when an employee clocks out",
+    variables: [
+      { name: "employeeName", sample: "John Doe", description: "Full name of the employee" },
+      { name: "employeeEmail", sample: "john@example.com", description: "Employee's email address" },
+      { name: "date", sample: "Monday, October 21, 2025", description: "Formatted date" },
+      { name: "clockInTime", sample: "09:12:45 AM", description: "Time clocked in" },
+      { name: "clockOutTime", sample: "06:30:12 PM", description: "Time clocked out" },
+      { name: "totalHours", sample: "8.5h", description: "Total hours worked" },
+    ],
+  },
+  late_alert_notification: {
+    label: "Late Alert Notification",
+    description: "Sent to admins when an employee arrives late",
+    variables: [
+      { name: "employeeName", sample: "John Doe", description: "Full name of the employee" },
+      { name: "employeeEmail", sample: "john@example.com", description: "Employee's email address" },
+      { name: "date", sample: "Monday, October 21, 2025", description: "Formatted date" },
+      { name: "clockInTime", sample: "10:25:30 AM", description: "Actual clock-in time" },
+      { name: "officeTime", sample: "09:15 AM", description: "Office start time" },
+      { name: "lateDuration", sample: "1h 10m", description: "How late (formatted)" },
+      { name: "lateByMinutes", sample: "70", description: "Minutes late (numeric)" },
+    ],
+  },
+};
+
+/** Renders {{var}} placeholders with sample values for preview */
+function renderPreview(template: string, key: string): string {
+  const reg = TEMPLATE_REGISTRY[key];
+  if (!reg) return template;
+  const samples: Record<string, string> = {};
+  reg.variables.forEach((v) => (samples[v.name] = v.sample));
+  return template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k) =>
+    samples[k] !== undefined ? samples[k] : `{{${k}}}`
+  );
 }
 
 export default function AdminEmailTemplates() {
@@ -103,6 +156,42 @@ export default function AdminEmailTemplates() {
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
           Save All
         </button>
+      </div>
+
+      {/* Available Template Keys Reference */}
+      <div className="rounded-xl border border-blue-200 dark:border-blue-500/30 bg-blue-50/50 dark:bg-blue-500/5 p-5">
+        <div className="mb-3 flex items-center gap-2">
+          <Info className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+          <h3 className="font-semibold text-gray-900 dark:text-white">Recognized Template Keys</h3>
+        </div>
+        <p className="text-xs text-gray-600 dark:text-gray-400 mb-3">
+          The system uses these specific keys to find the right template when sending emails. If a key isn't configured, the system falls back to a default template.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+          {Object.entries(TEMPLATE_REGISTRY).map(([key, info]) => {
+            const exists = templates.some((t) => t.key === key);
+            return (
+              <div
+                key={key}
+                className={`rounded-lg border px-3 py-2 ${
+                  exists
+                    ? "border-emerald-200 dark:border-emerald-500/30 bg-emerald-50/50 dark:bg-emerald-500/5"
+                    : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                }`}
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <code className="text-xs font-semibold text-gray-900 dark:text-white">{key}</code>
+                  {exists ? (
+                    <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">CONFIGURED</span>
+                  ) : (
+                    <span className="text-[10px] font-semibold text-gray-400">DEFAULT</span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{info.description}</p>
+              </div>
+            );
+          })}
+        </div>
       </div>
 
       {/* Add New Template */}
@@ -219,20 +308,50 @@ export default function AdminEmailTemplates() {
                 </div>
               </div>
 
+              {/* Variables for this template */}
+              {TEMPLATE_REGISTRY[tpl.key] && (
+                <div className="border-t border-gray-100 dark:border-gray-800 px-5 py-3 bg-indigo-50/30 dark:bg-indigo-500/5">
+                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1.5">
+                    <Code className="h-3 w-3" />
+                    Available Variables
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {TEMPLATE_REGISTRY[tpl.key].variables.map((v) => (
+                      <button
+                        key={v.name}
+                        type="button"
+                        onClick={() => {
+                          navigator.clipboard.writeText(`{{${v.name}}}`);
+                          toast.success(`Copied {{${v.name}}}`);
+                        }}
+                        title={v.description}
+                        className="inline-flex items-center rounded-md bg-white dark:bg-gray-800 border border-indigo-200 dark:border-indigo-500/30 px-2 py-0.5 text-xs font-mono text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                      >
+                        {`{{${v.name}}}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Preview Section */}
               {previewIndex === i && (
                 <div className="border-t border-gray-100 dark:border-gray-800 px-5 py-4">
                   <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                    Preview
+                    Preview {TEMPLATE_REGISTRY[tpl.key] && <span className="text-indigo-500 normal-case font-normal">(with sample data)</span>}
                   </p>
                   <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-5">
                     <div className="mb-3 border-b border-gray-200 dark:border-gray-700 pb-3">
                       <p className="text-xs text-gray-400 dark:text-gray-500">Subject:</p>
-                      <p className="font-semibold text-gray-900 dark:text-white">{tpl.subject || "(empty)"}</p>
+                      <p className="font-semibold text-gray-900 dark:text-white">
+                        {renderPreview(tpl.subject, tpl.key) || "(empty)"}
+                      </p>
                     </div>
                     <div
                       className="prose prose-sm dark:prose-invert max-w-none text-gray-700 dark:text-gray-300"
-                      dangerouslySetInnerHTML={{ __html: tpl.body || "<em>No content</em>" }}
+                      dangerouslySetInnerHTML={{
+                        __html: renderPreview(tpl.body, tpl.key) || "<em>No content</em>",
+                      }}
                     />
                   </div>
                 </div>

@@ -3,21 +3,33 @@ import { Plus, Pencil, Trash2, X, Pin, Loader2 } from "lucide-react";
 import { announcementApi, type AnnouncementData } from "../../api/announcementApi";
 import toast from "react-hot-toast";
 
-const CATEGORY_OPTIONS = ["HR", "Team", "Important", "General"];
+const CATEGORY_OPTIONS: { value: string; label: string }[] = [
+  { value: "all", label: "General" },
+  { value: "hr", label: "HR" },
+  { value: "team", label: "Team" },
+  { value: "important", label: "Important" },
+];
 const AUDIENCE_OPTIONS = ["all", "department", "team", "individual"];
 
 const categoryColors: Record<string, string> = {
-  HR: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  Team: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-  Important: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-  General: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
+  hr: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  team: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
+  important: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
+  all: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300",
 };
 
 const categoryDots: Record<string, string> = {
-  HR: "bg-blue-500",
-  Team: "bg-emerald-500",
-  Important: "bg-rose-500",
-  General: "bg-gray-400 dark:bg-gray-500",
+  hr: "bg-blue-500",
+  team: "bg-emerald-500",
+  important: "bg-rose-500",
+  all: "bg-gray-400 dark:bg-gray-500",
+};
+
+const categoryLabels: Record<string, string> = {
+  hr: "HR",
+  team: "Team",
+  important: "Important",
+  all: "General",
 };
 
 const card =
@@ -40,7 +52,7 @@ interface FormState {
 const emptyForm: FormState = {
   title: "",
   content: "",
-  category: "General",
+  category: "all",
   targetAudience: "all",
   tags: "",
   isPinned: false,
@@ -86,7 +98,7 @@ export default function AdminAnnouncements() {
     setForm({
       title: a.title,
       content: a.content,
-      category: a.category || "General",
+      category: a.category || "all",
       targetAudience: a.targetAudience || "all",
       tags: a.tags?.join(", ") || "",
       isPinned: a.isPinned,
@@ -175,9 +187,10 @@ export default function AdminAnnouncements() {
       ) : (
         <div className="space-y-3">
           {announcements.map((a) => {
-            const catKey = a.category || "General";
-            const colorCls = categoryColors[catKey] || categoryColors.General;
-            const dotCls = categoryDots[catKey] || categoryDots.General;
+            const catKey = a.category || "all";
+            const colorCls = categoryColors[catKey] || categoryColors.all;
+            const dotCls = categoryDots[catKey] || categoryDots.all;
+            const catLabel = categoryLabels[catKey] || catKey;
             return (
               <div key={a._id} className={card}>
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -188,7 +201,7 @@ export default function AdminAnnouncements() {
                         className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${colorCls}`}
                       >
                         <span className={`inline-block h-1.5 w-1.5 rounded-full ${dotCls}`} />
-                        {catKey}
+                        {catLabel}
                       </span>
                       {a.isPinned && (
                         <Pin className="h-3.5 w-3.5 text-amber-500" />
@@ -296,8 +309,8 @@ export default function AdminAnnouncements() {
                     className={inputCls}
                   >
                     {CATEGORY_OPTIONS.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
+                      <option key={c.value} value={c.value}>
+                        {c.label}
                       </option>
                     ))}
                   </select>
