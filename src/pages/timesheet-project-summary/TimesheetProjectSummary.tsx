@@ -139,8 +139,8 @@ export default function TimesheetProjectSummary() {
           {/* ── Bar Chart ── */}
           <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md">
             <p className={`${labelClasses} mb-4`}>Hours by Project</p>
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-80 min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
                 <BarChart
                   data={projects.map((p) => ({
                     name: p.projectName.length > 15 ? p.projectName.slice(0, 15) + "..." : p.projectName,

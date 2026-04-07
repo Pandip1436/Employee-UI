@@ -211,7 +211,7 @@ export default function HrDashboard() {
           {attendanceData.length > 0 &&
           (attendanceData[0].value > 0 || attendanceData[1].value > 0) ? (
             <div className="h-56 min-w-0">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
                 <PieChart>
                   <Pie
                     data={attendanceData}

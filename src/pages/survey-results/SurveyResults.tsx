@@ -144,8 +144,8 @@ export default function SurveyResults() {
 
             {/* MCQ bar chart */}
             {result.type === "mcq" && (
-              <div className="h-64">
-                <ResponsiveContainer width="100%" height="100%">
+              <div className="h-64 min-w-0">
+                <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
                   <BarChart data={result.data} layout="vertical" margin={{ left: 20, right: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
                     <XAxis type="number" allowDecimals={false} tick={{ fill: "#9ca3af", fontSize: 12 }} />
