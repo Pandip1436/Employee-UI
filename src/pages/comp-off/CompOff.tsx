@@ -10,6 +10,13 @@ const statusStyle: Record<string, { bg: string; dot: string }> = {
   approved: { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500" },
   rejected: { bg: "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400", dot: "bg-rose-500" },
   used: { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500" },
+  expired: { bg: "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400", dot: "bg-gray-500" },
+};
+
+const daysUntil = (iso?: string) => {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime() - Date.now();
+  return Math.ceil(ms / 86400000);
 };
 
 const inputCls = "w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
@@ -24,6 +31,7 @@ export default function CompOff() {
   const [page, setPage] = useState(1);
   const [showApply, setShowApply] = useState(false);
   const [workedDate, setWorkedDate] = useState("");
+  const [hoursWorked, setHoursWorked] = useState<number | "">("");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -38,13 +46,27 @@ export default function CompOff() {
   useEffect(() => { fetchRequests(); }, [page, tab]);
 
   const handleApply = async (e: FormEvent) => {
-    e.preventDefault(); setSaving(true);
-    try { await compOffApi.apply({ workedDate, reason }); toast.success("Comp-off applied!"); setShowApply(false); setWorkedDate(""); setReason(""); fetchRequests(); fetchBalance(); }
-    catch { /* interceptor */ } finally { setSaving(false); }
+    e.preventDefault();
+    if (!workedDate) return toast.error("Pick the date you worked.");
+    if (!hoursWorked || hoursWorked < 4) return toast.error("Minimum 4 hours of work required.");
+    // Server validates weekend OR declared holiday
+    setSaving(true);
+    try {
+      await compOffApi.apply({ workedDate, hoursWorked: Number(hoursWorked), reason });
+      toast.success("Comp-off applied!");
+      setShowApply(false); setWorkedDate(""); setHoursWorked(""); setReason("");
+      fetchRequests(); fetchBalance();
+    } catch { /* interceptor */ } finally { setSaving(false); }
   };
 
   const handleApprove = async (id: string, status: "approved" | "rejected") => {
     try { await compOffApi.approve(id, status); toast.success(`Request ${status}.`); fetchRequests(); fetchBalance(); } catch { /* interceptor */ }
+  };
+
+  const handleUse = async (id: string) => {
+    if (!confirm("Mark this comp-off as used today?")) return;
+    try { await compOffApi.markUsed(id); toast.success("Comp-off used."); fetchRequests(); fetchBalance(); }
+    catch { /* interceptor */ }
   };
 
   const handleDelete = async (id: string) => {
@@ -61,12 +83,14 @@ export default function CompOff() {
 
       {/* Balance Cards */}
       {balance && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {[
             { label: "Earned", value: balance.earned, color: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-500/20" },
             { label: "Used", value: balance.used, color: "text-blue-600 dark:text-blue-400", border: "border-blue-200 dark:border-blue-500/20" },
             { label: "Available", value: balance.available, color: "text-indigo-600 dark:text-indigo-400", border: "border-indigo-200 dark:border-indigo-500/20" },
             { label: "Pending", value: balance.pending, color: "text-amber-600 dark:text-amber-400", border: "border-amber-200 dark:border-amber-500/20" },
+            { label: "Expiring Soon", value: balance.expiringSoon ?? 0, color: "text-orange-600 dark:text-orange-400", border: "border-orange-200 dark:border-orange-500/20" },
+            { label: "Expired", value: balance.expired ?? 0, color: "text-gray-500 dark:text-gray-400", border: "border-gray-200 dark:border-gray-700" },
           ].map((c) => (
             <div key={c.label} className={`rounded-xl border ${c.border} bg-white dark:bg-gray-900 p-4 text-center transition-all hover:shadow-md`}>
               <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
@@ -93,21 +117,33 @@ export default function CompOff() {
             <tr>
               {tab === "all" && <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Employee</th>}
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Worked Date</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hours</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Reason</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Expiry</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
             {requests.length === 0 ? (
-              <tr><td colSpan={tab === "all" ? 5 : 4} className="px-4 py-12 text-center text-gray-400">No requests found.</td></tr>
+              <tr><td colSpan={tab === "all" ? 7 : 6} className="px-4 py-12 text-center text-gray-400">No requests found.</td></tr>
             ) : requests.map((r) => {
               const s = statusStyle[r.status] || statusStyle.pending;
+              const days = daysUntil(r.expiryDate);
+              const expiringSoon = r.status === "approved" && days != null && days <= 7 && days >= 0;
               return (
-                <tr key={r._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                <tr key={r._id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${expiringSoon ? "bg-orange-50/50 dark:bg-orange-500/5" : ""}`}>
                   {tab === "all" && <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{(r.userId as any)?.name || "—"}</td>}
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{new Date(r.workedDate).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{r.hoursWorked ?? "—"}h</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-xs truncate">{r.reason}</td>
+                  <td className="px-4 py-3 text-xs">
+                    {r.expiryDate ? (
+                      <span className={expiringSoon ? "font-semibold text-orange-600 dark:text-orange-400" : "text-gray-500 dark:text-gray-400"}>
+                        {new Date(r.expiryDate).toLocaleDateString()}{expiringSoon ? ` · ${days}d left` : ""}
+                      </span>
+                    ) : <span className="text-gray-400">—</span>}
+                  </td>
                   <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${s.bg}`}><span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />{r.status}</span></td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
@@ -119,6 +155,9 @@ export default function CompOff() {
                       )}
                       {tab === "my" && r.status === "pending" && (
                         <button onClick={() => handleDelete(r._id)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4" /></button>
+                      )}
+                      {tab === "my" && r.status === "approved" && (
+                        <button onClick={() => handleUse(r._id)} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Use</button>
                       )}
                     </div>
                   </td>
@@ -180,6 +219,7 @@ export default function CompOff() {
             <div className="mb-5 flex items-center justify-between"><h2 className="text-lg font-bold text-gray-900 dark:text-white">Apply Comp-Off</h2><button onClick={() => setShowApply(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X className="h-5 w-5" /></button></div>
             <form onSubmit={handleApply} className="space-y-4">
               <div><label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Date Worked (Weekend/Holiday)</label><input type="date" required value={workedDate} onChange={(e) => setWorkedDate(e.target.value)} className={inputCls} /></div>
+              <div><label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Hours Worked (min 4)</label><input type="number" min={4} max={24} step={0.5} required value={hoursWorked} onChange={(e) => setHoursWorked(e.target.value === "" ? "" : Number(e.target.value))} className={inputCls} placeholder="e.g. 8" /><p className="mt-1 text-[11px] text-gray-400">≥4h = ½ day · ≥8h = full day</p></div>
               <div><label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Reason</label><textarea required rows={3} value={reason} onChange={(e) => setReason(e.target.value)} className={inputCls} placeholder="Describe the work done..." /></div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowApply(false)} className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>

@@ -67,7 +67,7 @@ export default function AdminTimesheetExport() {
     if (employeeId) params.userId = employeeId;
     weeklyTimesheetApi
       .getAll(params)
-      .then((r) => setData(r.data.data))
+      .then((r) => setData((r.data.data || []).filter((ts) => ts.status !== "draft")))
       .catch(() => toast.error("Failed to load data"))
       .finally(() => setLoading(false));
   };
@@ -164,7 +164,6 @@ export default function AdminTimesheetExport() {
           </label>
           <select value={status} onChange={(e) => setStatus(e.target.value)} className={`w-full ${inputCls}`}>
             <option value="">All Statuses</option>
-            <option value="draft">Draft</option>
             <option value="submitted">Submitted</option>
             <option value="approved">Approved</option>
             <option value="rejected">Rejected</option>

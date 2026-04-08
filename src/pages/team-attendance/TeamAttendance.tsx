@@ -4,9 +4,9 @@ import { attendanceApi } from "../../api/attendanceApi";
 import type {  LiveStatusData, LiveEmployee } from "../../types";
 
 const liveStyles: Record<string, { bg: string; dot: string; label: string; pulse: boolean }> = {
-  "clocked-in": { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", label: "Working", pulse: true },
-  late: { bg: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400", dot: "bg-amber-500", label: "Late", pulse: true },
-  "clocked-out": { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500", label: "Done", pulse: false },
+  "clocked-in": { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", label: "Logged In", pulse: true},
+  late: { bg: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400", dot: "bg-amber-500", label: "Late Login", pulse: true },
+  "clocked-out": { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500", label: "Logged Out", pulse: false},
   "not-marked": { bg: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400", dot: "bg-gray-400", label: "Not Marked", pulse: false },
 };
 
@@ -43,9 +43,9 @@ export default function TeamAttendance() {
       {liveData?.summary && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
-            { label: "Working", value: liveData.summary.clockedIn, color: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-500/20" },
-            { label: "Late", value: liveData.summary.late, color: "text-amber-600 dark:text-amber-400", border: "border-amber-200 dark:border-amber-500/20" },
-            { label: "Completed", value: liveData.summary.clockedOut, color: "text-blue-600 dark:text-blue-400", border: "border-blue-200 dark:border-blue-500/20" },
+            { label: "Logged In", value: liveData.summary.clockedIn, color: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-500/20" },
+            { label: "Late Login", value: liveData.summary.late, color: "text-amber-600 dark:text-amber-400", border: "border-amber-200 dark:border-amber-500/20" },
+            { label: "Logged Out", value: liveData.summary.clockedOut, color: "text-blue-600 dark:text-blue-400", border: "border-blue-200 dark:border-blue-500/20" },
             { label: "Not Marked", value: liveData.summary.notMarked, color: "text-gray-500 dark:text-gray-400", border: "border-gray-200 dark:border-gray-700" },
           ].map((c) => (
             <div key={c.label} className={`rounded-xl border ${c.border} bg-white dark:bg-gray-900 p-4 text-center`}>

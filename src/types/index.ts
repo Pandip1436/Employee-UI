@@ -151,7 +151,7 @@ export interface LiveStatusData {
 
 // ── Leave ──
 export type LeaveStatus = "pending" | "approved" | "rejected";
-export type LeaveType = "casual" | "sick" | "earned" | "unpaid";
+export type LeaveType = "casual" | "sick" | "earned" | "unpaid" | "compoff";
 
 export interface LeaveRequest {
   _id: string;
@@ -171,6 +171,7 @@ export interface LeaveBalance {
   casual: { total: number; used: number; remaining: number };
   sick: { total: number; used: number; remaining: number };
   earned: { total: number; used: number; remaining: number };
+  compoff: { total: number; used: number; remaining: number };
 }
 
 // ── Document ──
@@ -262,10 +263,12 @@ export interface CompOffRequest {
   _id: string;
   userId: User;
   workedDate: string;
+  hoursWorked: number;
   reason: string;
-  status: "pending" | "approved" | "rejected" | "used";
+  status: "pending" | "approved" | "rejected" | "used" | "expired";
   approvedBy?: User;
   usedDate?: string;
+  expiryDate?: string;
   createdAt: string;
 }
 
@@ -274,6 +277,9 @@ export interface CompOffBalance {
   used: number;
   available: number;
   pending: number;
+  expired: number;
+  expiringSoon: number;
+  cap?: number;
 }
 
 // ── Weekly Timesheet ──

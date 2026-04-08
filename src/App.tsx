@@ -31,7 +31,6 @@ import TimesheetLogModal from "./pages/timesheet-home/TimesheetLogModal";
 import TimesheetHistory from "./pages/timesheet-history/TimesheetHistory";
 import TimesheetDetail from "./pages/timesheet-detail/TimesheetDetail";
 import TimesheetApprovals from "./pages/timesheet-approvals/TimesheetApprovals";
-import TimesheetProjectSummary from "./pages/timesheet-project-summary/TimesheetProjectSummary";
 import AdminTimesheetDashboard from "./pages/admin-timesheet/AdminTimesheetDashboard";
 import AdminTimesheetReports from "./pages/admin-timesheet-reports/AdminTimesheetReports";
 import AdminOvertimeReport from "./pages/admin-timesheet-overtime/AdminOvertimeReport";
@@ -61,6 +60,7 @@ import AdminAuditLog from "./pages/admin-audit/AdminAuditLog";
 import MyGoals from "./pages/perf-goals/MyGoals";
 import GoalForm from "./pages/perf-goal-form/GoalForm";
 import SelfReview from "./pages/perf-self-review/SelfReview";
+import MyReviews from "./pages/perf-my-reviews/MyReviews";
 import ManagerReview from "./pages/perf-mgr-review/ManagerReview";
 import FeedbackPage from "./pages/perf-feedback/FeedbackPage";
 import PIPDetail from "./pages/perf-pip/PIPDetail";
@@ -77,8 +77,6 @@ import TeamChat from "./pages/chat/TeamChat";
 // Learning Module
 import LearningHub from "./pages/learning-hub/LearningHub";
 import MyCertifications from "./pages/learning-certs/MyCertifications";
-import Teaching from "./pages/learning-teaching/Teaching";
-import LearningCalendar from "./pages/learning-calendar/LearningCalendar";
 
 export default function App() {
   return (
@@ -113,6 +111,7 @@ export default function App() {
           {/* Performance */}
           <Route path="/performance/goals" element={<MyGoals />} />
           <Route path="/performance/goals/new" element={<GoalForm />} />
+          <Route path="/performance/reviews/my" element={<MyReviews />} />
           <Route path="/performance/reviews/:id/self" element={<SelfReview />} />
           <Route path="/performance/feedback" element={<FeedbackPage />} />
           <Route path="/performance/pip/:id" element={<PIPDetail />} />
@@ -120,8 +119,6 @@ export default function App() {
           {/* Learning */}
           <Route path="/learning" element={<LearningHub />} />
           <Route path="/learning/certifications" element={<MyCertifications />} />
-          <Route path="/learning/teaching" element={<Teaching />} />
-          <Route path="/learning/calendar" element={<LearningCalendar />} />
 
           {/* Chat */}
           <Route path="/chat" element={<TeamChat />} />
@@ -148,7 +145,6 @@ export default function App() {
           <Route path="/attendance/reports" element={<AttendanceReports />} />
           <Route path="/leave/approvals" element={<LeaveApprovals />} />
           <Route path="/timesheet/approvals" element={<TimesheetApprovals />} />
-          <Route path="/timesheet/team/projects" element={<TimesheetProjectSummary />} />
           <Route path="/daily-updates/team" element={<TeamDailyUpdates />} />
           <Route path="/dashboard/manager" element={<ManagerDashboard />} />
           <Route path="/admin/announcements" element={<AdminAnnouncements />} />

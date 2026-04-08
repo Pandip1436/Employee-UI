@@ -5,7 +5,7 @@ import {
   ClipboardList, UsersRound as TeamIcon, PartyPopper, Laptop, Gift, BarChart3,
   Grid3X3, CalendarClock, History, FileCheck, Settings, AlertTriangle, Download,
   Megaphone, Award, ClipboardCheck, Building, Shield, Mail, ScrollText,
-  Target, Star, MessageCircle, TrendingUp, BookOpen, GraduationCap, Presentation,
+  Target, Star, MessageCircle, TrendingUp, BookOpen, GraduationCap,
   NotebookPen,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
@@ -43,7 +43,6 @@ const links: SidebarLink[] = [
   { to: "/timesheet/history", label: "History", icon: History, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
   { to: "/admin/timesheet", label: "Timesheet Dashboard", icon: LayoutDashboard, roles: ["admin"], section: "Timesheet" },
   { to: "/timesheet/approvals", label: "Approvals", icon: FileCheck, roles: ["admin", "manager"], section: "Timesheet" },
-  { to: "/timesheet/team/projects", label: "Project Hours", icon: BarChart3, roles: ["admin", "manager"], section: "Timesheet" },
   { to: "/admin/timesheet/missing", label: "Missing", icon: AlertTriangle, roles: ["admin"], section: "Timesheet" },
   { to: "/admin/timesheet/reports/overtime", label: "Overtime", icon: Clock, roles: ["admin"], section: "Timesheet" },
   { to: "/admin/timesheet/export", label: "Export", icon: Download, roles: ["admin"], section: "Timesheet" },
@@ -65,8 +64,6 @@ const links: SidebarLink[] = [
   { to: "/admin/performance/calibrate", label: "Calibration", icon: BarChart3, roles: ["admin"], section: "Performance" },
   { to: "/learning", label: "Learning Hub", icon: BookOpen, roles: [], section: "Learning" },
   { to: "/learning/certifications", label: "Certifications", icon: GraduationCap, roles: [], section: "Learning" },
-  { to: "/learning/teaching", label: "Teaching", icon: Presentation, roles: [], section: "Learning" },
-  { to: "/learning/calendar", label: "Calendar", icon: CalendarDays, roles: [], section: "Learning" },
   { to: "/admin/announcements", label: "Post Manager", icon: Megaphone, roles: ["admin", "manager"], section: "Settings" },
   { to: "/admin/settings/company", label: "Company", icon: Building, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/designations", label: "Designations", icon: Shield, roles: ["admin"], section: "Settings" },

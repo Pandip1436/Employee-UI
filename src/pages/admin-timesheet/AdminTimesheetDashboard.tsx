@@ -8,7 +8,6 @@ import {
   AlertTriangle,
   ArrowRight,
   Users,
-  BarChart3,
   FileDown,
 } from "lucide-react";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
@@ -72,14 +71,6 @@ const quickLinks = [
     iconColor: "text-emerald-600 dark:text-emerald-400",
   },
   {
-    label: "Project Summary",
-    description: "Time by project report",
-    href: "/timesheet/team/projects",
-    icon: BarChart3,
-    iconBg: "bg-indigo-50 dark:bg-indigo-500/10",
-    iconColor: "text-indigo-600 dark:text-indigo-400",
-  },
-  {
     label: "Export Reports",
     description: "Download timesheet data",
     href: "/admin/timesheet/export",
@@ -104,16 +95,26 @@ export default function AdminTimesheetDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      weeklyTimesheetApi.getDashboardStats(),
-      weeklyTimesheetApi.getMissing(),
-    ])
-      .then(([statsRes, missingRes]) => {
-        setStats(statsRes.data.data ?? null);
-        setMissing(missingRes.data.data ?? []);
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    const load = () =>
+      Promise.all([
+        weeklyTimesheetApi.getDashboardStats(),
+        weeklyTimesheetApi.getMissing(),
+      ])
+        .then(([statsRes, missingRes]) => {
+          setStats(statsRes.data.data ?? null);
+          setMissing(missingRes.data.data ?? []);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+
+    load();
+    const id = setInterval(load, 30000);
+    const onFocus = () => load();
+    window.addEventListener("focus", onFocus);
+    return () => {
+      clearInterval(id);
+      window.removeEventListener("focus", onFocus);
+    };
   }, []);
 
   if (loading) {

@@ -15,9 +15,9 @@ const statusStyle: Record<string, { bg: string; dot: string; label: string }> = 
 };
 
 const liveStyles: Record<string, { bg: string; dot: string; label: string; pulse: boolean }> = {
-  "clocked-in": { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", label: "Working", pulse: true },
-  late: { bg: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400", dot: "bg-amber-500", label: "Late", pulse: true },
-  "clocked-out": { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500", label: "Done", pulse: false },
+  "clocked-in": { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", label: "Logged In", pulse: true },
+  late: { bg: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400", dot: "bg-amber-500", label: "Late Login", pulse: true },
+  "clocked-out": { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500", label: "Logged Out", pulse: false },
   "not-marked": { bg: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400", dot: "bg-gray-400", label: "Not Marked", pulse: false },
 };
 
@@ -31,7 +31,7 @@ export default function Attendance() {
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<"my" | "all" | "live">("my");
+  const [tab, setTab] = useState<"my" | "all" | "live" | "absent">("my");
   const [elapsed, setElapsed] = useState(0);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -117,7 +117,7 @@ export default function Attendance() {
     }).catch(() => {});
   }, [today]);
   useEffect(() => { if (canViewAll) userApi.getAll({ limit: 200 }).then((r) => setEmployees(r.data.data)).catch(() => {}); }, [canViewAll]);
-  useEffect(() => { if (tab === "my") fetchHistory(); else if (tab === "all") fetchAll(); else fetchLive(); }, [page, tab, filterDate, filterUserId, filterStatus]);
+  useEffect(() => { if (tab === "my") fetchHistory(); else if (tab === "all") fetchAll(); else if (tab === "live" || tab === "absent") fetchLive(); }, [page, tab, filterDate, filterUserId, filterStatus]);
   useEffect(() => { if (tab !== "live") return; const id = setInterval(fetchLive, 30000); return () => clearInterval(id); }, [tab]);
   useEffect(() => {
     if (today?.clockIn && !today?.clockOut) {
@@ -220,13 +220,13 @@ export default function Attendance() {
       {/* ━━━ Tabs ━━━ */}
       {canViewAll && (
         <div className="flex overflow-x-auto gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 scrollbar-hide">
-          {(["my", "all", "live"] as const).map((t) => (
+          {(["my", "all", "live", "absent"] as const).map((t) => (
             <button key={t} onClick={() => { setTab(t); setPage(1); }}
               className={`flex-1 sm:flex-none whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
                 tab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
               }`}
             >
-              {t === "my" ? "My Attendance" : t === "all" ? "All Employees" : "Live Status"}
+              {t === "my" ? "My Attendance" : t === "all" ? "All Employees" : t === "live" ? "Live Status" : "Today Absents"}
             </button>
           ))}
         </div>
@@ -238,9 +238,9 @@ export default function Attendance() {
           {liveData?.summary && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                { label: "Working", value: liveData.summary.clockedIn, icon: Users, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-200 dark:border-emerald-500/20" },
-                { label: "Late", value: liveData.summary.late, icon: AlertTriangle, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200 dark:border-amber-500/20" },
-                { label: "Completed", value: liveData.summary.clockedOut, icon: CheckCircle2, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-200 dark:border-blue-500/20" },
+                { label: "Logged In", value: liveData.summary.clockedIn, icon: Users, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-200 dark:border-emerald-500/20" },
+                { label: "Late Login", value: liveData.summary.late, icon: AlertTriangle, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200 dark:border-amber-500/20" },
+                { label: "Logged Out", value: liveData.summary.clockedOut, icon: CheckCircle2, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-200 dark:border-blue-500/20" },
                 { label: "Not Marked", value: liveData.summary.notMarked, icon: Clock, color: "text-gray-500 dark:text-gray-400", bg: "bg-gray-50 dark:bg-gray-800", border: "border-gray-200 dark:border-gray-700" },
               ].map((c) => (
                 <div key={c.label} className={`rounded-xl border ${c.border} bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md`}>
@@ -368,6 +368,40 @@ export default function Attendance() {
         </div>
       )}
 
+      {/* ━━━ Today Absents ━━━ */}
+      {tab === "absent" && canViewAll && (
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+          <div className="border-b border-gray-200 dark:border-gray-800 px-5 py-4">
+            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+              Absent Today — {liveData?.employees.filter((e) => e.status === "absent").length ?? 0}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
+          </div>
+          {(() => {
+            const absents = liveData?.employees.filter((e) => e.status === "absent") ?? [];
+            if (absents.length === 0) {
+              return <div className="py-12 text-center text-gray-400 dark:text-gray-500">No absent employees today 🎉</div>;
+            }
+            return (
+              <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+                {absents.map((emp) => (
+                  <li key={emp._id} className="flex items-center gap-4 px-5 py-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-100 text-sm font-semibold text-rose-700 dark:bg-rose-500/20 dark:text-rose-400">
+                      {emp.name?.charAt(0).toUpperCase()}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{emp.name}</p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{emp.email}{emp.department ? ` · ${emp.department}` : ""}</p>
+                    </div>
+                    <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">Absent</span>
+                  </li>
+                ))}
+              </ul>
+            );
+          })()}
+        </div>
+      )}
+
       {/* ━━━ My Status Filter ━━━ */}
       {tab === "my" && (
         <div className="flex flex-wrap gap-2">
@@ -388,7 +422,7 @@ export default function Attendance() {
       )}
 
       {/* ━━━ Export ━━━ */}
-      {tab !== "live" && (
+      {tab !== "live" && tab !== "absent" && (
         <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-gray-900 dark:text-white">Monthly Report</p>
@@ -407,7 +441,7 @@ export default function Attendance() {
       )}
 
       {/* ━━━ Records ━━━ */}
-      {tab !== "live" && (
+      {tab !== "live" && tab !== "absent" && (
         <>
           {/* Desktop table */}
           <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">

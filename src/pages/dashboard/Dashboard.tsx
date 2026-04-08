@@ -7,37 +7,58 @@ import {
 import { dashboardApi, type EmployeeKpis } from "../../api/dashboardApi";
 import { reportApi } from "../../api/reportApi";
 import { leaveApi } from "../../api/leaveApi";
+import { attendanceApi } from "../../api/attendanceApi";
+import type { AttendanceRecord } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import TimerWidget from "../../components/TimerWidget";
 import type { WeeklySummary, LeaveBalance } from "../../types";
 
-const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const WORK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [kpis, setKpis] = useState<EmployeeKpis | null>(null);
   const [weekly, setWeekly] = useState<WeeklySummary | null>(null);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
+  const [attendanceWeek, setAttendanceWeek] = useState<AttendanceRecord[]>([]);
 
   useEffect(() => {
     dashboardApi.getEmployeeKpis().then((r) => setKpis(r.data.data ?? null)).catch(() => { /* interceptor */ });
     reportApi.getWeeklySummary().then((r) => setWeekly(r.data.data!)).catch(() => { /* interceptor */ });
     leaveApi.getBalance().then((r) => { if (r.data.data) setLeaveBalance(r.data.data); }).catch(() => { /* interceptor */ });
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    attendanceApi.getMyHistory({ month, limit: 200 }).then((r) => setAttendanceWeek(r.data.data || [])).catch(() => {});
   }, []);
 
-  const barData = weekly
-    ? Array.from({ length: 7 }, (_, i) => {
-        const ws = new Date(weekly.weekStart), d = new Date(ws);
-        d.setDate(ws.getDate() + i);
-        const key = d.toISOString().split("T")[0];
-        return { day: DAY_LABELS[d.getDay()], hours: weekly.dailyBreakdown.find((b) => b._id === key)?.totalHours || 0 };
-      })
-    : [];
+  // Build Mon–Fri bars from attendance clock-in hours for current work week
+  const barData = (() => {
+    const now = new Date();
+    const weekStart = new Date(now);
+    const dow = now.getDay();
+    const diffToMon = dow === 0 ? -6 : 1 - dow;
+    weekStart.setDate(now.getDate() + diffToMon);
+    weekStart.setHours(0, 0, 0, 0);
+    const ymd = (dt: Date) =>
+      `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    // Attendance dates are stored as UTC midnight of the business day — read UTC parts
+    const ymdUTC = (dt: Date) =>
+      `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+    return Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(weekStart);
+      d.setDate(weekStart.getDate() + i);
+      const key = ymd(d);
+      const rec = attendanceWeek.find((r) => ymdUTC(new Date(r.date)) === key);
+      return { day: WORK_DAYS[i], hours: rec?.totalHours || 0 };
+    });
+  })();
+  void weekly;
 
   const leaveData = leaveBalance ? [
     { name: "Casual", used: leaveBalance.casual.used, remaining: leaveBalance.casual.remaining },
     { name: "Sick", used: leaveBalance.sick.used, remaining: leaveBalance.sick.remaining },
     { name: "Earned", used: leaveBalance.earned.used, remaining: leaveBalance.earned.remaining },
+    { name: "Comp-Off", used: leaveBalance.compoff.used, remaining: leaveBalance.compoff.remaining },
   ] : [];
 
   const quickActions = [

@@ -45,6 +45,11 @@ const typeConfig: Record<string, { dot: string; badge: string; label: string }> 
     badge: "bg-gray-50 text-gray-600 ring-1 ring-gray-500/20 dark:bg-gray-500/10 dark:text-gray-300 dark:ring-gray-500/20",
     label: "Unpaid",
   },
+  compoff: {
+    dot: "bg-indigo-500",
+    badge: "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-600/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-500/20",
+    label: "Comp-Off",
+  },
 };
 
 const balanceCardConfig: Record<string, { border: string; icon: typeof CalendarDays; iconBg: string; iconColor: string; progressBar: string }> = {
@@ -68,6 +73,13 @@ const balanceCardConfig: Record<string, { border: string; icon: typeof CalendarD
     iconBg: "bg-purple-50 dark:bg-purple-500/10",
     iconColor: "text-purple-600 dark:text-purple-400",
     progressBar: "bg-purple-500",
+  },
+  compoff: {
+    border: "border-l-4 border-indigo-500",
+    icon: CalendarDays,
+    iconBg: "bg-indigo-50 dark:bg-indigo-500/10",
+    iconColor: "text-indigo-600 dark:text-indigo-400",
+    progressBar: "bg-indigo-500",
   },
 };
 
@@ -179,8 +191,8 @@ export default function Leaves() {
 
       {/* Leave Balance Cards */}
       {balance && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {(["casual", "sick", "earned"] as const).map((type) => {
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {(["casual", "sick", "earned", "compoff"] as const).map((type) => {
             const config = balanceCardConfig[type];
             const Icon = config.icon;
             const used = balance[type].used;
@@ -196,7 +208,7 @@ export default function Leaves() {
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
                     <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                      {type} Leave
+                      {typeConfig[type]?.label || type} {type === "compoff" ? "" : "Leave"}
                     </p>
                     <div className="flex items-baseline gap-1.5">
                       <span className="text-3xl font-bold text-gray-900 dark:text-white">
@@ -438,6 +450,7 @@ export default function Leaves() {
                   <option value="sick">Sick</option>
                   <option value="earned">Earned</option>
                   <option value="unpaid">Unpaid</option>
+                  <option value="compoff">Comp-Off</option>
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-4">

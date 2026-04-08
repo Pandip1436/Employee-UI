@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarDays, Send, X, Palmtree, ThermometerSun, Award, Ban } from "lucide-react";
+import { CalendarDays, Send, X, Palmtree, ThermometerSun, Award, Ban, Gift } from "lucide-react";
 import { leaveApi } from "../../api/leaveApi";
 import type { LeaveBalance } from "../../types";
 import toast from "react-hot-toast";
@@ -10,6 +10,7 @@ const leaveTypes = [
   { value: "sick", label: "Sick Leave", icon: ThermometerSun, color: "text-amber-500" },
   { value: "earned", label: "Earned Leave", icon: Award, color: "text-emerald-500" },
   { value: "unpaid", label: "Unpaid Leave", icon: Ban, color: "text-red-500" },
+  { value: "compoff", label: "Comp-Off", icon: Gift, color: "text-indigo-500" },
 ];
 
 const inputCls =
