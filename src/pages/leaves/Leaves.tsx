@@ -1,5 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { Plus, X, CheckCircle, XCircle, CalendarDays, Clock, Briefcase, Heart, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
 import { leaveApi } from "../../api/leaveApi";
 import { useAuth } from "../../context/AuthContext";
 import type { LeaveRequest, LeaveBalance, Pagination } from "../../types";
@@ -167,13 +168,13 @@ export default function Leaves() {
             Track and manage leave requests
           </p>
         </div>
-        <button
-          onClick={() => setShowApply(true)}
+        <Link
+          to="/leave/apply"
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md active:scale-[0.98]"
         >
           <Plus className="h-4 w-4" />
           Apply Leave
-        </button>
+        </Link>
       </div>
 
       {/* Leave Balance Cards */}

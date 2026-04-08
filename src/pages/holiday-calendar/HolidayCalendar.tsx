@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Plus, Trash2, X, Star, Building, Globe } from "lucide-react";
+import { Plus, Trash2, X, Star, Building, Globe, ChevronLeft, ChevronRight } from "lucide-react";
 import { holidayApi } from "../../api/holidayApi";
 import { useAuth } from "../../context/AuthContext";
 import type { Holiday } from "../../types";
@@ -24,6 +24,16 @@ export default function HolidayCalendar() {
   const [desc, setDesc] = useState("");
   const [saving, setSaving] = useState(false);
   const [view, setView] = useState<"list" | "calendar">("list");
+  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
+
+  const goPrevMonth = () => {
+    if (currentMonth === 0) { setCurrentMonth(11); setYear((y) => y - 1); }
+    else setCurrentMonth(currentMonth - 1);
+  };
+  const goNextMonth = () => {
+    if (currentMonth === 11) { setCurrentMonth(0); setYear((y) => y + 1); }
+    else setCurrentMonth(currentMonth + 1);
+  };
 
   const fetchHolidays = () => { holidayApi.getAll(year).then((r) => setHolidays(r.data.data || [])).catch(() => { /* interceptor */ }); };
   useEffect(() => { fetchHolidays(); }, [year]);
@@ -152,19 +162,39 @@ export default function HolidayCalendar() {
           </div>
         </>
       ) : (
-        /* Calendar grid */
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 12 }, (_, m) => (
-            <div key={m} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-              <p className="mb-2 text-sm font-bold text-gray-900 dark:text-white">{monthNames[m]}</p>
-              <div className="grid grid-cols-7 gap-1 text-center">
-                {["S","M","T","W","T","F","S"].map((d, i) => (
-                  <div key={i} className="text-[10px] font-semibold text-gray-400 dark:text-gray-500">{d}</div>
-                ))}
-                {renderMonth(m)}
-              </div>
-            </div>
-          ))}
+        /* Single-month calendar */
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6">
+          <div className="mb-4 flex items-center justify-between">
+            <button onClick={goPrevMonth} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"><ChevronLeft className="h-5 w-5" /></button>
+            <p className="text-lg font-bold text-gray-900 dark:text-white">{monthNames[currentMonth]} {year}</p>
+            <button onClick={goNextMonth} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800"><ChevronRight className="h-5 w-5" /></button>
+          </div>
+          <div className="grid grid-cols-7 gap-2 text-center">
+            {["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map((d) => (
+              <div key={d} className="pb-2 text-xs font-semibold text-gray-400 dark:text-gray-500">{d}</div>
+            ))}
+            {(() => {
+              const firstDay = new Date(year, currentMonth, 1).getDay();
+              const daysInMonth = new Date(year, currentMonth + 1, 0).getDate();
+              const cells: React.ReactNode[] = [];
+              for (let i = 0; i < firstDay; i++) cells.push(<div key={`e${i}`} />);
+              for (let d = 1; d <= daysInMonth; d++) {
+                const key = `${year}-${String(currentMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                const h = holidayByDate.get(key);
+                cells.push(
+                  <div key={d} className={`relative flex h-16 flex-col items-center justify-center rounded-lg border text-sm font-medium transition-colors ${
+                    h
+                      ? "border-indigo-300 dark:border-indigo-500/40 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
+                      : "border-gray-200 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  }`} title={h?.name || ""}>
+                    <span className="font-semibold">{d}</span>
+                    {h && <span className="mt-0.5 truncate max-w-[90%] text-[10px] font-medium">{h.name}</span>}
+                  </div>
+                );
+              }
+              return cells;
+            })()}
+          </div>
         </div>
       )}
 

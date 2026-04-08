@@ -39,6 +39,9 @@ export default function Attendance() {
   const [filterDate, setFilterDate] = useState("");
   const [filterUserId, setFilterUserId] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [myStatusFilter, setMyStatusFilter] = useState<"all" | "present" | "late" | "half-day" | "absent">("all");
+  const [weeklyHours, setWeeklyHours] = useState(0);
+  const [monthlyHours, setMonthlyHours] = useState(0);
   const [employees, setEmployees] = useState<User[]>([]);
   const [reportMonth, setReportMonth] = useState(() => {
     const now = new Date();
@@ -92,6 +95,27 @@ export default function Attendance() {
   const fetchLive = () => { if (canViewAll) attendanceApi.getLiveStatus().then((r) => setLiveData(r.data.data ?? null)).catch(() => {}); };
 
   useEffect(() => { fetchToday(); }, []);
+  useEffect(() => {
+    const now = new Date();
+    const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    attendanceApi.getMyHistory({ month, limit: 200 }).then((r) => {
+      const recs = r.data.data || [];
+      // Start of current work week (Monday 00:00 local)
+      const weekStart = new Date(now);
+      const dow = now.getDay(); // 0=Sun..6=Sat
+      const diffToMon = dow === 0 ? -6 : 1 - dow;
+      weekStart.setDate(now.getDate() + diffToMon);
+      weekStart.setHours(0, 0, 0, 0);
+      let week = 0, month_ = 0;
+      for (const rec of recs) {
+        const h = rec.totalHours || 0;
+        month_ += h;
+        if (new Date(rec.date) >= weekStart) week += h;
+      }
+      setWeeklyHours(Math.round(week * 100) / 100);
+      setMonthlyHours(Math.round(month_ * 100) / 100);
+    }).catch(() => {});
+  }, [today]);
   useEffect(() => { if (canViewAll) userApi.getAll({ limit: 200 }).then((r) => setEmployees(r.data.data)).catch(() => {}); }, [canViewAll]);
   useEffect(() => { if (tab === "my") fetchHistory(); else if (tab === "all") fetchAll(); else fetchLive(); }, [page, tab, filterDate, filterUserId, filterStatus]);
   useEffect(() => { if (tab !== "live") return; const id = setInterval(fetchLive, 30000); return () => clearInterval(id); }, [tab]);
@@ -104,7 +128,9 @@ export default function Attendance() {
     } else { setElapsed(0); }
   }, [today]);
 
-  const records = tab === "my" ? history : allRecords;
+  const records = tab === "my"
+    ? (myStatusFilter === "all" ? history : history.filter((r) => r.status === myStatusFilter))
+    : allRecords;
 
   return (
     <div className="space-y-6">
@@ -170,12 +196,14 @@ export default function Attendance() {
       </div>
 
       {/* ━━━ Quick Stats ━━━ */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
           { icon: Timer, label: "Today's Hours", value: today?.totalHours ? `${today.totalHours}h` : today?.clockIn ? fmtTime(elapsed) : "—", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
           { icon: Calendar, label: "Status", value: today?.status ? statusStyle[today.status]?.label || today.status : "Not Marked", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
           { icon: Activity, label: "Clock In", value: fmtClock(today?.clockIn ?? null), color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10" },
           { icon: Clock, label: "Clock Out", value: fmtClock(today?.clockOut ?? null), color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10" },
+          { icon: Timer, label: "Weekly Hours", value: `${weeklyHours}h`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10" },
+          { icon: Calendar, label: "Monthly Hours", value: `${monthlyHours}h`, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10" },
         ].map((s) => (
           <div key={s.label} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md dark:hover:shadow-gray-800/30">
             <div className="flex items-center gap-3">
@@ -337,6 +365,25 @@ export default function Attendance() {
               <X className="h-3.5 w-3.5" /> Clear
             </button>
           )}
+        </div>
+      )}
+
+      {/* ━━━ My Status Filter ━━━ */}
+      {tab === "my" && (
+        <div className="flex flex-wrap gap-2">
+          {(["all", "present", "late", "half-day", "absent"] as const).map((s) => (
+            <button
+              key={s}
+              onClick={() => setMyStatusFilter(s)}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition-all ${
+                myStatusFilter === s
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              }`}
+            >
+              {s === "all" ? "All" : s.replace("-", " ")}
+            </button>
+          ))}
         </div>
       )}
 

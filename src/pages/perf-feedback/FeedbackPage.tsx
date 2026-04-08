@@ -35,8 +35,9 @@ function RatingStars({ value, onChange, readonly }: { value: number; onChange?: 
 }
 
 export default function FeedbackPage() {
-  const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<"give" | "my">("give");
+  const { user, isAdmin, isManager } = useAuth();
+  const canGiveFeedback = isAdmin || isManager;
+  const [activeTab, setActiveTab] = useState<"give" | "my">(canGiveFeedback ? "give" : "my");
 
   // Give Feedback state
   const [users, setUsers] = useState<User[]>([]);
@@ -117,7 +118,7 @@ export default function FeedbackPage() {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/60 p-1">
-        {(["give", "my"] as const).map((t) => (
+        {(canGiveFeedback ? (["give", "my"] as const) : (["my"] as const)).map((t) => (
           <button
             key={t}
             onClick={() => setActiveTab(t)}
@@ -133,7 +134,7 @@ export default function FeedbackPage() {
       </div>
 
       {/* Give Feedback Tab */}
-      {activeTab === "give" && (
+      {activeTab === "give" && canGiveFeedback && (
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className={card}>
             <h2 className="font-semibold text-gray-900 dark:text-white mb-4">Give Feedback</h2>
