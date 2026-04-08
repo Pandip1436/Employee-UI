@@ -57,25 +57,6 @@ export default function HolidayCalendar() {
   // Calendar data
   const holidayByDate = new Map(holidays.map((h) => [h.date.split("T")[0], h]));
 
-  const renderMonth = (month: number) => {
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const cells = [];
-    for (let i = 0; i < firstDay; i++) cells.push(<div key={`e${i}`} />);
-    for (let d = 1; d <= daysInMonth; d++) {
-      const key = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      const h = holidayByDate.get(key);
-      cells.push(
-        <div key={d} className={`relative flex h-8 w-8 items-center justify-center rounded-lg text-xs font-medium transition-colors ${
-          h ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400 font-bold" : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-        }`} title={h?.name || ""}>
-          {d}
-          {h && <span className="absolute -bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-indigo-500" />}
-        </div>
-      );
-    }
-    return cells;
-  };
 
   const upcoming = holidays.filter((h) => new Date(h.date) >= new Date()).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
   const inputCls = "w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3.5 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
