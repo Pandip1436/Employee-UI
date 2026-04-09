@@ -342,3 +342,16 @@ export interface OvertimeEntry {
   totalHours: number;
   overtime: number;
 }
+
+export interface EmployeeTimesheetStatus {
+  _id: string;
+  name: string;
+  email: string;
+  department: string | null;
+  status: "draft" | "submitted" | "approved" | "rejected" | "not_started";
+  totalHours: number;
+  submittedAt: string | null;
+  approvedAt: string | null;
+  managerComment: string | null;
+  sheetId: string | null;
+}

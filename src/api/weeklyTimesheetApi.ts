@@ -2,6 +2,7 @@ import api from "./axios";
 import type {
   ApiResponse, PaginatedResponse, WeeklyTimesheetData, ActivityTypeItem,
   PolicyItem, TimesheetDashboardStats, ProjectTimeSummary, OvertimeEntry, User,
+  EmployeeTimesheetStatus,
 } from "../types";
 
 export const weeklyTimesheetApi = {
@@ -49,6 +50,9 @@ export const weeklyTimesheetApi = {
 
   getCompliance: (weeks = 8) =>
     api.get<ApiResponse<{ weeks: number; employees: { _id: string; name: string; email: string; department?: string; submitted: number; total: number; compliance: number }[] }>>("/weekly-timesheet/compliance", { params: { weeks } }),
+
+  getEmployeesStatus: (weekStart?: string, department?: string) =>
+    api.get<ApiResponse<EmployeeTimesheetStatus[]>>("/weekly-timesheet/employees-status", { params: { ...(weekStart ? { weekStart } : {}), ...(department ? { department } : {}) } }),
 
   // Config
   getActivityTypes: () =>
