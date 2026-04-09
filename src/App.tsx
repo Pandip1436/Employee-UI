@@ -151,6 +151,7 @@ export default function App() {
           <Route path="/admin/announcements" element={<AdminAnnouncements />} />
           <Route path="/admin/surveys/:id/results" element={<SurveyResults />} />
           <Route path="/performance/reviews/:id/mgr" element={<ManagerReview />} />
+          <Route path="/admin/timesheet/compliance" element={<AdminTimesheetCompliance />} />
         </Route>
       </Route>
 
@@ -164,7 +165,6 @@ export default function App() {
           <Route path="/admin/timesheet/reports/overtime" element={<AdminOvertimeReport />} />
           <Route path="/admin/timesheet/missing" element={<AdminMissingTimesheet />} />
           <Route path="/admin/timesheet/export" element={<AdminTimesheetExport />} />
-          <Route path="/admin/timesheet/compliance" element={<AdminTimesheetCompliance />} />
           <Route path="/admin/timesheet/config" element={<AdminTimesheetConfig />} />
           <Route path="/admin/settings/company" element={<AdminCompanySettings />} />
           <Route path="/admin/settings/designations" element={<AdminDesignations />} />
