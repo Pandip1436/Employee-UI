@@ -31,7 +31,6 @@ import TimesheetLogModal from "./pages/timesheet-home/TimesheetLogModal";
 import TimesheetHistory from "./pages/timesheet-history/TimesheetHistory";
 import TimesheetDetail from "./pages/timesheet-detail/TimesheetDetail";
 import TimesheetApprovals from "./pages/timesheet-approvals/TimesheetApprovals";
-import AdminTimesheetDashboard from "./pages/admin-timesheet/AdminTimesheetDashboard";
 import AdminTimesheetReports from "./pages/admin-timesheet-reports/AdminTimesheetReports";
 import AdminOvertimeReport from "./pages/admin-timesheet-overtime/AdminOvertimeReport";
 import AdminMissingTimesheet from "./pages/admin-timesheet-missing/AdminMissingTimesheet";
@@ -61,7 +60,6 @@ import MyGoals from "./pages/perf-goals/MyGoals";
 import GoalForm from "./pages/perf-goal-form/GoalForm";
 import SelfReview from "./pages/perf-self-review/SelfReview";
 import MyReviews from "./pages/perf-my-reviews/MyReviews";
-import AdminTimesheetCompliance from "./pages/admin-timesheet-compliance/AdminTimesheetCompliance";
 import ManagerReview from "./pages/perf-mgr-review/ManagerReview";
 import FeedbackPage from "./pages/perf-feedback/FeedbackPage";
 import PIPDetail from "./pages/perf-pip/PIPDetail";
@@ -151,7 +149,6 @@ export default function App() {
           <Route path="/admin/announcements" element={<AdminAnnouncements />} />
           <Route path="/admin/surveys/:id/results" element={<SurveyResults />} />
           <Route path="/performance/reviews/:id/mgr" element={<ManagerReview />} />
-          <Route path="/admin/timesheet/compliance" element={<AdminTimesheetCompliance />} />
         </Route>
       </Route>
 
@@ -160,7 +157,6 @@ export default function App() {
         <Route element={<MainLayout />}>
           <Route path="/users" element={<Users />} />
           <Route path="/dashboard/hr" element={<HrDashboard />} />
-          <Route path="/admin/timesheet" element={<AdminTimesheetDashboard />} />
           <Route path="/admin/timesheet/reports/employee" element={<AdminTimesheetReports />} />
           <Route path="/admin/timesheet/reports/overtime" element={<AdminOvertimeReport />} />
           <Route path="/admin/timesheet/missing" element={<AdminMissingTimesheet />} />

@@ -28,7 +28,7 @@ const typeConfig: Record<string, { dot: string; badge: string; label: string }> 
   casual: {
     dot: "bg-blue-500",
     badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20",
-    label: "Casual",
+    label: "Personal",
   },
   sick: {
     dot: "bg-orange-500",
@@ -52,34 +52,42 @@ const typeConfig: Record<string, { dot: string; badge: string; label: string }> 
   },
 };
 
-const balanceCardConfig: Record<string, { border: string; icon: typeof CalendarDays; iconBg: string; iconColor: string; progressBar: string }> = {
+const balanceCardConfig: Record<string, { border: string; bg: string; icon: typeof CalendarDays; iconBg: string; iconColor: string; progressBar: string; valueColor: string }> = {
   casual: {
     border: "border-l-4 border-blue-500",
+    bg: "bg-blue-50/40 dark:bg-blue-500/5",
     icon: Briefcase,
-    iconBg: "bg-blue-50 dark:bg-blue-500/10",
+    iconBg: "bg-blue-100 dark:bg-blue-500/10",
     iconColor: "text-blue-600 dark:text-blue-400",
     progressBar: "bg-blue-500",
+    valueColor: "text-blue-700 dark:text-blue-400",
   },
   sick: {
     border: "border-l-4 border-orange-500",
+    bg: "bg-orange-50/40 dark:bg-orange-500/5",
     icon: Heart,
-    iconBg: "bg-orange-50 dark:bg-orange-500/10",
+    iconBg: "bg-orange-100 dark:bg-orange-500/10",
     iconColor: "text-orange-600 dark:text-orange-400",
     progressBar: "bg-orange-500",
+    valueColor: "text-orange-700 dark:text-orange-400",
   },
   earned: {
     border: "border-l-4 border-purple-500",
+    bg: "bg-purple-50/40 dark:bg-purple-500/5",
     icon: Clock,
-    iconBg: "bg-purple-50 dark:bg-purple-500/10",
+    iconBg: "bg-purple-100 dark:bg-purple-500/10",
     iconColor: "text-purple-600 dark:text-purple-400",
     progressBar: "bg-purple-500",
+    valueColor: "text-purple-700 dark:text-purple-400",
   },
   compoff: {
     border: "border-l-4 border-indigo-500",
+    bg: "bg-indigo-50/40 dark:bg-indigo-500/5",
     icon: CalendarDays,
-    iconBg: "bg-indigo-50 dark:bg-indigo-500/10",
+    iconBg: "bg-indigo-100 dark:bg-indigo-500/10",
     iconColor: "text-indigo-600 dark:text-indigo-400",
     progressBar: "bg-indigo-500",
+    valueColor: "text-indigo-700 dark:text-indigo-400",
   },
 };
 
@@ -203,7 +211,7 @@ export default function Leaves() {
             return (
               <div
                 key={type}
-                className={`${config.border} rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md`}
+                className={`${config.border} ${config.bg} rounded-xl border border-gray-200 dark:border-gray-800 p-5 transition-all hover:shadow-md`}
               >
                 <div className="flex items-start justify-between">
                   <div className="space-y-1">
@@ -211,7 +219,7 @@ export default function Leaves() {
                       {typeConfig[type]?.label || type} {type === "compoff" ? "" : "Leave"}
                     </p>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                      <span className={`text-3xl font-bold ${config.valueColor}`}>
                         {remaining}
                       </span>
                       <span className="text-sm text-gray-400 dark:text-gray-500">
@@ -446,7 +454,7 @@ export default function Leaves() {
                   onChange={(e) => setLeaveType(e.target.value)}
                   className={inputClasses}
                 >
-                  <option value="casual">Casual</option>
+                  <option value="casual">Personal</option>
                   <option value="sick">Sick</option>
                   <option value="earned">Earned</option>
                   <option value="unpaid">Unpaid</option>

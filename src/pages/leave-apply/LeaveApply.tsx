@@ -6,7 +6,7 @@ import type { LeaveBalance } from "../../types";
 import toast from "react-hot-toast";
 
 const leaveTypes = [
-  { value: "casual", label: "Casual Leave", icon: Palmtree, color: "text-blue-500" },
+  { value: "casual", label: "Personal Leave", icon: Palmtree, color: "text-blue-500" },
   { value: "sick", label: "Sick Leave", icon: ThermometerSun, color: "text-amber-500" },
   { value: "earned", label: "Earned Leave", icon: Award, color: "text-emerald-500" },
   { value: "unpaid", label: "Unpaid Leave", icon: Ban, color: "text-red-500" },
@@ -71,10 +71,11 @@ export default function LeaveApply() {
       .finally(() => setSubmitting(false));
   };
 
-  const balanceEntries: { key: keyof LeaveBalance; label: string; color: string }[] = [
-    { key: "casual", label: "Casual", color: "bg-blue-500" },
-    { key: "sick", label: "Sick", color: "bg-amber-500" },
-    { key: "earned", label: "Earned", color: "bg-emerald-500" },
+  const balanceEntries: { key: keyof LeaveBalance; label: string; bar: string; border: string; bg: string; text: string }[] = [
+    { key: "casual",  label: "Personal", bar: "bg-blue-500",    border: "border border-gray-100 dark:border-gray-800 border-l-4 border-l-blue-500",    bg: "bg-blue-50/40 dark:bg-blue-500/5",    text: "text-blue-600 dark:text-blue-400" },
+    { key: "sick",    label: "Sick",     bar: "bg-amber-500",   border: "border border-gray-100 dark:border-gray-800 border-l-4 border-l-amber-500",   bg: "bg-amber-50/40 dark:bg-amber-500/5",  text: "text-amber-600 dark:text-amber-400" },
+    { key: "earned",  label: "Earned",   bar: "bg-emerald-500", border: "border border-gray-100 dark:border-gray-800 border-l-4 border-l-emerald-500", bg: "bg-emerald-50/40 dark:bg-emerald-500/5", text: "text-emerald-600 dark:text-emerald-400" },
+    { key: "compoff", label: "Comp-Off", bar: "bg-indigo-500",  border: "border border-gray-100 dark:border-gray-800 border-l-4 border-l-indigo-500",  bg: "bg-indigo-50/40 dark:bg-indigo-500/5",  text: "text-indigo-600 dark:text-indigo-400" },
   ];
 
   return (
@@ -204,23 +205,24 @@ export default function LeaveApply() {
                     ))}
                   </div>
                 ) : (
-                  balanceEntries.map(({ key, label, color }) => {
+                  balanceEntries.map(({ key, label, bar, border, bg, text }) => {
                     const b = balance[key];
+                    if (!b) return null;
                     const pct = b.total > 0 ? (b.used / b.total) * 100 : 0;
                     return (
                       <div
                         key={key}
-                        className="rounded-xl border border-gray-100 dark:border-gray-800 p-4"
+                        className={`rounded-xl ${border} ${bg} p-4`}
                       >
                         <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</span>
-                          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                          <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{label}</span>
+                          <span className={`text-sm font-bold ${text}`}>
                             {b.remaining} / {b.total}
                           </span>
                         </div>
                         <div className="h-2 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                           <div
-                            className={`h-full rounded-full ${color} transition-all duration-500`}
+                            className={`h-full rounded-full ${bar} transition-all duration-500`}
                             style={{ width: `${pct}%` }}
                           />
                         </div>
