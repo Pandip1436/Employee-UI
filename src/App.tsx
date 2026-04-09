@@ -61,6 +61,7 @@ import MyGoals from "./pages/perf-goals/MyGoals";
 import GoalForm from "./pages/perf-goal-form/GoalForm";
 import SelfReview from "./pages/perf-self-review/SelfReview";
 import MyReviews from "./pages/perf-my-reviews/MyReviews";
+import AdminTimesheetCompliance from "./pages/admin-timesheet-compliance/AdminTimesheetCompliance";
 import ManagerReview from "./pages/perf-mgr-review/ManagerReview";
 import FeedbackPage from "./pages/perf-feedback/FeedbackPage";
 import PIPDetail from "./pages/perf-pip/PIPDetail";
@@ -163,6 +164,7 @@ export default function App() {
           <Route path="/admin/timesheet/reports/overtime" element={<AdminOvertimeReport />} />
           <Route path="/admin/timesheet/missing" element={<AdminMissingTimesheet />} />
           <Route path="/admin/timesheet/export" element={<AdminTimesheetExport />} />
+          <Route path="/admin/timesheet/compliance" element={<AdminTimesheetCompliance />} />
           <Route path="/admin/timesheet/config" element={<AdminTimesheetConfig />} />
           <Route path="/admin/settings/company" element={<AdminCompanySettings />} />
           <Route path="/admin/settings/designations" element={<AdminDesignations />} />

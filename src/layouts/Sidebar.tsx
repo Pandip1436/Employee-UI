@@ -46,6 +46,7 @@ const links: SidebarLink[] = [
   { to: "/admin/timesheet/missing", label: "Missing", icon: AlertTriangle, roles: ["admin"], section: "Timesheet" },
   { to: "/admin/timesheet/reports/overtime", label: "Overtime", icon: Clock, roles: ["admin"], section: "Timesheet" },
   { to: "/admin/timesheet/export", label: "Export", icon: Download, roles: ["admin"], section: "Timesheet" },
+  { to: "/admin/timesheet/compliance", label: "Compliance", icon: BarChart3, roles: ["admin", "manager"], section: "Timesheet" },
   { to: "/admin/timesheet/config", label: "Config", icon: Settings, roles: ["admin"], section: "Timesheet" },
   { to: "/leaves", label: "Leave Dashboard", icon: CalendarDays, roles: [], section: "Leave" },
   { to: "/leave/apply", label: "Apply Leave", icon: ClipboardList, roles: [], section: "Leave" },

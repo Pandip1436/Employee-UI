@@ -44,6 +44,12 @@ export const weeklyTimesheetApi = {
   getOvertimeReport: (startDate: string, endDate: string) =>
     api.get<ApiResponse<OvertimeEntry[]>>("/weekly-timesheet/overtime", { params: { startDate, endDate } }),
 
+  sendReminders: () =>
+    api.post<ApiResponse<{ sent: number; weekLabel: string }>>("/weekly-timesheet/reminders/send"),
+
+  getCompliance: (weeks = 8) =>
+    api.get<ApiResponse<{ weeks: number; employees: { _id: string; name: string; email: string; department?: string; submitted: number; total: number; compliance: number }[] }>>("/weekly-timesheet/compliance", { params: { weeks } }),
+
   // Config
   getActivityTypes: () =>
     api.get<ApiResponse<ActivityTypeItem[]>>("/weekly-timesheet/activity-types"),
