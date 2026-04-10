@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import {
-  CheckCircle, XCircle, Gift, ChevronLeft, ChevronRight, X, AlertTriangle, MessageSquare, Clock,
+  CheckCircle, XCircle, Gift, ChevronLeft, ChevronRight, X, AlertTriangle, Clock,
 } from "lucide-react";
 import { compOffApi } from "../../api/compOffApi";
 import type { CompOffRequest, Pagination } from "../../types";
