@@ -59,7 +59,7 @@ const links: SidebarLink[] = [
   { to: "/performance/goals", label: "My Goals", icon: Target, roles: [], section: "Performance" },
   { to: "/performance/goals/team", label: "Team Goals", icon: Users, roles: ["admin", "manager"], section: "Performance" },
   { to: "/performance/feedback", label: "Feedback", icon: MessageCircle, roles: [], section: "Performance" },
-  { to: "/performance/reviews/my", label: "My Reviews", icon: Star, roles: [], section: "Performance" },
+  { to: "/performance/reviews/my", label: "My Reviews", icon: Star, roles: ["admin"], section: "Performance" },
   { to: "/admin/performance/cycles", label: "Cycles", icon: TrendingUp, roles: ["admin"], section: "Performance" },
   { to: "/admin/performance/calibrate", label: "Calibration", icon: BarChart3, roles: ["admin"], section: "Performance" },
   { to: "/learning", label: "Learning Hub", icon: BookOpen, roles: [], section: "Learning" },
