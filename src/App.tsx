@@ -57,6 +57,7 @@ import AdminAuditLog from "./pages/admin-audit/AdminAuditLog";
 
 // Performance Module
 import MyGoals from "./pages/perf-goals/MyGoals";
+import TeamGoals from "./pages/perf-goals/TeamGoals";
 import GoalForm from "./pages/perf-goal-form/GoalForm";
 import SelfReview from "./pages/perf-self-review/SelfReview";
 import MyReviews from "./pages/perf-my-reviews/MyReviews";
@@ -149,6 +150,7 @@ export default function App() {
           <Route path="/admin/announcements" element={<AdminAnnouncements />} />
           <Route path="/admin/surveys/:id/results" element={<SurveyResults />} />
           <Route path="/performance/reviews/:id/mgr" element={<ManagerReview />} />
+          <Route path="/performance/goals/team" element={<TeamGoals />} />
         </Route>
       </Route>
 
