@@ -1,4 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import {  Plus, X, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { compOffApi } from "../../api/compOffApi";
 import { useAuth } from "../../context/AuthContext";
@@ -23,6 +24,7 @@ const inputCls = "w-full rounded-lg border border-gray-300 dark:border-gray-600 
 
 export default function CompOff() {
   const { isAdmin, isManager } = useAuth();
+  const navigate = useNavigate();
   const canApprove = isAdmin || isManager;
   const [tab, setTab] = useState<"my" | "all">("my");
   const [requests, setRequests] = useState<CompOffRequest[]>([]);
@@ -63,10 +65,8 @@ export default function CompOff() {
     try { await compOffApi.approve(id, status); toast.success(`Request ${status}.`); fetchRequests(); fetchBalance(); } catch { /* interceptor */ }
   };
 
-  const handleUse = async (id: string) => {
-    if (!confirm("Mark this comp-off as used today?")) return;
-    try { await compOffApi.markUsed(id); toast.success("Comp-off used."); fetchRequests(); fetchBalance(); }
-    catch { /* interceptor */ }
+  const handleUse = () => {
+    navigate("/leave/apply?type=compoff");
   };
 
   const handleDelete = async (id: string) => {
@@ -157,7 +157,7 @@ export default function CompOff() {
                         <button onClick={() => handleDelete(r._id)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4" /></button>
                       )}
                       {tab === "my" && r.status === "approved" && (
-                        <button onClick={() => handleUse(r._id)} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Use</button>
+                        <button onClick={() => handleUse()} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Use</button>
                       )}
                     </div>
                   </td>

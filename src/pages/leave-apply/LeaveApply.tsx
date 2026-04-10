@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { CalendarDays, Send, X, Palmtree, ThermometerSun, Award, Ban, Gift } from "lucide-react";
 import { leaveApi } from "../../api/leaveApi";
 import type { LeaveBalance } from "../../types";
@@ -21,8 +21,9 @@ const labelCls =
 
 export default function LeaveApply() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [type, setType] = useState("");
+  const [type, setType] = useState(searchParams.get("type") || "");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [reason, setReason] = useState("");
