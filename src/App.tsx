@@ -20,6 +20,7 @@ import LeaveApply from "./pages/leave-apply/LeaveApply";
 import LeaveApprovals from "./pages/leave-approvals/LeaveApprovals";
 import WFHRequests from "./pages/wfh-requests/WFHRequests";
 import WFHApprovals from "./pages/wfh/WFHApprovals";
+import CompOffApprovals from "./pages/comp-off/CompOffApprovals";
 import CompOff from "./pages/comp-off/CompOff";
 import Documents from "./pages/documents/Documents";
 import Profile from "./pages/profile/Profile";
@@ -153,6 +154,7 @@ export default function App() {
           <Route path="/performance/reviews/:id/mgr" element={<ManagerReview />} />
           <Route path="/performance/goals/team" element={<TeamGoals />} />
           <Route path="/wfh/approvals" element={<WFHApprovals />} />
+          <Route path="/compoff/approvals" element={<CompOffApprovals />} />
         </Route>
       </Route>
 
