@@ -108,7 +108,7 @@ export default function HrDashboard() {
 
   const quickLinks = [
     { label: "Employees", to: "/employees", icon: Building2 },
-    { label: "Admin Timesheet", to: "/admin/timesheet", icon: ClipboardList },
+    { label: "Timesheet Approvals", to: "/timesheet/approvals", icon: ClipboardList },
     { label: "Attendance Reports", to: "/attendance/reports", icon: FileBarChart },
     { label: "Export Timesheet", to: "/admin/timesheet/export", icon: Download },
   ];
