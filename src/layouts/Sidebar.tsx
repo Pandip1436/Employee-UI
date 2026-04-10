@@ -23,14 +23,14 @@ interface SidebarLink {
 }
 
 const links: SidebarLink[] = [
-  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [],  section: "Main" },
+  { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard, roles: [],excludeRoles: ["admin"],  section: "Main" },
   { to: "/dashboard/manager", label: "Team Dashboard", icon: UsersRound, roles: ["manager"], section: "Main" },
   { to: "/dashboard/hr", label: "HR Dashboard", icon: BarChart3, roles: ["admin"], section: "Main" },
   { to: "/employees", label: "Employees", icon: UsersRound, roles: ["admin", "manager"], section: "Main" },
   { to: "/projects", label: "Projects", icon: FolderKanban, roles: [], section: "Main" },
   { to: "/documents", label: "Documents", icon: FileText, roles: [], section: "Main" },
-  { to: "/attendance", label: "My Attendance", icon: UserCheck, roles: [], section: "Attendance" },
-  { to: "/attendance/calendar", label: "Calendar", icon: CalendarRange, roles: [], section: "Attendance" },
+  { to: "/attendance", label: "My Attendance", icon: UserCheck, roles: [],excludeRoles: ["admin"], section: "Attendance" },
+  { to: "/attendance/calendar", label: "Calendar", icon: CalendarRange, roles: [],excludeRoles: ["admin"], section: "Attendance" },
   { to: "/attendance/team", label: "Team View", icon: TeamIcon, roles: ["admin", "manager"], section: "Attendance" },
   { to: "/attendance/holidays", label: "Holidays", icon: PartyPopper, roles: [], section: "Attendance" },
   { to: "/attendance/reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"], section: "Attendance" },
