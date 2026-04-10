@@ -1,20 +1,24 @@
-import { useState, useEffect } from "react";
-import {  Search } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Search } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
-import type {  LiveStatusData, LiveEmployee } from "../../types";
+import type { LiveStatusData, LiveEmployee } from "../../types";
 
 const liveStyles: Record<string, { bg: string; dot: string; label: string; pulse: boolean }> = {
-  "clocked-in": { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", label: "Logged In", pulse: true},
+  "clocked-in": { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", label: "Logged In", pulse: true },
   late: { bg: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400", dot: "bg-amber-500", label: "Late Login", pulse: true },
-  "clocked-out": { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500", label: "Logged Out", pulse: false},
+  "clocked-out": { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500", label: "Logged Out", pulse: false },
   "not-marked": { bg: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400", dot: "bg-gray-400", label: "Not Marked", pulse: false },
+  absent: { bg: "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400", dot: "bg-rose-500", label: "Absent", pulse: false },
 };
+
+type ViewTab = "all" | "present" | "absent";
 
 export default function TeamAttendance() {
   const [liveData, setLiveData] = useState<LiveStatusData | null>(null);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
+  const [viewTab, setViewTab] = useState<ViewTab>("all");
 
   const fetchData = () => {
     attendanceApi.getLiveStatus().then((r) => {
@@ -26,9 +30,19 @@ export default function TeamAttendance() {
 
   useEffect(() => { fetchData(); const id = setInterval(fetchData, 30000); return () => clearInterval(id); }, []);
 
+  const absentStatuses = ["not-marked"];
+  const presentStatuses = ["clocked-in", "late", "clocked-out"];
+
+  const absentCount = useMemo(() => (liveData?.employees || []).filter((e) => absentStatuses.includes(e.liveStatus)).length, [liveData]);
+
   const filtered = (liveData?.employees || [])
     .filter((e) => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.email.toLowerCase().includes(search.toLowerCase()))
-    .filter((e) => !deptFilter || e.department === deptFilter);
+    .filter((e) => !deptFilter || e.department === deptFilter)
+    .filter((e) => {
+      if (viewTab === "absent") return absentStatuses.includes(e.liveStatus);
+      if (viewTab === "present") return presentStatuses.includes(e.liveStatus);
+      return true;
+    });
 
   const fmtClock = (d: string | null) => d ? new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
 
@@ -41,12 +55,13 @@ export default function TeamAttendance() {
 
       {/* Summary */}
       {liveData?.summary && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {[
             { label: "Logged In", value: liveData.summary.clockedIn, color: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-500/20" },
             { label: "Late Login", value: liveData.summary.late, color: "text-amber-600 dark:text-amber-400", border: "border-amber-200 dark:border-amber-500/20" },
             { label: "Logged Out", value: liveData.summary.clockedOut, color: "text-blue-600 dark:text-blue-400", border: "border-blue-200 dark:border-blue-500/20" },
             { label: "Not Marked", value: liveData.summary.notMarked, color: "text-gray-500 dark:text-gray-400", border: "border-gray-200 dark:border-gray-700" },
+            { label: "Absent", value: absentCount, color: "text-rose-600 dark:text-rose-400", border: "border-rose-200 dark:border-rose-500/20" },
           ].map((c) => (
             <div key={c.label} className={`rounded-xl border ${c.border} bg-white dark:bg-gray-900 p-4 text-center`}>
               <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
@@ -55,6 +70,20 @@ export default function TeamAttendance() {
           ))}
         </div>
       )}
+
+      {/* View Tabs */}
+      <div className="flex gap-1 rounded-xl bg-gray-100 dark:bg-gray-800/60 p-1 w-fit">
+        {([
+          { key: "all" as ViewTab, label: "All", count: liveData?.employees.length ?? 0 },
+          { key: "present" as ViewTab, label: "Present", count: (liveData?.employees || []).filter((e) => presentStatuses.includes(e.liveStatus)).length },
+          { key: "absent" as ViewTab, label: "Absent", count: absentCount },
+        ]).map((t) => (
+          <button key={t.key} onClick={() => setViewTab(t.key)}
+            className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors ${viewTab === t.key ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700"}`}>
+            {t.label} <span className="ml-1 text-xs opacity-60">{t.count}</span>
+          </button>
+        ))}
+      </div>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-3">
