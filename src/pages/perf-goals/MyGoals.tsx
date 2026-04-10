@@ -129,9 +129,9 @@ export default function MyGoals() {
           {[
             { label: "Total", value: stats.total, cls: "text-gray-900 dark:text-white", border: "border-l-4 border-indigo-500" },
             { label: "Avg Progress", value: `${stats.avgProgress}%`, cls: "text-indigo-600 dark:text-indigo-400", border: "border-l-4 border-indigo-500" },
-            { label: "Completed", value: stats.completed, cls: "text-blue-600 dark:text-blue-400", border: "border-l-4 border-blue-500" },
-            { label: "On Track", value: stats.onTrack, cls: "text-emerald-600 dark:text-emerald-400", border: "border-l-4 border-emerald-500" },
-            { label: "At Risk", value: stats.atRisk, cls: "text-amber-600 dark:text-amber-400", border: "border-l-4 border-amber-500" },
+            { label: "Completed", value: stats.completed, cls: "text-blue-600 dark:text-blue-400", border: "border-l-4 border-yellow-500" },
+            { label: "On Track", value: stats.onTrack, cls: "text-emerald-600 dark:text-emerald-400", border: "border-l-4 border-green-500" },
+            { label: "At Risk", value: stats.atRisk, cls: "text-amber-600 dark:text-amber-400", border: "border-l-4 border-orange-500" },
             { label: "Behind", value: stats.behind, cls: "text-rose-600 dark:text-rose-400", border: "border-l-4 border-rose-500" },
             { label: "Not Started", value: stats.notStarted, cls: "text-gray-500", border: "border-l-4 border-gray-400" },
           ].map((s) => (

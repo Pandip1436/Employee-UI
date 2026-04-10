@@ -54,7 +54,7 @@ const typeConfig: Record<string, { dot: string; badge: string; label: string }> 
 
 const balanceCardConfig: Record<string, { border: string; bg: string; icon: typeof CalendarDays; iconBg: string; iconColor: string; progressBar: string; valueColor: string }> = {
   casual: {
-    border: "border-l-4 border-blue-500",
+    border: "border-l-4 border-indigo-500",
     bg: "bg-blue-50/40 dark:bg-blue-500/5",
     icon: Briefcase,
     iconBg: "bg-blue-100 dark:bg-blue-500/10",

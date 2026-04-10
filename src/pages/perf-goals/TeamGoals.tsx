@@ -84,9 +84,9 @@ export default function TeamGoals() {
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total Goals", value: teamStats.total, cls: "text-gray-900 dark:text-white", border: "border-l-4 border-indigo-500" },
+          { label: "Total Goals", value: teamStats.total, cls: "text-gray-900 dark:text-white", border: "border-l-4 border-yellow-500" },
           { label: "Avg Progress", value: `${teamStats.avgProgress}%`, cls: "text-indigo-600 dark:text-indigo-400", border: "border-l-4 border-indigo-500" },
-          { label: "Completed", value: teamStats.completed, cls: "text-blue-600 dark:text-blue-400", border: "border-l-4 border-blue-500" },
+          { label: "Completed", value: teamStats.completed, cls: "text-blue-600 dark:text-blue-400", border: "border-l-4 border-green-500" },
           { label: "At Risk / Behind", value: teamStats.atRisk, cls: "text-rose-600 dark:text-rose-400", border: "border-l-4 border-rose-500" },
         ].map((s) => (
           <div key={s.label} className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 ${s.border} p-4`}>
