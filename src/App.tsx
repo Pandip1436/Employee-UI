@@ -19,6 +19,7 @@ import Leaves from "./pages/leaves/Leaves";
 import LeaveApply from "./pages/leave-apply/LeaveApply";
 import LeaveApprovals from "./pages/leave-approvals/LeaveApprovals";
 import WFHRequests from "./pages/wfh-requests/WFHRequests";
+import WFHApprovals from "./pages/wfh/WFHApprovals";
 import CompOff from "./pages/comp-off/CompOff";
 import Documents from "./pages/documents/Documents";
 import Profile from "./pages/profile/Profile";
@@ -151,6 +152,7 @@ export default function App() {
           <Route path="/admin/surveys/:id/results" element={<SurveyResults />} />
           <Route path="/performance/reviews/:id/mgr" element={<ManagerReview />} />
           <Route path="/performance/goals/team" element={<TeamGoals />} />
+          <Route path="/wfh/approvals" element={<WFHApprovals />} />
         </Route>
       </Route>
 
