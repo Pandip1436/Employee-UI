@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Clock, FolderKanban, CheckCircle, AlertCircle, CalendarDays, FileText, LogIn } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, Navigate } from "react-router-dom";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -16,7 +16,9 @@ import type { WeeklySummary, LeaveBalance } from "../../types";
 const WORK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+
+  if (isAdmin) return <Navigate to="/dashboard/hr" replace />;
   const [kpis, setKpis] = useState<EmployeeKpis | null>(null);
   const [weekly, setWeekly] = useState<WeeklySummary | null>(null);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
