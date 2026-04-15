@@ -212,9 +212,11 @@ export default function Employees() {
                 <h3 className="mb-4 text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2"><Shield className="h-4 w-4 text-blue-500" /> Bank & Identity</h3>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <InfoRow icon={Shield} label="Bank" value={p?.bankName} color="blue" />
+                  <InfoRow icon={Shield} label="Account Number" value={p?.bankAccountNumber || p?.bankAccountNumberMasked} color="blue" />
                   <InfoRow icon={Shield} label="IFSC" value={p?.bankIfsc} color="blue" />
-                  <InfoRow icon={Shield} label="Aadhaar" value={p?.aadhaarNumberMasked || "XXXX"} color="purple" />
-                  <InfoRow icon={Shield} label="PAN" value={p?.panNumberMasked || "XXXX"} color="purple" />
+                  <InfoRow icon={Shield} label="Aadhaar" value={p?.aadhaarNumber || p?.aadhaarNumberMasked} color="purple" />
+                  <InfoRow icon={Shield} label="PAN" value={p?.panNumber || p?.panNumberMasked} color="purple" />
+                  <InfoRow icon={Shield} label="Passport" value={p?.passportNumber || p?.passportNumberMasked} color="purple" />
                 </div>
               </div>
             </div>
@@ -258,6 +260,24 @@ export default function Employees() {
                       <p className="text-sm font-medium text-gray-900 dark:text-white">{c.name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{c.issuer}{c.year ? ` — ${c.year}` : ""}</p>
                     </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {(p?.offerLetterPath || (p?.certificatePaths?.length || 0) > 0) && (
+              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5">
+                <h3 className="mb-3 text-sm font-bold text-gray-900 dark:text-white flex items-center gap-2"><Shield className="h-4 w-4 text-rose-500" /> Documents</h3>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {p?.offerLetterPath && (
+                    <a href={`/${p.offerLetterPath}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg bg-gray-50 dark:bg-gray-800 p-3 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <Shield className="h-4 w-4" /> Offer Letter
+                    </a>
+                  )}
+                  {p?.certificatePaths?.map((path, i) => (
+                    <a key={i} href={`/${path}`} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg bg-gray-50 dark:bg-gray-800 p-3 text-sm text-indigo-600 dark:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700">
+                      <Shield className="h-4 w-4" /> Certificate {i + 1}
+                    </a>
                   ))}
                 </div>
               </div>

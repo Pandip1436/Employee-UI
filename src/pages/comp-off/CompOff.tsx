@@ -1,6 +1,5 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { useNavigate } from "react-router-dom";
-import {  Plus, X, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import { Plus, X, CheckCircle, XCircle, Trash2, ArrowRight, CalendarDays, Gift } from "lucide-react";
 import { compOffApi } from "../../api/compOffApi";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmContext";
@@ -13,6 +12,7 @@ const statusStyle: Record<string, { bg: string; dot: string }> = {
   rejected: { bg: "bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400", dot: "bg-rose-500" },
   used: { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500" },
   expired: { bg: "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400", dot: "bg-gray-500" },
+  cancelled: { bg: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400", dot: "bg-gray-400" },
 };
 
 const daysUntil = (iso?: string) => {
@@ -26,7 +26,6 @@ const inputCls = "w-full rounded-lg border border-gray-300 dark:border-gray-600 
 export default function CompOff() {
   const { isAdmin, isManager } = useAuth();
   const confirm = useConfirm();
-  const navigate = useNavigate();
   const canApprove = isAdmin || isManager;
   const [tab, setTab] = useState<"my" | "all">("my");
   const [requests, setRequests] = useState<CompOffRequest[]>([]);
@@ -35,7 +34,9 @@ export default function CompOff() {
   const [page, setPage] = useState(1);
   const [showApply, setShowApply] = useState(false);
   const [workedDate, setWorkedDate] = useState("");
+  const [dayOffDate, setDayOffDate] = useState("");
   const [hoursWorked, setHoursWorked] = useState<number | "">("");
+  const [dayType, setDayType] = useState<"full" | "half">("full");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
 
@@ -52,23 +53,21 @@ export default function CompOff() {
   const handleApply = async (e: FormEvent) => {
     e.preventDefault();
     if (!workedDate) return toast.error("Pick the date you worked.");
+    if (!dayOffDate) return toast.error("Pick the day-off date you want to redeem.");
+    if (new Date(dayOffDate) <= new Date(workedDate)) return toast.error("Day-off date must be after worked date.");
     if (!hoursWorked || hoursWorked < 4) return toast.error("Minimum 4 hours of work required.");
-    // Server validates weekend OR declared holiday
     setSaving(true);
     try {
-      await compOffApi.apply({ workedDate, hoursWorked: Number(hoursWorked), reason });
-      toast.success("Comp-off applied!");
-      setShowApply(false); setWorkedDate(""); setHoursWorked(""); setReason("");
+      await compOffApi.apply({ workedDate, dayOffDate, hoursWorked: Number(hoursWorked), reason, dayType });
+      toast.success("Comp-off request submitted!");
+      setShowApply(false);
+      setWorkedDate(""); setDayOffDate(""); setHoursWorked(""); setReason(""); setDayType("full");
       fetchRequests(); fetchBalance();
     } catch { /* interceptor */ } finally { setSaving(false); }
   };
 
   const handleApprove = async (id: string, status: "approved" | "rejected") => {
     try { await compOffApi.approve(id, status); toast.success(`Request ${status}.`); fetchRequests(); fetchBalance(); } catch { /* interceptor */ }
-  };
-
-  const handleUse = () => {
-    navigate("/leave/apply?type=compoff");
   };
 
   const handleDelete = async (id: string) => {
@@ -118,10 +117,10 @@ export default function CompOff() {
           <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
             <tr>
               {tab === "all" && <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Employee</th>}
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Worked Date</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Worked → Day-Off</th>
+              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Type</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hours</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Reason</th>
-              <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Expiry</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
               <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Actions</th>
             </tr>
@@ -131,21 +130,24 @@ export default function CompOff() {
               <tr><td colSpan={tab === "all" ? 7 : 6} className="px-4 py-12 text-center text-gray-400">No requests found.</td></tr>
             ) : requests.map((r) => {
               const s = statusStyle[r.status] || statusStyle.pending;
-              const days = daysUntil(r.expiryDate);
-              const expiringSoon = r.status === "approved" && days != null && days <= 7 && days >= 0;
+              const days = daysUntil(r.dayOffDate);
+              const upcoming = r.status === "approved" && days != null && days <= 7 && days >= 0;
               return (
-                <tr key={r._id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${expiringSoon ? "bg-orange-50/50 dark:bg-orange-500/5" : ""}`}>
+                <tr key={r._id} className={`hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors ${upcoming ? "bg-emerald-50/50 dark:bg-emerald-500/5" : ""}`}>
                   {tab === "all" && <td className="px-4 py-3 font-medium text-gray-900 dark:text-white">{(r.userId as any)?.name || "—"}</td>}
-                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{new Date(r.workedDate).toLocaleDateString()}</td>
+                  <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5 text-indigo-500" />{new Date(r.workedDate).toLocaleDateString()}</span>
+                      <ArrowRight className="h-3.5 w-3.5 text-gray-400" />
+                      <span className="inline-flex items-center gap-1"><Gift className="h-3.5 w-3.5 text-emerald-500" />{r.dayOffDate ? new Date(r.dayOffDate).toLocaleDateString() : "—"}</span>
+                    </div>
+                    {upcoming && <p className="mt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">In {days} day{days === 1 ? "" : "s"}</p>}
+                  </td>
+                  <td className="px-4 py-3 text-xs capitalize">
+                    <span className="rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-0.5 font-semibold text-gray-600 dark:text-gray-300">{r.dayType || "full"}</span>
+                  </td>
                   <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{r.hoursWorked ?? "—"}h</td>
                   <td className="px-4 py-3 text-gray-600 dark:text-gray-400 max-w-xs truncate">{r.reason}</td>
-                  <td className="px-4 py-3 text-xs">
-                    {r.expiryDate ? (
-                      <span className={expiringSoon ? "font-semibold text-orange-600 dark:text-orange-400" : "text-gray-500 dark:text-gray-400"}>
-                        {new Date(r.expiryDate).toLocaleDateString()}{expiringSoon ? ` · ${days}d left` : ""}
-                      </span>
-                    ) : <span className="text-gray-400">—</span>}
-                  </td>
                   <td className="px-4 py-3"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${s.bg}`}><span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />{r.status}</span></td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1">
@@ -157,9 +159,6 @@ export default function CompOff() {
                       )}
                       {tab === "my" && r.status === "pending" && (
                         <button onClick={() => handleDelete(r._id)} className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"><Trash2 className="h-4 w-4" /></button>
-                      )}
-                      {tab === "my" && r.status === "approved" && (
-                        <button onClick={() => handleUse()} className="rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-700">Use</button>
                       )}
                     </div>
                   </td>
@@ -178,10 +177,14 @@ export default function CompOff() {
           const s = statusStyle[r.status] || statusStyle.pending;
           return (
             <div key={r._id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md">
-              <div className="flex items-center justify-between mb-2">
-                <div>
+              <div className="flex items-start justify-between mb-2 gap-2">
+                <div className="min-w-0">
                   {tab === "all" && <p className="font-semibold text-gray-900 dark:text-white">{(r.userId as any)?.name || "—"}</p>}
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Worked: {new Date(r.workedDate).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1.5 flex-wrap">
+                    <span className="inline-flex items-center gap-1"><CalendarDays className="h-3.5 w-3.5 text-indigo-500" />{new Date(r.workedDate).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                    <ArrowRight className="h-3 w-3 text-gray-400" />
+                    <span className="inline-flex items-center gap-1"><Gift className="h-3.5 w-3.5 text-emerald-500" />{r.dayOffDate ? new Date(r.dayOffDate).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "—"}</span>
+                  </p>
                 </div>
                 <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium capitalize ${s.bg}`}><span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />{r.status}</span>
               </div>
@@ -218,14 +221,43 @@ export default function CompOff() {
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowApply(false)} />
           <div className="relative w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between"><h2 className="text-lg font-bold text-gray-900 dark:text-white">Apply Comp-Off</h2><button onClick={() => setShowApply(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X className="h-5 w-5" /></button></div>
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Apply Comp-Off</h2>
+                <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Pick the day you worked and the day you want off</p>
+              </div>
+              <button onClick={() => setShowApply(false)} className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"><X className="h-5 w-5" /></button>
+            </div>
             <form onSubmit={handleApply} className="space-y-4">
-              <div><label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Date Worked (Weekend/Holiday)</label><input type="date" required value={workedDate} onChange={(e) => setWorkedDate(e.target.value)} className={inputCls} /></div>
-              <div><label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Hours Worked (min 4)</label><input type="number" min={4} max={24} step={0.5} required value={hoursWorked} onChange={(e) => setHoursWorked(e.target.value === "" ? "" : Number(e.target.value))} className={inputCls} placeholder="e.g. 8" /><p className="mt-1 text-[11px] text-gray-400">≥4h = ½ day · ≥8h = full day</p></div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 flex items-center gap-1"><CalendarDays className="h-3 w-3 text-indigo-500" /> Worked Date</label>
+                  <input type="date" required max={new Date().toISOString().slice(0, 10)} value={workedDate} onChange={(e) => setWorkedDate(e.target.value)} className={inputCls} />
+                  <p className="mt-1 text-[11px] text-gray-400">Weekend or holiday</p>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 flex items-center gap-1"><Gift className="h-3 w-3 text-emerald-500" /> Day-Off Date</label>
+                  <input type="date" required min={new Date(Date.now() + 86400000).toISOString().slice(0, 10)} value={dayOffDate} onChange={(e) => setDayOffDate(e.target.value)} className={inputCls} />
+                  <p className="mt-1 text-[11px] text-gray-400">Working day, within 60 days</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Day Type</label>
+                  <select value={dayType} onChange={(e) => setDayType(e.target.value as "full" | "half")} className={inputCls}>
+                    <option value="full">Full Day</option>
+                    <option value="half">Half Day</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Hours Worked</label>
+                  <input type="number" min={4} max={24} step={0.5} required value={hoursWorked} onChange={(e) => setHoursWorked(e.target.value === "" ? "" : Number(e.target.value))} className={inputCls} placeholder="e.g. 8" />
+                </div>
+              </div>
               <div><label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Reason</label><textarea required rows={3} value={reason} onChange={(e) => setReason(e.target.value)} className={inputCls} placeholder="Describe the work done..." /></div>
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={() => setShowApply(false)} className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{saving ? "Applying..." : "Apply"}</button>
+                <button type="submit" disabled={saving} className="flex-1 rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50">{saving ? "Applying..." : "Submit"}</button>
               </div>
             </form>
           </div>

@@ -1,11 +1,13 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { Plus, X, CheckCircle, XCircle, CalendarDays, Clock, Briefcase, Heart, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Plus, X, CheckCircle, XCircle, CalendarDays, Clock, Briefcase, Heart, ChevronLeft, ChevronRight, Trash2, Laptop, Gift, LayoutDashboard } from "lucide-react";
 import { leaveApi } from "../../api/leaveApi";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmContext";
 import type { LeaveRequest, LeaveBalance, Pagination } from "../../types";
 import toast from "react-hot-toast";
+import LeaveApply from "../leave-apply/LeaveApply";
+import WFHRequests from "../wfh-requests/WFHRequests";
+import CompOff from "../comp-off/CompOff";
 
 const statusConfig: Record<string, { dot: string; badge: string; label: string }> = {
   pending: {
@@ -101,6 +103,7 @@ export default function Leaves() {
   const { isAdmin, isManager } = useAuth();
   const confirm = useConfirm();
   const canApprove = isAdmin || isManager;
+  const [section, setSection] = useState<"leaves" | "apply" | "wfh" | "compoff">("leaves");
   const [tab, setTab] = useState<"my" | "requests">(canApprove ? "requests" : "my");
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [balance, setBalance] = useState<LeaveBalance | null>(null);
@@ -190,19 +193,46 @@ export default function Leaves() {
             Track and manage leave requests
           </p>
         </div>
-        <Link
-          to="/leave/apply"
+        <button
+          onClick={() => setSection("apply")}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 hover:shadow-md active:scale-[0.98]"
         >
           <Plus className="h-4 w-4" />
           Apply Leave
-        </Link>
+        </button>
       </div>
 
+      {/* Section Tabs */}
+      <div className="flex overflow-x-auto gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 scrollbar-hide">
+        {([
+          { id: "leaves", label: "Leave Dashboard", icon: LayoutDashboard },
+          { id: "apply", label: "Apply Leave", icon: Plus },
+          { id: "wfh", label: "WFH Requests", icon: Laptop },
+          { id: "compoff", label: "Comp-Off", icon: Gift },
+        ] as const).map((s) => (
+          <button
+            key={s.id}
+            onClick={() => setSection(s.id)}
+            className={`flex items-center gap-2 flex-1 sm:flex-none whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+              section === s.id
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+          >
+            <s.icon className="h-4 w-4" />
+            {s.label}
+          </button>
+        ))}
+      </div>
+
+      {section === "apply" && <LeaveApply />}
+      {section === "wfh" && <WFHRequests />}
+      {section === "compoff" && <CompOff />}
+
       {/* Leave Balance Cards */}
-      {balance && (
+      {section === "leaves" && balance && (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {(["casual", "sick", "earned", "compoff"] as const).map((type) => {
+          {(["casual", "sick", "compoff"] as const).map((type) => {
             const config = balanceCardConfig[type];
             const Icon = config.icon;
             const used = balance[type].used;
@@ -255,7 +285,7 @@ export default function Leaves() {
       )}
 
       {/* Tabs */}
-      {canApprove && (
+      {section === "leaves" && canApprove && (
         <div className="overflow-x-auto scrollbar-none -mx-1 px-1">
           <div className="inline-flex gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
             {(["my", "requests"] as const).map((t) => (
@@ -276,6 +306,7 @@ export default function Leaves() {
       )}
 
       {/* Leave Requests */}
+      {section === "leaves" && (
       <div className="space-y-3">
         {leaves.length === 0 ? (
           <div className="flex flex-col items-center justify-center rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-20 px-4 text-center">
@@ -400,9 +431,10 @@ export default function Leaves() {
           })
         )}
       </div>
+      )}
 
       {/* Pagination */}
-      {pagination && pagination.pages > 1 && (
+      {section === "leaves" && pagination && pagination.pages > 1 && (
         <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Page <span className="font-medium text-gray-700 dark:text-gray-200">{pagination.page}</span> of{" "}
@@ -458,7 +490,6 @@ export default function Leaves() {
                 >
                   <option value="casual">Personal</option>
                   <option value="sick">Sick</option>
-                  <option value="earned">Earned</option>
                   <option value="unpaid">Unpaid</option>
                   <option value="compoff">Comp-Off</option>
                 </select>

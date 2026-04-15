@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { LogIn, LogOut, Clock, Calendar, Timer, FileSpreadsheet, FileDown, X, Activity, Users, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { LogIn, LogOut, Clock, Calendar, Timer, X, Activity, Users, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
 import { useAuth } from "../../context/AuthContext";
 import type { AttendanceRecord, Pagination, User, LiveStatusData, LiveEmployee } from "../../types";
 import toast from "react-hot-toast";
+import AttendanceCalendar from "../attendance-calendar/AttendanceCalendar";
 
 const statusStyle: Record<string, { bg: string; dot: string; label: string }> = {
   present: { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", label: "Present" },
@@ -31,10 +32,9 @@ export default function Attendance() {
   const [allRecords, setAllRecords] = useState<AttendanceRecord[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
-  const [tab, setTab] = useState<"my" | "all" | "live" | "absent">("my");
+  const [tab, setTab] = useState<"my" | "calendar" | "all" | "live" | "absent">("my");
   const [elapsed, setElapsed] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [exporting, setExporting] = useState(false);
   const [liveData, setLiveData] = useState<LiveStatusData | null>(null);
   const [filterDate, setFilterDate] = useState("");
   const [filterUserId, setFilterUserId] = useState("");
@@ -43,19 +43,9 @@ export default function Attendance() {
   const [weeklyHours, setWeeklyHours] = useState(0);
   const [monthlyHours, setMonthlyHours] = useState(0);
   const [employees, setEmployees] = useState<User[]>([]);
-  const [reportMonth, setReportMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Helpers ──
-  const downloadFile = (data: Blob, filename: string) => {
-    const url = window.URL.createObjectURL(data);
-    const a = document.createElement("a");
-    a.href = url; a.download = filename; a.click();
-    window.URL.revokeObjectURL(url);
-  };
   const fmtTime = (s: number) => {
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
@@ -63,9 +53,6 @@ export default function Attendance() {
   const fmtClock = (d: string | null) => d ? new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
 
   // ── Handlers ──
-  const handleExportExcel = async () => { setExporting(true); try { const r = await attendanceApi.exportExcel(reportMonth); downloadFile(new Blob([r.data]), `attendance-${reportMonth}.xlsx`); toast.success("Excel downloaded!"); } catch { /* handled by interceptor */ } finally { setExporting(false); } };
-  const handleExportPdf = async () => { setExporting(true); try { const r = await attendanceApi.exportPdf(reportMonth); downloadFile(new Blob([r.data], { type: "application/pdf" }), `attendance-${reportMonth}.pdf`); toast.success("PDF downloaded!"); } catch { /* handled by interceptor */ } finally { setExporting(false); } };
-
   const handleClockIn = async () => {
     setLoading(true);
     try {
@@ -117,7 +104,7 @@ export default function Attendance() {
     }).catch(() => {});
   }, [today]);
   useEffect(() => { if (canViewAll) userApi.getAll({ limit: 200 }).then((r) => setEmployees(r.data.data)).catch(() => {}); }, [canViewAll]);
-  useEffect(() => { if (tab === "my") fetchHistory(); else if (tab === "all") fetchAll(); else if (tab === "live" || tab === "absent") fetchLive(); }, [page, tab, filterDate, filterUserId, filterStatus]);
+  useEffect(() => { if (tab === "my") fetchHistory(); else if (tab === "all") fetchAll(); else if (tab === "live" || tab === "absent") fetchLive(); /* calendar: self-contained */ }, [page, tab, filterDate, filterUserId, filterStatus]);
   useEffect(() => { if (tab !== "live") return; const id = setInterval(fetchLive, 30000); return () => clearInterval(id); }, [tab]);
   useEffect(() => {
     if (today?.clockIn && !today?.clockOut) {
@@ -218,19 +205,20 @@ export default function Attendance() {
       </div>
 
       {/* ━━━ Tabs ━━━ */}
-      {canViewAll && (
-        <div className="flex overflow-x-auto gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 scrollbar-hide">
-          {(["my", "all", "live", "absent"] as const).map((t) => (
-            <button key={t} onClick={() => { setTab(t); setPage(1); }}
-              className={`flex-1 sm:flex-none whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                tab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
-              }`}
-            >
-              {t === "my" ? "My Attendance" : t === "all" ? "All Employees" : t === "live" ? "Live Status" : "Today Absents"}
-            </button>
-          ))}
-        </div>
-      )}
+      <div className="flex overflow-x-auto gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 scrollbar-hide">
+        {((canViewAll ? ["my", "calendar", "all", "live", "absent"] : ["my", "calendar"]) as const).map((t) => (
+          <button key={t} onClick={() => { setTab(t); setPage(1); }}
+            className={`flex-1 sm:flex-none whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
+              tab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+          >
+            {t === "my" ? "My Attendance" : t === "calendar" ? "Calendar" : t === "all" ? "All Employees" : t === "live" ? "Live Status" : "Today Absents"}
+          </button>
+        ))}
+      </div>
+
+      {/* ━━━ Calendar ━━━ */}
+      {tab === "calendar" && <AttendanceCalendar />}
 
       {/* ━━━ Live Status ━━━ */}
       {tab === "live" && canViewAll && (
@@ -421,27 +409,8 @@ export default function Attendance() {
         </div>
       )}
 
-      {/* ━━━ Export ━━━ */}
-      {tab !== "live" && tab !== "absent" && (
-        <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">Monthly Report</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Export attendance data</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-            <input type="month" value={reportMonth} onChange={(e) => setReportMonth(e.target.value)} className={`flex-1 sm:flex-none ${inputCls}`} />
-            <button onClick={handleExportExcel} disabled={exporting} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors">
-              <FileSpreadsheet className="h-4 w-4" /> Excel
-            </button>
-            <button onClick={handleExportPdf} disabled={exporting} className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-50 transition-colors">
-              <FileDown className="h-4 w-4" /> PDF
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* ━━━ Records ━━━ */}
-      {tab !== "live" && tab !== "absent" && (
+      {tab !== "live" && tab !== "absent" && tab !== "calendar" && (
         <>
           {/* Desktop table */}
           <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">

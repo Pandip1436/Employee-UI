@@ -312,7 +312,7 @@ export default function Profile() {
               </div>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <ReadField label="Account Number" value={profile?.bankAccountNumberMasked || "XXXX"} icon={CreditCard} />
+                <ReadField label="Account Number" value={profile?.bankAccountNumber || profile?.bankAccountNumberMasked || "—"} icon={CreditCard} />
                 <ReadField label="IFSC Code" value={profile?.bankIfsc} icon={Building} />
                 <ReadField label="Bank Name" value={profile?.bankName} icon={Building} />
               </div>
@@ -324,9 +324,6 @@ export default function Profile() {
         {activeTab === "identity" && (
           <div className="space-y-5">
             <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><Shield className="h-5 w-5 text-purple-500" /> Identity Details</h3>
-            <div className="rounded-lg bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3 text-xs text-amber-700 dark:text-amber-400">
-              Sensitive data is masked for security. Click Edit to update values.
-            </div>
             {editing ? (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 <div><label className={labelCls}>Aadhaar Number</label><input value={form.aadhaarNumber || ""} onChange={(e) => setField("aadhaarNumber", e.target.value)} className={inputCls} placeholder="1234 5678 9012" /></div>
@@ -335,9 +332,9 @@ export default function Profile() {
               </div>
             ) : (
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <ReadField label="Aadhaar" value={profile?.aadhaarNumberMasked || "XXXXXXXX"} icon={Shield} />
-                <ReadField label="PAN" value={profile?.panNumberMasked || "XXXXXX"} icon={FileText} />
-                <ReadField label="Passport" value={profile?.passportNumberMasked || "—"} icon={FileText} />
+                <ReadField label="Aadhaar" value={profile?.aadhaarNumber || profile?.aadhaarNumberMasked || "—"} icon={Shield} />
+                <ReadField label="PAN" value={profile?.panNumber || profile?.panNumberMasked || "—"} icon={FileText} />
+                <ReadField label="Passport" value={profile?.passportNumber || profile?.passportNumberMasked || "—"} icon={FileText} />
               </div>
             )}
           </div>

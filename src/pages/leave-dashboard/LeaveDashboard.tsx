@@ -172,7 +172,7 @@ export default function LeaveDashboard() {
         <div>
           <p className={`${labelClasses} mb-3`}>Leave Balances</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {(["casual", "sick", "earned"] as const).map((type) => {
+            {(["casual", "sick"] as const).map((type) => {
               const config = balanceCardConfig[type];
               const Icon = config.icon;
               const used = balance[type].used;

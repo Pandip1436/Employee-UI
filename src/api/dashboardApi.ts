@@ -62,7 +62,7 @@ export const dashboardApi = {
     api.get<ApiResponse<HrStats>>("/dashboard/hr-stats"),
 
   getUpcomingEvents: () =>
-    api.get<ApiResponse<{ anniversaries: unknown[] }>>("/dashboard/upcoming-events"),
+    api.get<ApiResponse<{ anniversaries: { _id: string; name: string; email: string; department?: string; years: number; eventDate: string }[] }>>("/dashboard/upcoming-events"),
 
   getPendingApprovals: () =>
     api.get<ApiResponse<{ leaves: PendingApprovalItem[]; timesheets: PendingApprovalItem[] }>>("/dashboard/pending-approvals"),

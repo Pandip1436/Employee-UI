@@ -263,10 +263,13 @@ export interface CompOffRequest {
   _id: string;
   userId: User;
   workedDate: string;
+  dayOffDate: string;
+  dayType: "full" | "half";
   hoursWorked: number;
   reason: string;
-  status: "pending" | "approved" | "rejected" | "used" | "expired";
+  status: "pending" | "approved" | "rejected" | "used" | "expired" | "cancelled";
   approvedBy?: User;
+  rejectionComment?: string;
   usedDate?: string;
   expiryDate?: string;
   createdAt: string;

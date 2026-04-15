@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CalendarDays, Send, X, Palmtree, ThermometerSun, Award, Ban, Gift } from "lucide-react";
+import { CalendarDays, Send, X, Palmtree, ThermometerSun, Ban, Gift } from "lucide-react";
 import { leaveApi } from "../../api/leaveApi";
 import type { LeaveBalance } from "../../types";
 import toast from "react-hot-toast";
@@ -8,7 +8,6 @@ import toast from "react-hot-toast";
 const leaveTypes = [
   { value: "casual", label: "Personal Leave", icon: Palmtree, color: "text-blue-500" },
   { value: "sick", label: "Sick Leave", icon: ThermometerSun, color: "text-amber-500" },
-  { value: "earned", label: "Earned Leave", icon: Award, color: "text-emerald-500" },
   { value: "unpaid", label: "Unpaid Leave", icon: Ban, color: "text-red-500" },
   { value: "compoff", label: "Comp-Off", icon: Gift, color: "text-indigo-500" },
 ];
@@ -75,7 +74,6 @@ export default function LeaveApply() {
   const balanceEntries: { key: keyof LeaveBalance; label: string; bar: string; border: string; bg: string; text: string }[] = [
     { key: "casual",  label: "Personal", bar: "bg-blue-500",    border: "border border-gray-100 dark:border-gray-800 border-l-4 border-l-blue-500",    bg: "bg-blue-50/40 dark:bg-blue-500/5",    text: "text-blue-600 dark:text-blue-400" },
     { key: "sick",    label: "Sick",     bar: "bg-amber-500",   border: "border border-gray-100 dark:border-gray-800 border-l-4 border-l-amber-500",   bg: "bg-amber-50/40 dark:bg-amber-500/5",  text: "text-amber-600 dark:text-amber-400" },
-    { key: "earned",  label: "Earned",   bar: "bg-emerald-500", border: "border border-gray-100 dark:border-gray-800 border-l-4 border-l-emerald-500", bg: "bg-emerald-50/40 dark:bg-emerald-500/5", text: "text-emerald-600 dark:text-emerald-400" },
     { key: "compoff", label: "Comp-Off", bar: "bg-indigo-500",  border: "border border-gray-100 dark:border-gray-800 border-l-4 border-l-indigo-500",  bg: "bg-indigo-50/40 dark:bg-indigo-500/5",  text: "text-indigo-600 dark:text-indigo-400" },
   ];
 

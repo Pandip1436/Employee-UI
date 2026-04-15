@@ -1,5 +1,6 @@
 import axios from "axios";
 import toast from "react-hot-toast";
+import { loaderBus } from "../utils/loaderBus";
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
@@ -12,13 +13,21 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  loaderBus.start();
   return config;
+}, (error) => {
+  loaderBus.stop();
+  return Promise.reject(error);
 });
 
 // Handle responses and errors globally
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    loaderBus.stop();
+    return response;
+  },
   (error) => {
+    loaderBus.stop();
     const message =
       error.response?.data?.message || "Something went wrong";
 

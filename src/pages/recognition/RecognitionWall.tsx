@@ -38,6 +38,9 @@ export default function RecognitionWall() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [loading, setLoading] = useState(true);
+  const [openComments, setOpenComments] = useState<Record<string, boolean>>({});
+  const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [posting, setPosting] = useState<string | null>(null);
 
   const fetchPosts = useCallback((p: number) => {
     setLoading(true);
@@ -58,6 +61,19 @@ export default function RecognitionWall() {
       await recognitionApi.react(id);
       fetchPosts(page);
     } catch { /* interceptor */ }
+  };
+
+  const handleComment = async (id: string) => {
+    const text = (drafts[id] || "").trim();
+    if (!text) return;
+    setPosting(id);
+    try {
+      await recognitionApi.comment(id, text);
+      setDrafts((d) => ({ ...d, [id]: "" }));
+      fetchPosts(page);
+    } catch { /* interceptor */ } finally {
+      setPosting(null);
+    }
   };
 
   const card = "rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md dark:hover:shadow-gray-800/30";
@@ -148,28 +164,45 @@ export default function RecognitionWall() {
                     <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
                     {post.reactions.like.length}
                   </button>
-                  <span className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400">
+                  <button
+                    onClick={() => setOpenComments((o) => ({ ...o, [post._id]: !o[post._id] }))}
+                    className="flex items-center gap-1.5 text-sm text-gray-500 dark:text-gray-400 hover:text-indigo-500 transition-colors"
+                  >
                     <MessageCircle className="h-4 w-4" />
                     {post.comments.length}
-                  </span>
+                  </button>
                 </div>
 
-                {/* Comments preview */}
-                {post.comments.length > 0 && (
+                {/* Comments */}
+                {(openComments[post._id] || post.comments.length > 0) && (
                   <div className="mt-3 space-y-2 pl-4 border-l-2 border-gray-100 dark:border-gray-800">
-                    {post.comments.slice(0, 2).map((c, i) => (
+                    {post.comments.map((c, i) => (
                       <p key={i} className="text-xs text-gray-600 dark:text-gray-400">
                         <span className="font-semibold text-gray-800 dark:text-gray-200">{c.userId.name}</span>{" "}
                         {c.text}
                       </p>
                     ))}
-                    {post.comments.length > 2 && (
-                      <p className="text-xs text-indigo-500 dark:text-indigo-400 font-medium">
-                        +{post.comments.length - 2} more comments
-                      </p>
-                    )}
                   </div>
                 )}
+
+                {/* Comment input */}
+                <div className="mt-3 flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={drafts[post._id] || ""}
+                    onChange={(e) => setDrafts((d) => ({ ...d, [post._id]: e.target.value }))}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleComment(post._id); }}
+                    placeholder="Write a comment..."
+                    className="flex-1 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-white outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                  <button
+                    onClick={() => handleComment(post._id)}
+                    disabled={posting === post._id || !(drafts[post._id] || "").trim()}
+                    className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             );
           })}

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Save, Loader2, Building2, Globe, Calendar, Briefcase } from "lucide-react";
 import { adminSettingsApi } from "../../api/adminSettingsApi";
 import type { CompanySettingsData } from "../../api/adminSettingsApi";
+import { useCompany } from "../../context/CompanyContext";
 import toast from "react-hot-toast";
 
 const inputCls =
@@ -32,6 +33,7 @@ const MONTHS = [
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export default function AdminCompanySettings() {
+  const { refresh: refreshCompany } = useCompany();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [companyName, setCompanyName] = useState("");
@@ -72,6 +74,7 @@ export default function AdminCompanySettings() {
         workingDays,
       } as Partial<CompanySettingsData>);
       toast.success("Company settings saved");
+      await refreshCompany();
     } catch {
       toast.error("Failed to save settings");
     } finally {

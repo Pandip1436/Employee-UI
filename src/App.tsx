@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PremiumLoader from "./components/PremiumLoader";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
@@ -74,9 +75,6 @@ import ReviewCycles from "./pages/perf-cycles/ReviewCycles";
 import DailyUpdates from "./pages/daily-updates/DailyUpdates";
 import TeamDailyUpdates from "./pages/daily-updates/TeamDailyUpdates";
 
-// Chat Module
-import TeamChat from "./pages/chat/TeamChat";
-
 // Learning Module
 import LearningHub from "./pages/learning-hub/LearningHub";
 import CourseDetail from "./pages/course-detail/CourseDetail";
@@ -84,6 +82,8 @@ import MyCertifications from "./pages/learning-certs/MyCertifications";
 
 export default function App() {
   return (
+    <>
+    <PremiumLoader />
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
@@ -125,9 +125,6 @@ export default function App() {
           <Route path="/learning" element={<LearningHub />} />
           <Route path="/learning/courses/:id" element={<CourseDetail />} />
           <Route path="/learning/certifications" element={<MyCertifications />} />
-
-          {/* Chat */}
-          <Route path="/chat" element={<TeamChat />} />
 
           {/* Daily Updates */}
           <Route path="/daily-updates" element={<DailyUpdates />} />
@@ -185,5 +182,6 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </>
   );
 }

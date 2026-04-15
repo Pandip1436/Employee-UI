@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Save, Loader2, Palmtree, Stethoscope, GraduationCap, ToggleLeft, ToggleRight } from "lucide-react";
+import { Save, Loader2, Palmtree, Stethoscope, ToggleLeft, ToggleRight } from "lucide-react";
 import { adminSettingsApi } from "../../api/adminSettingsApi";
 import type { CompanySettingsData } from "../../api/adminSettingsApi";
 import toast from "react-hot-toast";
@@ -32,19 +32,11 @@ const LEAVE_TYPES: LeaveTypeConfig[] = [
     color: "text-rose-600 dark:text-rose-400",
     bgColor: "bg-rose-50 dark:bg-rose-500/10",
   },
-  {
-    key: "earned",
-    label: "Earned Leave",
-    icon: <GraduationCap className="h-5 w-5" />,
-    color: "text-emerald-600 dark:text-emerald-400",
-    bgColor: "bg-emerald-50 dark:bg-emerald-500/10",
-  },
 ];
 
 const DEFAULT_POLICY: LeavePolicy = {
   casual: { total: 12, carryForward: false },
   sick: { total: 10, carryForward: false },
-  earned: { total: 15, carryForward: true, maxCarry: 5 },
 };
 
 export default function AdminLeavePolicy() {

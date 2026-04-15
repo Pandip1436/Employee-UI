@@ -1,17 +1,19 @@
 import { useState, useEffect } from "react";
 import {
-  CheckCircle, XCircle, Gift, ChevronLeft, ChevronRight, X, AlertTriangle, Clock,
+  CheckCircle, XCircle, Gift, ChevronLeft, ChevronRight, X, AlertTriangle,
+  CalendarDays, ArrowRight, Clock3,
 } from "lucide-react";
 import { compOffApi } from "../../api/compOffApi";
 import type { CompOffRequest, Pagination } from "../../types";
 import toast from "react-hot-toast";
 
 const statusConfig: Record<string, { dot: string; badge: string; label: string }> = {
-  pending:  { dot: "bg-amber-500",   badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20",       label: "Pending" },
-  approved: { dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20", label: "Approved" },
-  rejected: { dot: "bg-rose-500",    badge: "bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20",                label: "Rejected" },
-  used:     { dot: "bg-blue-500",    badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20",                label: "Used" },
-  expired:  { dot: "bg-gray-400",    badge: "bg-gray-100 text-gray-600 ring-1 ring-gray-400/20 dark:bg-gray-700 dark:text-gray-400 dark:ring-gray-500/20",                  label: "Expired" },
+  pending:   { dot: "bg-amber-500",   badge: "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20",             label: "Pending" },
+  approved:  { dot: "bg-emerald-500", badge: "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20", label: "Approved" },
+  rejected:  { dot: "bg-rose-500",    badge: "bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20",                   label: "Rejected" },
+  used:      { dot: "bg-blue-500",    badge: "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20",                   label: "Used" },
+  expired:   { dot: "bg-gray-400",    badge: "bg-gray-100 text-gray-600 ring-1 ring-gray-400/20 dark:bg-gray-700 dark:text-gray-400 dark:ring-gray-500/20",                     label: "Expired" },
+  cancelled: { dot: "bg-gray-400",    badge: "bg-gray-100 text-gray-500 ring-1 ring-gray-400/20 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-500/20",                     label: "Cancelled" },
 };
 
 type Tab = "pending" | "approved" | "rejected";
@@ -26,8 +28,10 @@ export default function CompOffApprovals() {
   const [requests, setRequests] = useState<CompOffRequest[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
+  const [counts, setCounts] = useState<{ pending: number; approved: number; rejected: number }>({ pending: 0, approved: 0, rejected: 0 });
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectComment, setRejectComment] = useState("");
+  const [acting, setActing] = useState<string | null>(null);
 
   const fetchRequests = () => {
     compOffApi.getAll({ page, limit: 10, status: tab })
@@ -35,24 +39,47 @@ export default function CompOffApprovals() {
       .catch(() => {});
   };
 
+  const fetchCounts = async () => {
+    try {
+      const [p, a, r] = await Promise.all([
+        compOffApi.getAll({ page: 1, limit: 1, status: "pending" }),
+        compOffApi.getAll({ page: 1, limit: 1, status: "approved" }),
+        compOffApi.getAll({ page: 1, limit: 1, status: "rejected" }),
+      ]);
+      setCounts({
+        pending: p.data.pagination?.total ?? 0,
+        approved: a.data.pagination?.total ?? 0,
+        rejected: r.data.pagination?.total ?? 0,
+      });
+    } catch { /* interceptor */ }
+  };
+
   useEffect(() => { setPage(1); }, [tab]);
   useEffect(() => { fetchRequests(); }, [page, tab]);
+  useEffect(() => { fetchCounts(); }, []);
 
   const handleApprove = async (id: string) => {
-    try { await compOffApi.approve(id, "approved"); toast.success("Comp-off approved!"); fetchRequests(); }
-    catch { /* interceptor */ }
+    setActing(id);
+    try { await compOffApi.approve(id, "approved"); toast.success("Comp-off approved!"); fetchRequests(); fetchCounts(); }
+    catch { /* interceptor */ } finally { setActing(null); }
   };
 
   const handleReject = async () => {
     if (!rejectId) return;
-    try { await compOffApi.approve(rejectId, "rejected"); toast.success("Comp-off rejected."); setRejectId(null); setRejectComment(""); fetchRequests(); }
-    catch { /* interceptor */ }
+    setActing(rejectId);
+    try {
+      await compOffApi.approve(rejectId, "rejected", rejectComment.trim() || undefined);
+      toast.success("Comp-off rejected.");
+      setRejectId(null); setRejectComment("");
+      fetchRequests(); fetchCounts();
+    } catch { /* interceptor */ } finally { setActing(null); }
   };
 
-  const fmtDate = (iso: string) => new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-
+  const fmtDate = (iso?: string) =>
+    iso ? new Date(iso).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : "—";
+  const fmtShort = (iso?: string) =>
+    iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—";
   const getInitials = (name: string) => name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
-
   const daysUntil = (iso?: string) => {
     if (!iso) return null;
     return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
@@ -61,14 +88,35 @@ export default function CompOffApprovals() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/20">
-          <Gift className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-purple-600 to-fuchsia-600 p-6 sm:p-7 text-white shadow-xl">
+        <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-white/10 blur-xl" />
+        <div className="relative flex items-center gap-4">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+            <Gift className="h-6 w-6" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Comp-Off Approvals</h1>
+            <p className="text-sm text-indigo-100">Review worked-date → day-off requests from your team</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Comp-Off Approvals</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">Review and manage employee compensatory off requests</p>
-        </div>
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { key: "pending",  label: "Pending",  value: counts.pending,  color: "text-amber-600 dark:text-amber-400",   border: "border-l-amber-500",   bg: "bg-amber-50/50 dark:bg-amber-500/5" },
+          { key: "approved", label: "Approved", value: counts.approved, color: "text-emerald-600 dark:text-emerald-400", border: "border-l-emerald-500", bg: "bg-emerald-50/50 dark:bg-emerald-500/5" },
+          { key: "rejected", label: "Rejected", value: counts.rejected, color: "text-rose-600 dark:text-rose-400",     border: "border-l-rose-500",    bg: "bg-rose-50/50 dark:bg-rose-500/5" },
+        ].map((c) => (
+          <button
+            key={c.key}
+            onClick={() => setTab(c.key as Tab)}
+            className={`text-left rounded-xl border border-gray-200 dark:border-gray-800 border-l-4 ${c.border} ${c.bg} bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md ${tab === c.key ? "ring-2 ring-indigo-500/30" : ""}`}
+          >
+            <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
+            <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{c.label}</p>
+          </button>
+        ))}
       </div>
 
       {/* Tabs */}
@@ -95,7 +143,7 @@ export default function CompOffApprovals() {
               <Gift className="h-8 w-8 text-gray-300 dark:text-gray-600" />
             </div>
             <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No {tab} comp-off requests</p>
-            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Comp-off requests will appear here once submitted by employees</p>
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Requests will appear here once submitted</p>
           </div>
         ) : (
           requests.map((req) => {
@@ -103,73 +151,100 @@ export default function CompOffApprovals() {
             const user = req.userId as any;
             const userName: string = user?.name || "Unknown";
             const userEmail: string = user?.email || "";
-            const days = daysUntil(req.expiryDate);
-            const expiringSoon = req.status === "approved" && days != null && days <= 7 && days >= 0;
+            const dept: string = user?.department || "";
+            const days = daysUntil(req.dayOffDate);
+            const upcoming = req.status === "approved" && days != null && days <= 7 && days >= 0;
+            const busy = acting === req._id;
 
             return (
-              <div key={req._id} className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 transition-all hover:shadow-md ${expiringSoon ? "border-l-4 border-l-orange-500" : ""}`}>
+              <div key={req._id} className={`rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 transition-all hover:shadow-md ${upcoming ? "border-l-4 border-l-emerald-500" : ""}`}>
                 {/* Top: avatar + info + actions */}
                 <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
                       {getInitials(userName)}
                     </div>
                     <div className="min-w-0">
                       <p className="truncate font-semibold text-gray-900 dark:text-white">{userName}</p>
-                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{userEmail}</p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{userEmail}{dept ? ` · ${dept}` : ""}</p>
                     </div>
                   </div>
 
-                  {tab === "pending" && req.status === "pending" && (
+                  {tab === "pending" && req.status === "pending" ? (
                     <div className="flex shrink-0 gap-2">
-                      <button onClick={() => handleApprove(req._id)}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 sm:flex-none">
+                      <button disabled={busy} onClick={() => handleApprove(req._id)}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 disabled:opacity-50 sm:flex-none">
                         <CheckCircle className="h-4 w-4" /> Approve
                       </button>
-                      <button onClick={() => { setRejectId(req._id); setRejectComment(""); }}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 sm:flex-none">
+                      <button disabled={busy} onClick={() => { setRejectId(req._id); setRejectComment(""); }}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 disabled:opacity-50 sm:flex-none">
                         <XCircle className="h-4 w-4" /> Reject
                       </button>
                     </div>
-                  )}
-
-                  {tab !== "pending" && (
+                  ) : (
                     <span className={`inline-flex items-center gap-1.5 self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${sConfig.badge}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${sConfig.dot}`} />{sConfig.label}
                     </span>
                   )}
                 </div>
 
+                {/* Paired Date Timeline */}
+                <div className="mt-4 rounded-xl bg-gradient-to-r from-indigo-50 to-emerald-50 dark:from-indigo-500/5 dark:to-emerald-500/5 p-4">
+                  <div className="flex items-center gap-3 sm:gap-6">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 flex items-center gap-1">
+                        <CalendarDays className="h-3 w-3" /> Worked
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-gray-900 dark:text-white truncate">{fmtDate(req.workedDate)}</p>
+                    </div>
+                    <ArrowRight className="h-5 w-5 shrink-0 text-gray-400" />
+                    <div className="flex-1 min-w-0 text-right">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 flex items-center gap-1 justify-end">
+                        <Gift className="h-3 w-3" /> Day-Off
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-gray-900 dark:text-white truncate">
+                        {fmtDate(req.dayOffDate)}
+                        {upcoming && (
+                          <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+                            <Clock3 className="h-2.5 w-2.5" /> In {days}d
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Detail chips */}
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
                   <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Worked Date</p>
-                    <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">{fmtDate(req.workedDate)}</p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Day Type</p>
+                    <p className="mt-0.5 text-sm font-bold capitalize text-gray-900 dark:text-white">{req.dayType || "full"}</p>
                   </div>
                   <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Hours Worked</p>
                     <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">{req.hoursWorked ?? "—"}h</p>
                   </div>
-                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Reason</p>
-                    <p className="mt-0.5 truncate text-sm font-bold text-gray-900 dark:text-white">{req.reason || "\u2014"}</p>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Expiry</p>
-                    {req.expiryDate ? (
-                      <p className={`mt-0.5 text-sm font-bold ${expiringSoon ? "text-orange-600 dark:text-orange-400" : "text-gray-900 dark:text-white"}`}>
-                        {fmtDate(req.expiryDate)}
-                        {expiringSoon && (
-                          <span className="ml-1.5 inline-flex items-center gap-0.5 text-[10px] font-medium text-orange-600 dark:text-orange-400">
-                            <Clock className="h-3 w-3" />{days}d left
-                          </span>
-                        )}
-                      </p>
-                    ) : (
-                      <p className="mt-0.5 text-sm font-bold text-gray-400">—</p>
-                    )}
+                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2 sm:col-span-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Submitted</p>
+                    <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">{fmtShort(req.createdAt)}</p>
                   </div>
                 </div>
+
+                {/* Reason */}
+                {req.reason && (
+                  <div className="mt-3 rounded-lg border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-3 py-2.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Reason</p>
+                    <p className="mt-1 text-sm text-gray-700 dark:text-gray-300">{req.reason}</p>
+                  </div>
+                )}
+
+                {/* Rejection comment */}
+                {req.status === "rejected" && req.rejectionComment && (
+                  <div className="mt-3 rounded-lg bg-rose-50 dark:bg-rose-500/5 border border-rose-100 dark:border-rose-500/10 px-3 py-2.5">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">Rejection Comment</p>
+                    <p className="mt-1 text-sm text-rose-700 dark:text-rose-300">{req.rejectionComment}</p>
+                  </div>
+                )}
               </div>
             );
           })
@@ -217,7 +292,7 @@ export default function CompOffApprovals() {
               className="mb-5 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20" />
             <div className="flex gap-3">
               <button onClick={() => setRejectId(null)} className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
-              <button onClick={handleReject} className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-700">Reject</button>
+              <button disabled={acting === rejectId} onClick={handleReject} className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 disabled:opacity-50">Reject</button>
             </div>
           </div>
         </div>

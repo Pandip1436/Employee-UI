@@ -1,14 +1,15 @@
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Clock, FolderKanban, CheckSquare, Users, X,
-  UserCheck, CalendarDays, FileText, UsersRound, CalendarRange,
-  ClipboardList, UsersRound as TeamIcon, PartyPopper, Laptop, Gift, BarChart3,
-  Grid3X3, CalendarClock, History, FileCheck, Settings, AlertTriangle, Download,
+  UserCheck, CalendarDays, FileText, UsersRound,
+  UsersRound as TeamIcon, PartyPopper, Laptop, Gift, BarChart3,
+  Grid3X3, FileCheck, Settings, AlertTriangle, Download,
   Megaphone, Award, ClipboardCheck, Building, Shield, Mail, ScrollText,
   Target, MessageCircle, BookOpen, GraduationCap,
   NotebookPen,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { useCompany } from "../context/CompanyContext";
 import type { UserRole } from "../types";
 import clsx from "clsx";
 import type { LucideIcon } from "lucide-react";
@@ -30,28 +31,21 @@ const links: SidebarLink[] = [
   { to: "/projects", label: "Projects", icon: FolderKanban, roles: [], section: "Main" },
   { to: "/documents", label: "Documents", icon: FileText, roles: [], section: "Main" },
   { to: "/attendance", label: "My Attendance", icon: UserCheck, roles: [],excludeRoles: ["admin"], section: "Attendance" },
-  { to: "/attendance/calendar", label: "Calendar", icon: CalendarRange, roles: [],excludeRoles: ["admin"], section: "Attendance" },
   { to: "/attendance/team", label: "Team View", icon: TeamIcon, roles: ["admin", "manager"], section: "Attendance" },
   { to: "/attendance/holidays", label: "Holidays", icon: PartyPopper, roles: [], section: "Attendance" },
   { to: "/attendance/reports", label: "Reports", icon: BarChart3, roles: ["admin", "manager"], section: "Attendance" },
-  { to: "/chat", label: "Team Chat", icon: MessageCircle, roles: [], section: "Communication" },
   { to: "/daily-updates", label: "My Updates", icon: NotebookPen, roles: [],excludeRoles: ["admin"], section: "Daily Updates" },
   { to: "/daily-updates/team", label: "Team Updates", icon: NotebookPen, roles: ["admin", "manager"], section: "Daily Updates" },
   { to: "/timesheet", label: "Timesheet Home", icon: Clock, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
   { to: "/timesheet/weekly", label: "Weekly Grid", icon: Grid3X3, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
-  { to: "/timesheet/daily", label: "Daily Log", icon: CalendarClock, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
-  { to: "/timesheet/history", label: "History", icon: History, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
   { to: "/timesheet/approvals", label: "Approvals", icon: FileCheck, roles: ["admin", "manager"], section: "Timesheet" },
   { to: "/admin/timesheet/missing", label: "Missing", icon: AlertTriangle, roles: ["admin"], section: "Timesheet" },
   { to: "/admin/timesheet/reports/overtime", label: "Overtime", icon: Clock, roles: ["admin"], section: "Timesheet" },
   { to: "/admin/timesheet/export", label: "Export", icon: Download, roles: ["admin"], section: "Timesheet" },
   { to: "/admin/timesheet/config", label: "Config", icon: Settings, roles: ["admin"], section: "Timesheet" },
   { to: "/leaves", label: "Leave Dashboard", icon: CalendarDays, roles: ["employee"], section: "Leave" },
-  { to: "/leave/apply", label: "Apply Leave", icon: ClipboardList, roles: ["employee"], section: "Leave" },
   { to: "/leave/approvals", label: "Leave Approvals", icon: CheckSquare, roles: ["admin", "manager"], section: "Leave" },
-  { to: "/attendance/wfh", label: "WFH Requests", icon: Laptop, roles: ["employee"], excludeRoles: ["admin"], section: "Leave" },
   { to: "/wfh/approvals", label: "WFH Approvals", icon: Laptop, roles: ["admin", "manager"], section: "Leave" },
-  { to: "/attendance/compoff", label: "Comp-Off", icon: Gift, roles: ["employee"], excludeRoles: ["admin"], section: "Leave" },
   { to: "/compoff/approvals", label: "Comp-Off Approvals", icon: Gift, roles: ["admin", "manager"], section: "Leave" },
   { to: "/announcements", label: "Announcements", icon: Megaphone, roles: [], section: "Engage" },
   { to: "/recognition", label: "Recognition", icon: Award, roles: [], section: "Engage" },
@@ -79,6 +73,7 @@ interface Props {
 
 export default function Sidebar({ open, onClose }: Props) {
   const { user } = useAuth();
+  const { companyName } = useCompany();
 
   const role = user?.role ?? "employee";
   const filtered = links.filter(
@@ -106,7 +101,7 @@ export default function Sidebar({ open, onClose }: Props) {
         <div className="flex h-16 items-center justify-between border-b border-gray-200 dark:border-gray-800 px-6">
           <div className="flex items-center gap-2.5">
             <img src="/logo.png" alt="Logo" className="h-8 w-8 rounded-lg object-contain dark:invert" />
-            <span className="text-base font-bold text-gray-900 dark:text-white">United Nexa Tech</span>
+            <span className="text-base font-bold text-gray-900 dark:text-white">{companyName}</span>
           </div>
           <button onClick={onClose} className="lg:hidden">
             <X className="h-5 w-5 text-gray-500 dark:text-gray-400" />

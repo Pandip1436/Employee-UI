@@ -23,6 +23,8 @@ export interface AuditLogEntry {
 }
 
 export const adminSettingsApi = {
+  getPublicCompanyInfo: () =>
+    api.get<ApiResponse<Pick<CompanySettingsData, "companyName" | "logo" | "timezone" | "fiscalYearStart" | "workingDays">>>("/company-info"),
   getCompanySettings: () => api.get<ApiResponse<CompanySettingsData>>("/admin/settings/company"),
   updateCompanySettings: (data: Partial<CompanySettingsData>) => api.put<ApiResponse<CompanySettingsData>>("/admin/settings/company", data),
   getDesignations: () => api.get<ApiResponse<CompanySettingsData["designations"]>>("/admin/settings/designations"),

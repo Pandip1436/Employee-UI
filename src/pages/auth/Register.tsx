@@ -3,10 +3,12 @@ import { Link, useNavigate } from "react-router-dom";
 
 
 import { useAuth } from "../../context/AuthContext";
+import { useCompany } from "../../context/CompanyContext";
 import toast from "react-hot-toast";
 
 export default function Register() {
   const { register } = useAuth();
+  const { companyName } = useCompany();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -35,7 +37,7 @@ export default function Register() {
         <div className="mb-8 text-center">
           <div className="mb-4 flex items-center justify-center gap-2">
             <img src="/logo.png" alt="Logo" className="h-12 w-12 rounded-xl object-contain dark:invert" />
-            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">United Nexa Tech</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{companyName}</h1>
           </div>
           <p className="text-gray-500 dark:text-gray-400">Create your account</p>
         </div>

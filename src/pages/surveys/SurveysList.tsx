@@ -1,13 +1,16 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
-  ClipboardList, Plus, CheckCircle2, Clock, XCircle, ChevronRight, BarChart3,
+  ClipboardList, Plus, CheckCircle2, Clock, XCircle, ChevronRight, BarChart3, Trash2,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { surveyApi, type SurveyData } from "../../api/surveyApi";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 
 export default function SurveysList() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const isAdmin = user?.role === "admin";
   const [surveys, setSurveys] = useState<SurveyData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,6 +50,23 @@ export default function SurveysList() {
     const copy = [...questions];
     copy[qi].options = [...(copy[qi].options || []), ""];
     setQuestions(copy);
+  };
+
+  const handleDelete = async (e: React.MouseEvent, id: string, title: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const ok = await confirm({
+      title: "Delete survey?",
+      description: `"${title}" and all its responses will be permanently removed.`,
+      confirmLabel: "Delete",
+      cancelLabel: "Keep",
+    });
+    if (!ok) return;
+    try {
+      await surveyApi.delete(id);
+      setSurveys((s) => s.filter((x) => x._id !== id));
+      toast.success("Survey deleted.");
+    } catch { /* interceptor */ }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -190,13 +210,22 @@ export default function SurveysList() {
                 </div>
                 <div className="flex items-center gap-2">
                   {isAdmin && (
-                    <Link
-                      to={`/admin/surveys/${survey._id}/results`}
-                      onClick={(e) => e.stopPropagation()}
-                      className="text-xs text-indigo-500 hover:text-indigo-400 font-medium flex items-center gap-1"
-                    >
-                      <BarChart3 className="h-3 w-3" /> Results
-                    </Link>
+                    <>
+                      <Link
+                        to={`/admin/surveys/${survey._id}/results`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="text-xs text-indigo-500 hover:text-indigo-400 font-medium flex items-center gap-1"
+                      >
+                        <BarChart3 className="h-3 w-3" /> Results
+                      </Link>
+                      <button
+                        onClick={(e) => handleDelete(e, survey._id, survey.title)}
+                        title="Delete survey"
+                        className="rounded-md p-1 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </>
                   )}
                   <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-indigo-500 transition-colors" />
                 </div>
