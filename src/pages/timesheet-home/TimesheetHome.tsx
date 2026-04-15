@@ -20,7 +20,14 @@ export default function TimesheetHome() {
     weeklyTimesheetApi.getHistory({ limit: 5 }).then((r) => setRecent(r.data.data)).catch(() => { /* interceptor */ });
   }, []);
 
-  const fmtWeek = (d: string) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const fmtWeek = (d: string | Date) =>
+    new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  const weekEndFrom = (weekStart: string) => {
+    const start = new Date(weekStart);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    return end;
+  };
 
   return (
     <div className="space-y-6">
@@ -74,7 +81,7 @@ export default function TimesheetHome() {
               return (
                 <Link key={r._id} to={`/timesheet/${r._id}`} className="flex items-center justify-between rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3 hover:shadow-md transition-all">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{fmtWeek(r.weekStart)} — {fmtWeek(r.weekEnd)}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white">{fmtWeek(r.weekStart)} — {fmtWeek(weekEndFrom(r.weekStart))}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">{r.entries.length} entries</p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">

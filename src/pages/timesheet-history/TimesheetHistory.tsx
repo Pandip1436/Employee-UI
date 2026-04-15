@@ -43,12 +43,18 @@ const statusConfig: Record<string, { dot: string; badge: string; label: string }
 };
 
 /* ─── Helpers ─── */
-const formatDate = (iso: string) =>
+const formatDate = (iso: string | Date) =>
   new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+
+const weekEndFrom = (weekStart: string) => {
+  const end = new Date(weekStart);
+  end.setDate(end.getDate() + 6);
+  return end;
+};
 
 const labelClasses =
   "text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500";
@@ -186,7 +192,7 @@ export default function TimesheetHistory() {
                       <td className="px-5 py-4">
                         <span className="inline-flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
                           <CalendarDays className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                          {formatDate(ts.weekStart)} &mdash; {formatDate(ts.weekEnd)}
+                          {formatDate(ts.weekStart)} &mdash; {formatDate(weekEndFrom(ts.weekStart))}
                         </span>
                       </td>
                       <td className="px-5 py-4">
@@ -221,7 +227,7 @@ export default function TimesheetHistory() {
                               onClick={() =>
                                 requestDelete(
                                   ts._id,
-                                  `${formatDate(ts.weekStart)} — ${formatDate(ts.weekEnd)}`
+                                  `${formatDate(ts.weekStart)} — ${formatDate(weekEndFrom(ts.weekStart))}`
                                 )
                               }
                               disabled={deletingId === ts._id}
@@ -263,7 +269,7 @@ export default function TimesheetHistory() {
 
                   <div className="flex items-center gap-1.5 text-sm text-gray-600 dark:text-gray-400 mb-2">
                     <CalendarDays className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                    {formatDate(ts.weekStart)} &mdash; {formatDate(ts.weekEnd)}
+                    {formatDate(ts.weekStart)} &mdash; {formatDate(weekEndFrom(ts.weekStart))}
                   </div>
 
                   <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-700 dark:text-gray-300">
@@ -283,7 +289,7 @@ export default function TimesheetHistory() {
                         onClick={() =>
                           requestDelete(
                             ts._id,
-                            `${formatDate(ts.weekStart)} — ${formatDate(ts.weekEnd)}`
+                            `${formatDate(ts.weekStart)} — ${formatDate(weekEndFrom(ts.weekStart))}`
                           )
                         }
                         disabled={deletingId === ts._id}

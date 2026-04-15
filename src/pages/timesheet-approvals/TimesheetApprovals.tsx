@@ -19,12 +19,18 @@ import { projectApi } from "../../api/projectApi";
 import type { WeeklyTimesheetData, Pagination, User, Project } from "../../types";
 
 /* ─── Helpers ─── */
-const formatDate = (iso: string) =>
+const formatDate = (iso: string | Date) =>
   new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+
+const weekEndFrom = (weekStart: string) => {
+  const end = new Date(weekStart);
+  end.setDate(end.getDate() + 6);
+  return end;
+};
 
 const getUserName = (userId: User | string): string => {
   if (typeof userId === "object" && userId !== null) return (userId as User).name;
@@ -392,7 +398,7 @@ export default function TimesheetApprovals() {
                   <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
                     <p className={labelClasses}>Week Range</p>
                     <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">
-                      {formatDate(ts.weekStart)} &mdash; {formatDate(ts.weekEnd)}
+                      {formatDate(ts.weekStart)} &mdash; {formatDate(weekEndFrom(ts.weekStart))}
                     </p>
                   </div>
                   <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">

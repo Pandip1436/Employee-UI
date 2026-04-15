@@ -41,12 +41,18 @@ const statusConfig: Record<string, { dot: string; badge: string; label: string }
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 /* ─── Helpers ─── */
-const formatDate = (iso: string) =>
+const formatDate = (iso: string | Date) =>
   new Date(iso).toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
     year: "numeric",
   });
+
+const weekEndFrom = (weekStart: string) => {
+  const end = new Date(weekStart);
+  end.setDate(end.getDate() + 6);
+  return end;
+};
 
 const getProjectName = (entry: TimesheetEntry): string => {
   if (typeof entry.projectId === "object" && entry.projectId !== null) {
@@ -135,7 +141,7 @@ export default function TimesheetDetail() {
             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-gray-500 dark:text-gray-400">
               <span className="inline-flex items-center gap-1.5">
                 <CalendarDays className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                {formatDate(timesheet.weekStart)} &mdash; {formatDate(timesheet.weekEnd)}
+                {formatDate(timesheet.weekStart)} &mdash; {formatDate(weekEndFrom(timesheet.weekStart))}
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
