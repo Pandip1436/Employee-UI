@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BookOpen, Search, Plus, Clock, User, Users, CheckCircle2,
   GraduationCap, X, ExternalLink, Filter,
@@ -22,6 +23,7 @@ const CATEGORY_COLORS: Record<string, string> = {
 const EMPTY_FORM = { title: "", description: "", category: "Technical", skill: "", duration: "", instructor: "", link: "" };
 
 export default function LearningHub() {
+  const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const [courses, setCourses] = useState<CourseData[]>([]);
   const [loading, setLoading] = useState(true);
@@ -154,7 +156,7 @@ export default function LearningHub() {
             const catColor = CATEGORY_COLORS[course.category ?? "Other"] ?? CATEGORY_COLORS.Other;
 
             return (
-              <div key={course._id} className={`${card} flex flex-col`}>
+              <div key={course._id} className={`${card} flex flex-col cursor-pointer`} onClick={() => navigate(`/learning/courses/${course._id}`)}>
                 {/* Status badges */}
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
                   {course.category && (
@@ -193,7 +195,7 @@ export default function LearningHub() {
                   </div>
 
                   {/* Actions */}
-                  <div className="flex items-center gap-2 pt-2">
+                  <div className="flex items-center gap-2 pt-2" onClick={(e) => e.stopPropagation()}>
                     {!enrolled && !completed && (
                       <button
                         onClick={() => handleEnroll(course._id)}

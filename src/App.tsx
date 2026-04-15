@@ -78,6 +78,7 @@ import TeamChat from "./pages/chat/TeamChat";
 
 // Learning Module
 import LearningHub from "./pages/learning-hub/LearningHub";
+import CourseDetail from "./pages/course-detail/CourseDetail";
 import MyCertifications from "./pages/learning-certs/MyCertifications";
 
 export default function App() {
@@ -120,6 +121,7 @@ export default function App() {
 
           {/* Learning */}
           <Route path="/learning" element={<LearningHub />} />
+          <Route path="/learning/courses/:id" element={<CourseDetail />} />
           <Route path="/learning/certifications" element={<MyCertifications />} />
 
           {/* Chat */}
