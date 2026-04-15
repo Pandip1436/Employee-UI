@@ -206,7 +206,7 @@ export default function Attendance() {
 
       {/* ━━━ Tabs ━━━ */}
       <div className="flex overflow-x-auto gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 scrollbar-hide">
-        {((canViewAll ? ["my", "calendar", "all", "live", "absent"] : ["my", "calendar"]) as const).map((t) => (
+        {(canViewAll ? (["my", "calendar", "all", "live", "absent"] as const) : (["my", "calendar"] as const)).map((t) => (
           <button key={t} onClick={() => { setTab(t); setPage(1); }}
             className={`flex-1 sm:flex-none whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
               tab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
