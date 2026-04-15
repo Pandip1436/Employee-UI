@@ -195,7 +195,12 @@ export default function TimesheetWeekly() {
     if (isFuture(d)) return "bg-gray-50 dark:bg-gray-800/30 opacity-60";
     return "";
   };
-  const fmtDate = (d: string) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const fmtDate = (d: string | Date) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  const weekRangeEnd = (() => {
+    if (weekDates.length === 7) return weekDates[6];
+    if (sheet?.weekStart) { const d = new Date(sheet.weekStart); d.setDate(d.getDate() + 6); return d; }
+    return null;
+  })();
 
   const inputCls = "rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-2.5 py-1.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
 
@@ -206,7 +211,7 @@ export default function TimesheetWeekly() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Weekly Timesheet</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            {sheet?.weekStart ? fmtDate(sheet.weekStart) : ""} — {sheet?.weekEnd ? fmtDate(sheet.weekEnd) : ""}
+            {sheet?.weekStart ? fmtDate(sheet.weekStart) : ""} — {weekRangeEnd ? fmtDate(weekRangeEnd) : ""}
           </p>
         </div>
         <div className="flex items-center gap-2">
