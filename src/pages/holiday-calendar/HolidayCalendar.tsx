@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Trash2, X, Star, Building, Globe, ChevronLeft, ChevronRight } from "lucide-react";
 import { holidayApi } from "../../api/holidayApi";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import type { Holiday } from "../../types";
 import toast from "react-hot-toast";
 
@@ -15,6 +16,7 @@ const monthNames = ["January","February","March","April","May","June","July","Au
 
 export default function HolidayCalendar() {
   const { isAdmin } = useAuth();
+  const confirm = useConfirm();
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [year, setYear] = useState(new Date().getFullYear());
   const [showAdd, setShowAdd] = useState(false);
@@ -50,7 +52,7 @@ export default function HolidayCalendar() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this holiday?")) return;
+    if (!(await confirm({ title: "Delete holiday?", description: "This holiday will be removed from the calendar for everyone.", confirmLabel: "Delete" }))) return;
     try { await holidayApi.delete(id); toast.success("Deleted."); fetchHolidays(); } catch { /* interceptor */ }
   };
 

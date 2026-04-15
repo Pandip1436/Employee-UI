@@ -4,6 +4,7 @@ import { userApi } from "../../api/userApi";
 import type { User, Pagination, UserRole } from "../../types";
 import toast from "react-hot-toast";
 import clsx from "clsx";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const roleBadge: Record<string, string> = {
   admin: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400",
@@ -40,6 +41,7 @@ const roleDot = (role: string) => (
 );
 
 export default function Users() {
+  const confirm = useConfirm();
   const [users, setUsers] = useState<User[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
@@ -83,7 +85,7 @@ export default function Users() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this user permanently?")) return;
+    if (!(await confirm({ title: "Delete user?", description: "The user will be permanently removed along with their access. This cannot be undone.", confirmLabel: "Delete user" }))) return;
     try {
       await userApi.delete(id);
       toast.success("User deleted.");

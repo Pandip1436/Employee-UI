@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Target, Plus, Trash2, Save, ArrowLeft, Calendar, Flag, Layers, Eye, BarChart3 } from "lucide-react";
 import { performanceApi } from "../../api/performanceApi";
 import toast from "react-hot-toast";
+import { useConfirm } from "../../context/ConfirmContext";
 
 interface KpiRow { name: string; target: string; current: string; unit: string }
 interface MilestoneRow { title: string; dueDate: string; completed: boolean }
@@ -30,6 +31,7 @@ const card = "rounded-xl border border-gray-200 dark:border-gray-800 bg-white da
 const label = "block text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1.5";
 
 export default function GoalForm() {
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const editId = searchParams.get("edit");
@@ -96,7 +98,8 @@ export default function GoalForm() {
   };
 
   const handleDelete = async () => {
-    if (!editId || !confirm("Delete this goal permanently?")) return;
+    if (!editId) return;
+    if (!(await confirm({ title: "Delete goal?", description: "This goal and all its check-ins and progress will be permanently removed.", confirmLabel: "Delete goal" }))) return;
     setDeleting(true);
     try { await performanceApi.deleteGoal(editId); toast.success("Goal deleted"); navigate("/performance/goals"); }
     catch { toast.error("Failed to delete"); } finally { setDeleting(false); }

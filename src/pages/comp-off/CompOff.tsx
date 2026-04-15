@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {  Plus, X, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { compOffApi } from "../../api/compOffApi";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import type { CompOffRequest, CompOffBalance, Pagination } from "../../types";
 import toast from "react-hot-toast";
 
@@ -24,6 +25,7 @@ const inputCls = "w-full rounded-lg border border-gray-300 dark:border-gray-600 
 
 export default function CompOff() {
   const { isAdmin, isManager } = useAuth();
+  const confirm = useConfirm();
   const navigate = useNavigate();
   const canApprove = isAdmin || isManager;
   const [tab, setTab] = useState<"my" | "all">("my");
@@ -70,7 +72,7 @@ export default function CompOff() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Cancel this request?")) return;
+    if (!(await confirm({ title: "Cancel comp-off request?", description: "This request will be withdrawn.", confirmLabel: "Cancel request", cancelLabel: "Keep" }))) return;
     try { await compOffApi.delete(id); toast.success("Cancelled."); fetchRequests(); fetchBalance(); } catch { /* interceptor */ }
   };
 

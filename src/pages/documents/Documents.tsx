@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { Upload, Download, Trash2, File, FileText, Image, FolderOpen, Search, X } from "lucide-react";
 import { documentApi } from "../../api/documentApi";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import type { DocumentFile, Pagination } from "../../types";
 import toast from "react-hot-toast";
 
@@ -49,6 +50,7 @@ const formatSize = (bytes: number) => {
 
 export default function Documents() {
   const { isAdmin } = useAuth();
+  const confirm = useConfirm();
   const [docs, setDocs] = useState<DocumentFile[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
@@ -112,7 +114,7 @@ export default function Documents() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this document?")) return;
+    if (!(await confirm({ title: "Delete document?", description: "This document will be removed and can no longer be downloaded.", confirmLabel: "Delete" }))) return;
     try {
       await documentApi.delete(id);
       toast.success("Document deleted.");
@@ -232,8 +234,8 @@ export default function Documents() {
                   {categoryLabels[doc.category] || doc.category}
                 </span>
 
-                {/* Hover Actions */}
-                <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                {/* Actions — always visible on mobile, hover on desktop */}
+                <div className="flex gap-1 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
                   <button
                     onClick={() => handleDownload(doc)}
                     className="rounded-lg p-1.5 text-gray-400 dark:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300"

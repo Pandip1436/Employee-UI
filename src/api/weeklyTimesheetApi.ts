@@ -16,6 +16,9 @@ export const weeklyTimesheetApi = {
   submit: (id: string) =>
     api.patch<ApiResponse<WeeklyTimesheetData>>(`/weekly-timesheet/${id}/submit`),
 
+  delete: (id: string) =>
+    api.delete<ApiResponse>(`/weekly-timesheet/${id}`),
+
   getHistory: (params?: Record<string, string | number>) =>
     api.get<PaginatedResponse<WeeklyTimesheetData>>("/weekly-timesheet/history", { params }),
 

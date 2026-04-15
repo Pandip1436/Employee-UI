@@ -7,9 +7,12 @@ import {
   ChevronRight,
   Filter,
   FileText,
+  Trash2,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { WeeklyTimesheetData, Pagination } from "../../types";
+import { useConfirm } from "../../context/ConfirmContext";
 
 /* ─── Status badge config ─── */
 const statusConfig: Record<string, { dot: string; badge: string; label: string }> = {
@@ -57,6 +60,36 @@ export default function TimesheetHistory() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<string>("");
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const confirm = useConfirm();
+
+  const requestDelete = async (id: string, range: string) => {
+    const ok = await confirm({
+      title: "Delete timesheet?",
+      description: (
+        <>
+          You're about to delete the timesheet for{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">{range}</span>. This action
+          cannot be undone.
+        </>
+      ),
+      confirmLabel: "Delete",
+      cancelLabel: "Keep",
+    });
+    if (!ok) return;
+    setDeletingId(id);
+    try {
+      await weeklyTimesheetApi.delete(id);
+      toast.success("Timesheet deleted.");
+      setTimesheets((prev) => prev.filter((t) => t._id !== id));
+    } catch {
+      // interceptor
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const canDelete = (status: string) => status === "draft" || status === "rejected";
 
   const fetchHistory = () => {
     setLoading(true);
@@ -176,12 +209,29 @@ export default function TimesheetHistory() {
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <Link
-                          to={`/timesheet/${ts._id}`}
-                          className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
-                        >
-                          View Details
-                        </Link>
+                        <div className="flex items-center gap-3">
+                          <Link
+                            to={`/timesheet/${ts._id}`}
+                            className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors"
+                          >
+                            View Details
+                          </Link>
+                          {canDelete(ts.status) && (
+                            <button
+                              onClick={() =>
+                                requestDelete(
+                                  ts._id,
+                                  `${formatDate(ts.weekStart)} — ${formatDate(ts.weekEnd)}`
+                                )
+                              }
+                              disabled={deletingId === ts._id}
+                              title="Delete"
+                              className="inline-flex items-center gap-1 rounded-md p-1.5 text-rose-500 transition-colors hover:bg-rose-50 hover:text-rose-600 disabled:opacity-50 dark:hover:bg-rose-500/10"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -195,10 +245,9 @@ export default function TimesheetHistory() {
             {timesheets.map((ts) => {
               const sConfig = statusConfig[ts.status] || statusConfig.draft;
               return (
-                <Link
+                <div
                   key={ts._id}
-                  to={`/timesheet/${ts._id}`}
-                  className="block rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md"
+                  className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <span
@@ -221,7 +270,30 @@ export default function TimesheetHistory() {
                     <Clock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
                     {ts.totalHours} hours
                   </div>
-                </Link>
+
+                  <div className="mt-3 flex items-center justify-between border-t border-gray-100 dark:border-gray-800 pt-3">
+                    <Link
+                      to={`/timesheet/${ts._id}`}
+                      className="text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
+                    >
+                      View Details
+                    </Link>
+                    {canDelete(ts.status) && (
+                      <button
+                        onClick={() =>
+                          requestDelete(
+                            ts._id,
+                            `${formatDate(ts.weekStart)} — ${formatDate(ts.weekEnd)}`
+                          )
+                        }
+                        disabled={deletingId === ts._id}
+                        className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-sm text-rose-600 transition-colors hover:bg-rose-50 disabled:opacity-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                      >
+                        <Trash2 className="h-4 w-4" /> Delete
+                      </button>
+                    )}
+                  </div>
+                </div>
               );
             })}
           </div>
@@ -261,6 +333,7 @@ export default function TimesheetHistory() {
           </div>
         </div>
       )}
+
     </div>
   );
 }

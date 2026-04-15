@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Plus, Pencil, Trash2, X, Pin, Loader2 } from "lucide-react";
 import { announcementApi, type AnnouncementData } from "../../api/announcementApi";
 import toast from "react-hot-toast";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const CATEGORY_OPTIONS: { value: string; label: string }[] = [
   { value: "all", label: "General" },
@@ -67,6 +68,7 @@ function formatDate(iso: string) {
 }
 
 export default function AdminAnnouncements() {
+  const confirm = useConfirm();
   const [announcements, setAnnouncements] = useState<AnnouncementData[]>([]);
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState(false);
@@ -147,7 +149,7 @@ export default function AdminAnnouncements() {
   };
 
   const handleDelete = async (id: string, title: string) => {
-    if (!confirm(`Delete announcement "${title}"?`)) return;
+    if (!(await confirm({ title: "Delete announcement?", description: <>Are you sure you want to delete <span className="font-semibold text-gray-900 dark:text-white">"{title}"</span>? Employees will lose access to this post.</>, confirmLabel: "Delete" }))) return;
     try {
       await announcementApi.delete(id);
       toast.success("Announcement deleted");

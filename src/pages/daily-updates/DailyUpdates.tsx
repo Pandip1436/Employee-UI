@@ -21,6 +21,7 @@ import { dailyUpdateApi } from "../../api/dailyUpdateApi";
 import type { DailyUpdateData } from "../../api/dailyUpdateApi";
 import type { Pagination } from "../../types";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 
 /* ── Status config ── */
 const statusConfig: Record<string, { dot: string; badge: string; icon: typeof CheckCircle2; label: string }> = {
@@ -74,6 +75,7 @@ const inputClass =
 /* ── Component ── */
 export default function DailyUpdates() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [updates, setUpdates] = useState<DailyUpdateData[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
@@ -161,7 +163,7 @@ export default function DailyUpdates() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this update?")) return;
+    if (!(await confirm({ title: "Delete update?", description: "This daily update will be removed permanently.", confirmLabel: "Delete" }))) return;
     try {
       await dailyUpdateApi.delete(id);
       toast.success("Update deleted.");

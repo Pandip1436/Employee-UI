@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, X, Users, FolderKanban, ChevronLeft, ChevronRight
 import { projectApi } from "../../api/projectApi";
 import { userApi } from "../../api/userApi";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import type { Project, User, Pagination } from "../../types";
 import toast from "react-hot-toast";
 import clsx from "clsx";
@@ -33,6 +34,7 @@ const labelClass =
 
 export default function Projects() {
   const { isAdmin, isManager } = useAuth();
+  const confirm = useConfirm();
   const canEdit = isAdmin || isManager;
 
   const [projects, setProjects] = useState<Project[]>([]);
@@ -122,7 +124,7 @@ export default function Projects() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this project?")) return;
+    if (!(await confirm({ title: "Delete project?", description: "All timesheet entries linked to this project will remain but the project itself will be removed.", confirmLabel: "Delete project" }))) return;
     try {
       await projectApi.delete(id);
       toast.success("Project deleted.");

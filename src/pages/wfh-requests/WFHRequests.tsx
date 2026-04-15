@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import {  Plus, X, CheckCircle, XCircle, Trash2 } from "lucide-react";
 import { wfhApi } from "../../api/wfhApi";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import type { WfhRequest, Pagination } from "../../types";
 import toast from "react-hot-toast";
 
@@ -15,6 +16,7 @@ const inputCls = "w-full rounded-lg border border-gray-300 dark:border-gray-600 
 
 export default function WFHRequests() {
   const { isAdmin, isManager } = useAuth();
+  const confirm = useConfirm();
   const canApprove = isAdmin || isManager;
   const [tab, setTab] = useState<"my" | "all">("my");
   const [requests, setRequests] = useState<WfhRequest[]>([]);
@@ -45,7 +47,7 @@ export default function WFHRequests() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Cancel this request?")) return;
+    if (!(await confirm({ title: "Cancel WFH request?", description: "This request will be withdrawn and removed from the approval queue.", confirmLabel: "Cancel request", cancelLabel: "Keep" }))) return;
     try { await wfhApi.delete(id); toast.success("Cancelled."); fetch(); } catch { /* interceptor */ }
   };
 

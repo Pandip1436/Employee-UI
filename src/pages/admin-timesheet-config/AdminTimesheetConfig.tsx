@@ -3,6 +3,7 @@ import {  Plus, Trash2, Save, Tag, ShieldCheck, Loader2 } from "lucide-react";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { ActivityTypeItem, PolicyItem } from "../../types";
 import toast from "react-hot-toast";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const inputCls =
   "rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
@@ -21,6 +22,7 @@ const DEFAULT_POLICIES = [
 ];
 
 export default function AdminTimesheetConfig() {
+  const confirm = useConfirm();
   const [tab, setTab] = useState<"activity" | "policies">("activity");
 
   // Activity Types state
@@ -95,7 +97,7 @@ export default function AdminTimesheetConfig() {
   };
 
   const handleDeleteType = async (id: string, name: string) => {
-    if (!confirm(`Delete activity type "${name}"?`)) return;
+    if (!(await confirm({ title: "Delete activity type?", description: <>Are you sure you want to delete <span className="font-semibold text-gray-900 dark:text-white">"{name}"</span>? Existing entries referencing it will not be affected.</>, confirmLabel: "Delete" }))) return;
     setDeletingId(id);
     try {
       await weeklyTimesheetApi.deleteActivityType(id);

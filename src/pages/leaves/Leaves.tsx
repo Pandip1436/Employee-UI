@@ -3,6 +3,7 @@ import { Plus, X, CheckCircle, XCircle, CalendarDays, Clock, Briefcase, Heart, C
 import { Link } from "react-router-dom";
 import { leaveApi } from "../../api/leaveApi";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import type { LeaveRequest, LeaveBalance, Pagination } from "../../types";
 import toast from "react-hot-toast";
 
@@ -98,6 +99,7 @@ const labelClasses = "mb-1.5 block text-[11px] font-semibold uppercase tracking-
 
 export default function Leaves() {
   const { isAdmin, isManager } = useAuth();
+  const confirm = useConfirm();
   const canApprove = isAdmin || isManager;
   const [tab, setTab] = useState<"my" | "requests">(canApprove ? "requests" : "my");
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
@@ -168,7 +170,7 @@ export default function Leaves() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Cancel this leave request?")) return;
+    if (!(await confirm({ title: "Cancel leave request?", description: "This leave request will be withdrawn. You can always re-apply later.", confirmLabel: "Cancel request", cancelLabel: "Keep" }))) return;
     try {
       await leaveApi.delete(id);
       toast.success("Leave cancelled.");

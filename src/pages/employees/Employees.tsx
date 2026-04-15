@@ -3,6 +3,7 @@ import { Pencil, Trash2, X, Search, Mail, Phone, Building, ArrowLeft, Calendar, 
 import { userApi } from "../../api/userApi";
 import { employeeProfileApi } from "../../api/employeeProfileApi";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import type { User, Pagination, UserRole, EmployeeProfile } from "../../types";
 import toast from "react-hot-toast";
 
@@ -20,6 +21,7 @@ const roleDot: Record<string, string> = {
 
 export default function Employees() {
   const { isAdmin } = useAuth();
+  const confirm = useConfirm();
   const [users, setUsers] = useState<User[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
@@ -92,7 +94,7 @@ export default function Employees() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Delete this employee?")) return;
+    if (!(await confirm({ title: "Delete employee?", description: "The employee record and their access will be permanently removed.", confirmLabel: "Delete" }))) return;
     try {
       await userApi.delete(id);
       toast.success("Employee deleted.");

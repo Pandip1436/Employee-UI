@@ -4,6 +4,7 @@ import { BrowserRouter } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 import { AuthProvider } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { ConfirmProvider } from "./context/ConfirmContext";
 import App from "./App";
 import "./index.css";
 
@@ -12,8 +13,10 @@ createRoot(document.getElementById("root")!).render(
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
-          <App />
-          <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+          <ConfirmProvider>
+            <App />
+            <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+          </ConfirmProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>
