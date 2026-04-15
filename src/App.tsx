@@ -24,6 +24,7 @@ import CompOffApprovals from "./pages/comp-off/CompOffApprovals";
 import CompOff from "./pages/comp-off/CompOff";
 import Documents from "./pages/documents/Documents";
 import Profile from "./pages/profile/Profile";
+import Notifications from "./pages/notifications/Notifications";
 
 // Timesheet Module
 import TimesheetHome from "./pages/timesheet-home/TimesheetHome";
@@ -102,6 +103,7 @@ export default function App() {
           <Route path="/leave/apply" element={<LeaveApply />} />
           <Route path="/documents" element={<Documents />} />
           <Route path="/profile" element={<Profile />} />
+          <Route path="/notifications" element={<Notifications />} />
 
           {/* Timesheet */}
           <Route path="/timesheet" element={<TimesheetHome />} />

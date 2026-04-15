@@ -3,6 +3,7 @@ import { Menu, LogOut, Sun, Moon, User, ChevronDown, Search, X, Clock, FolderKan
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import NotificationBell from "../components/NotificationBell";
 
 interface Props {
   onMenuClick: () => void;
@@ -162,6 +163,9 @@ export default function Topbar({ onMenuClick }: Props) {
           >
             <Search className="h-5 w-5" />
           </button>
+
+          {/* Notifications */}
+          <NotificationBell />
 
           {/* Dark mode toggle */}
           <button
