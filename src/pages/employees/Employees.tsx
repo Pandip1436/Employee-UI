@@ -1,11 +1,13 @@
 import { useState, useEffect, type FormEvent } from "react";
-import { Pencil, Trash2, X, Search, Mail, Phone, Building, ArrowLeft, Calendar, Shield, Activity } from "lucide-react";
+import { Pencil, Trash2, X, Search, Mail, Phone, Building, ArrowLeft, Calendar, Shield, Activity, Plus, Eye, EyeOff } from "lucide-react";
 import { userApi } from "../../api/userApi";
+import { adminSettingsApi } from "../../api/adminSettingsApi";
 import { employeeProfileApi } from "../../api/employeeProfileApi";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmContext";
 import type { User, Pagination, UserRole, EmployeeProfile } from "../../types";
 import toast from "react-hot-toast";
+import { validateStrongPassword, checkPassword, passwordStrengthScore } from "../../utils/password";
 
 const roleBadge: Record<string, string> = {
   admin: "bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400",
@@ -19,6 +21,75 @@ const roleDot: Record<string, string> = {
   employee: "bg-gray-400 dark:bg-gray-500",
 };
 
+// ── Validators ──
+const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const userIdRe = /^[a-zA-Z0-9._-]{3,}$/;
+const empIdRe = /^[A-Za-z0-9-]{1,}$/;
+const aadhaarRe = /^\d{12}$/;
+const phoneRe = /^\d{10}$/;
+
+type FormShape = {
+  name: string;
+  email: string;
+  userId: string;
+  password?: string;
+  empId: string;
+  aadhaar: string;
+  address: string;
+  phone: string;
+  doj: string;
+};
+
+function validate(f: FormShape, opts: { requirePassword: boolean }): Record<string, string> {
+  const e: Record<string, string> = {};
+  if (f.name.trim().length < 2) e.name = "Name must be at least 2 characters";
+  if (!emailRe.test(f.email.trim())) e.email = "Enter a valid email";
+  if (!userIdRe.test(f.userId.trim())) e.userId = "Min 3 chars — letters, numbers, . _ -";
+  if (opts.requirePassword || (f.password ?? "").length > 0) {
+    const pwErr = validateStrongPassword(f.password ?? "");
+    if (pwErr) e.password = pwErr;
+  }
+  if (!empIdRe.test(f.empId.trim())) e.empId = "Employee ID is required";
+  if (!aadhaarRe.test(f.aadhaar.trim())) e.aadhaar = "Aadhaar must be exactly 12 digits";
+  if (f.address.trim().length < 5) e.address = "Enter the full address";
+  if (!phoneRe.test(f.phone.trim())) e.phone = "Phone must be 10 digits";
+  if (!f.doj) e.doj = "Date of joining is required";
+  else if (new Date(f.doj) > new Date()) e.doj = "DOJ cannot be in the future";
+  return e;
+}
+
+function PasswordStrength({ pw }: { pw: string }) {
+  if (!pw) return null;
+  const c = checkPassword(pw);
+  const score = passwordStrengthScore(pw);
+  const barColor = score <= 2 ? "bg-rose-500" : score === 3 ? "bg-amber-500" : score === 4 ? "bg-lime-500" : "bg-emerald-500";
+  const label = score <= 2 ? "Weak" : score === 3 ? "Fair" : score === 4 ? "Good" : "Strong";
+  const labelColor = score <= 2 ? "text-rose-600 dark:text-rose-400" : score === 3 ? "text-amber-600 dark:text-amber-400" : score === 4 ? "text-lime-600 dark:text-lime-400" : "text-emerald-600 dark:text-emerald-400";
+  const Item = ({ ok, text }: { ok: boolean; text: string }) => (
+    <span className={`inline-flex items-center gap-1 text-[10px] ${ok ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+      {text}
+    </span>
+  );
+  return (
+    <div className="mt-1.5">
+      <div className="flex items-center gap-2">
+        <div className="h-1 flex-1 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+          <div className={`h-full transition-all ${barColor}`} style={{ width: `${(score / 5) * 100}%` }} />
+        </div>
+        <span className={`text-[10px] font-semibold uppercase ${labelColor}`}>{label}</span>
+      </div>
+      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
+        <Item ok={c.length} text="8+ chars" />
+        <Item ok={c.upper} text="A-Z" />
+        <Item ok={c.lower} text="a-z" />
+        <Item ok={c.digit} text="0-9" />
+        <Item ok={c.symbol} text="symbol" />
+      </div>
+    </div>
+  );
+}
+
 export default function Employees() {
   const { isAdmin } = useAuth();
   const confirm = useConfirm();
@@ -26,9 +97,10 @@ export default function Employees() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [designations, setDesignations] = useState<string[]>([]);
   const [profileUser, setProfileUser] = useState<User | null>(null);
   const [empProfile, setEmpProfile] = useState<EmployeeProfile | null>(null);
   const [profileLoading, setProfileLoading] = useState(false);
@@ -42,21 +114,40 @@ export default function Employees() {
   // Form
   const [formName, setFormName] = useState("");
   const [formEmail, setFormEmail] = useState("");
+  const [formUserId, setFormUserId] = useState("");
+  const [formPassword, setFormPassword] = useState("");
   const [formRole, setFormRole] = useState<UserRole>("employee");
   const [formDept, setFormDept] = useState("");
+  const [formDesignation, setFormDesignation] = useState("");
+  const [formEmpId, setFormEmpId] = useState("");
+  const [formAadhaar, setFormAadhaar] = useState("");
+  const [formAddress, setFormAddress] = useState("");
+  const [formPhone, setFormPhone] = useState("");
+  const [formDOJ, setFormDOJ] = useState("");
   const [formActive, setFormActive] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchUsers = () => {
-    const params: Record<string, string | number> = { page, limit: 10 };
-    if (roleFilter) params.role = roleFilter;
-    userApi.getAll(params).then((res) => {
+    userApi.getAll({ page, limit: 10, role: "employee" }).then((res) => {
       setUsers(res.data.data);
       setPagination(res.data.pagination);
     }).catch(() => {});
   };
 
-  useEffect(() => { fetchUsers(); }, [page, roleFilter]);
+  useEffect(() => { fetchUsers(); }, [page]);
+
+  // Load admin-managed departments + designations
+  useEffect(() => {
+    if (!isAdmin) return;
+    adminSettingsApi.getDepartments()
+      .then((res) => setDepartments((res.data.data || []).map((d) => d.name).filter(Boolean)))
+      .catch(() => {});
+    adminSettingsApi.getDesignations()
+      .then((res) => setDesignations((res.data.data || []).map((d) => d.name).filter(Boolean)))
+      .catch(() => {});
+  }, [isAdmin]);
 
   const filtered = search
     ? users.filter(
@@ -67,27 +158,98 @@ export default function Employees() {
     : users;
 
   const resetForm = () => {
-    setFormName(""); setFormEmail(""); setFormRole("employee");
-    setFormDept(""); setFormActive(true); setEditing(null); setShowModal(false);
+    setFormName(""); setFormEmail(""); setFormUserId(""); setFormPassword("");
+    setFormRole("employee"); setFormDept(""); setFormDesignation("");
+    setFormEmpId(""); setFormAadhaar(""); setFormAddress("");
+    setFormPhone(""); setFormDOJ("");
+    setFormActive(true); setShowPassword(false);
+    setEditing(null); setShowModal(false);
+    setErrors({});
+  };
+
+  const openCreate = () => {
+    resetForm();
+    setShowModal(true);
   };
 
   const openEdit = (u: User) => {
     setEditing(u);
     setFormName(u.name); setFormEmail(u.email);
+    setFormUserId(u.userId || ""); setFormPassword("");
     setFormRole(u.role); setFormDept(u.department || "");
+    setFormDesignation(""); setShowPassword(false);
+    setFormEmpId(""); setFormAadhaar(""); setFormAddress("");
+    setFormPhone(""); setFormDOJ("");
     setFormActive(u.isActive); setShowModal(true);
+    setErrors({});
+    employeeProfileApi.getByUserId(u._id)
+      .then((r) => {
+        const p = r.data.data;
+        setFormDesignation(p?.designation || "");
+        setFormEmpId(p?.employeeId || "");
+        setFormAadhaar(p?.aadhaarNumber || "");
+        setFormAddress(p?.address || "");
+        setFormPhone(p?.phone || "");
+        setFormDOJ(p?.joiningDate || "");
+      })
+      .catch(() => {});
   };
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
+    const formErrs = validate(
+      {
+        name: formName, email: formEmail, userId: formUserId,
+        password: formPassword, empId: formEmpId, aadhaar: formAadhaar,
+        address: formAddress, phone: formPhone, doj: formDOJ,
+      },
+      { requirePassword: !editing },
+    );
+    if (Object.keys(formErrs).length) {
+      setErrors(formErrs);
+      toast.error("Please fix the highlighted fields");
+      return;
+    }
+    setErrors({});
     setSaving(true);
+
+    const profilePatch = {
+      designation: formDesignation,
+      employeeId: formEmpId.trim(),
+      aadhaarNumber: formAadhaar.trim(),
+      address: formAddress.trim(),
+      phone: formPhone.trim(),
+      joiningDate: formDOJ,
+    };
+
     try {
       if (editing) {
-        await userApi.update(editing._id, {
+        const patch: Partial<User> = {
           name: formName, email: formEmail, role: formRole,
           department: formDept, isActive: formActive,
-        } as any);
+        };
+        if (formUserId.trim() && formUserId.trim() !== (editing.userId || "")) {
+          patch.userId = formUserId.trim();
+        }
+        await userApi.update(editing._id, patch);
+        await employeeProfileApi.updateByUserId(editing._id, profilePatch);
+        if (formPassword) {
+          await userApi.resetPassword(editing._id, formPassword);
+          toast.success("Password reset — user must sign in again");
+        }
         toast.success("Employee updated!");
+      } else {
+        const res = await userApi.create({
+          name: formName, email: formEmail,
+          userId: formUserId.trim(), password: formPassword,
+          role: formRole, department: formDept,
+        });
+        const newId = res.data.data?._id;
+        if (newId) {
+          await employeeProfileApi.updateByUserId(newId, profilePatch).catch(() => {});
+        }
+        toast.success("Employee created!");
       }
       resetForm(); fetchUsers();
     } catch { /* interceptor */ } finally { setSaving(false); }
@@ -299,30 +461,26 @@ export default function Employees() {
             Manage your team members and their roles
           </p>
         </div>
+        {isAdmin && (
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" /> New Employee
+          </button>
+        )}
       </div>
 
-      {/* Search + Filter */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
-          <input
-            type="text"
-            placeholder="Search by name or email..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
-          />
-        </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => { setRoleFilter(e.target.value); setPage(1); }}
-          className="w-full sm:w-44 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors"
-        >
-          <option value="">All Roles</option>
-          <option value="admin">Admin</option>
-          <option value="manager">Manager</option>
-          <option value="employee">Employee</option>
-        </select>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
+        <input
+          type="text"
+          placeholder="Search by name or email..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white py-2.5 pl-10 pr-4 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 placeholder:text-gray-400 dark:placeholder:text-gray-500 transition-colors"
+        />
       </div>
 
       {/* Desktop Table */}
@@ -466,50 +624,146 @@ export default function Employees() {
       )}
 
       {/* Edit Modal */}
-      {showModal && (
+      {showModal && (() => {
+        const fieldCls = (err?: string) =>
+          `w-full rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2.5 text-sm outline-none focus:ring-2 transition-colors ${
+            err
+              ? "border-rose-400 dark:border-rose-500 focus:border-rose-500 focus:ring-rose-500/20"
+              : "border-gray-300 dark:border-gray-700 focus:border-indigo-500 focus:ring-indigo-500/20"
+          }`;
+        const LabelText = ({ children }: { children: React.ReactNode }) => (
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{children}</label>
+        );
+        const ErrText = ({ msg }: { msg?: string }) =>
+          msg ? <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400">{msg}</p> : null;
+        return (
         <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm bg-black/40 dark:bg-black/60 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-2xl">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 p-6 shadow-2xl">
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900 dark:text-white">Edit Employee</h2>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">{editing ? "Edit Employee" : "New Employee"}</h2>
               <button onClick={resetForm} className="rounded-lg p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
                 <X className="h-5 w-5 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300" />
               </button>
             </div>
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Name</label>
-                <input required value={formName} onChange={(e) => setFormName(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors" />
-              </div>
-              <div>
-                <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Email</label>
-                <input required type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-5">
+              <div className="grid sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Role</label>
-                  <select value={formRole} onChange={(e) => setFormRole(e.target.value as UserRole)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors">
+                  <LabelText>Name</LabelText>
+                  <input value={formName} onChange={(e) => setFormName(e.target.value)} className={fieldCls(errors.name)} />
+                  <ErrText msg={errors.name} />
+                </div>
+                <div>
+                  <LabelText>Employee ID</LabelText>
+                  <input value={formEmpId} onChange={(e) => setFormEmpId(e.target.value)} placeholder="EMP-001" className={fieldCls(errors.empId)} />
+                  <ErrText msg={errors.empId} />
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <LabelText>Email</LabelText>
+                  <input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className={fieldCls(errors.email)} />
+                  <ErrText msg={errors.email} />
+                </div>
+                <div>
+                  <LabelText>Phone</LabelText>
+                  <input inputMode="numeric" maxLength={10} value={formPhone} onChange={(e) => setFormPhone(e.target.value.replace(/\D/g, ""))} placeholder="10 digits" className={fieldCls(errors.phone)} />
+                  <ErrText msg={errors.phone} />
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <LabelText>User ID</LabelText>
+                  <input value={formUserId} onChange={(e) => setFormUserId(e.target.value)} placeholder="login.id" className={fieldCls(errors.userId)} />
+                  <ErrText msg={errors.userId} />
+                </div>
+                <div>
+                  <LabelText>{editing ? "Reset Password" : "Password"}</LabelText>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      placeholder={editing ? "Leave blank to keep" : "Strong password"}
+                      className={`${fieldCls(errors.password)} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((s) => !s)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <PasswordStrength pw={formPassword} />
+                  <ErrText msg={errors.password} />
+                </div>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <LabelText>Aadhaar No</LabelText>
+                  <input inputMode="numeric" maxLength={12} value={formAadhaar} onChange={(e) => setFormAadhaar(e.target.value.replace(/\D/g, ""))} placeholder="12 digits" className={fieldCls(errors.aadhaar)} />
+                  <ErrText msg={errors.aadhaar} />
+                </div>
+                <div>
+                  <LabelText>Date of Joining</LabelText>
+                  <input type="date" value={formDOJ} onChange={(e) => setFormDOJ(e.target.value)} max={new Date().toISOString().slice(0, 10)} className={fieldCls(errors.doj)} />
+                  <ErrText msg={errors.doj} />
+                </div>
+              </div>
+              <div>
+                <LabelText>Address</LabelText>
+                <textarea rows={2} value={formAddress} onChange={(e) => setFormAddress(e.target.value)} placeholder="Full residential address" className={fieldCls(errors.address)} />
+                <ErrText msg={errors.address} />
+              </div>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <LabelText>Role</LabelText>
+                  <select value={formRole} onChange={(e) => setFormRole(e.target.value as UserRole)} className={fieldCls()}>
                     <option value="employee">Employee</option>
                     <option value="manager">Manager</option>
                     <option value="admin">Admin</option>
                   </select>
                 </div>
                 <div>
-                  <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Department</label>
-                  <input value={formDept} onChange={(e) => setFormDept(e.target.value)} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors" />
+                  <LabelText>Department</LabelText>
+                  <select value={formDept} onChange={(e) => setFormDept(e.target.value)} className={fieldCls()}>
+                    <option value="">— Select —</option>
+                    {(formDept && !departments.includes(formDept)) && (
+                      <option value={formDept}>{formDept}</option>
+                    )}
+                    {departments.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
-              <label className="flex items-center gap-2.5 text-sm text-gray-900 dark:text-gray-300">
-                <input type="checkbox" checked={formActive} onChange={(e) => setFormActive(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-indigo-600" />
-                Active
-              </label>
+              <div>
+                <LabelText>Designation</LabelText>
+                <select value={formDesignation} onChange={(e) => setFormDesignation(e.target.value)} className={fieldCls()}>
+                  <option value="">— Select —</option>
+                  {(formDesignation && !designations.includes(formDesignation)) && (
+                    <option value={formDesignation}>{formDesignation}</option>
+                  )}
+                  {designations.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+              {editing && (
+                <label className="flex items-center gap-2.5 text-sm text-gray-900 dark:text-gray-300">
+                  <input type="checkbox" checked={formActive} onChange={(e) => setFormActive(e.target.checked)} className="rounded border-gray-300 dark:border-gray-600 text-indigo-600" />
+                  Active
+                </label>
+              )}
               <div className="flex gap-3 pt-2">
                 <button type="button" onClick={resetForm} className="flex-1 rounded-xl border border-gray-300 dark:border-gray-600 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
-                <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-600/25">{saving ? "Saving..." : "Update"}</button>
+                <button type="submit" disabled={saving} className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-sm shadow-indigo-600/25">{saving ? "Saving..." : editing ? "Update" : "Create"}</button>
               </div>
             </form>
           </div>
         </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

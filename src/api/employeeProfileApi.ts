@@ -25,4 +25,7 @@ export const employeeProfileApi = {
 
   getByUserId: (id: string) =>
     api.get<ApiResponse<EmployeeProfile>>(`/employee-profile/${id}`),
+
+  updateByUserId: (id: string, data: Partial<EmployeeProfile>) =>
+    api.put<ApiResponse<EmployeeProfile>>(`/employee-profile/${id}`, data),
 };

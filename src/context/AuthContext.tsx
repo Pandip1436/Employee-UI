@@ -23,8 +23,7 @@ interface AuthContextType {
   user: User | null;
   token: string | null;
   loading: boolean;
-  login: (email: string, password: string, stayLoggedIn?: boolean) => Promise<void>;
-  register: (name: string, email: string, password: string) => Promise<void>;
+  login: (userId: string, password: string, stayLoggedIn?: boolean) => Promise<void>;
   logout: () => void;
   isAdmin: boolean;
   isManager: boolean;
@@ -54,8 +53,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, password: string, stayLoggedIn = false) => {
-    const res = await authApi.login({ email, password });
+  const login = async (userId: string, password: string, stayLoggedIn = false) => {
+    const res = await authApi.login({ userId, password });
     const { user: u, token: t } = res.data.data!;
     setUser(u);
     setToken(t);
@@ -72,16 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string) => {
-    const res = await authApi.register({ name, email, password });
-    const { user: u, token: t } = res.data.data!;
-    setUser(u);
-    setToken(t);
-    // Default: session only for new registrations
-    sessionStorage.setItem("token", t);
-    sessionStorage.setItem("user", JSON.stringify(u));
-  };
-
   const logout = () => {
     // Call backend to invalidate the active token
     authApi.logout().catch(() => {});
@@ -92,7 +81,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider value={{
-      user, token, loading, login, register, logout,
+      user, token, loading, login, logout,
       isAdmin: user?.role === "admin",
       isManager: user?.role === "manager",
     }}>

@@ -3,7 +3,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import PremiumLoader from "./components/PremiumLoader";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
 import Dashboard from "./pages/dashboard/Dashboard";
 import ManagerDashboard from "./pages/dashboard-manager/ManagerDashboard";
 import HrDashboard from "./pages/dashboard-hr/HrDashboard";
@@ -53,6 +52,7 @@ import SurveyResults from "./pages/survey-results/SurveyResults";
 
 // Admin Settings
 import AdminCompanySettings from "./pages/admin-company/AdminCompanySettings";
+import AdminDepartments from "./pages/admin-departments/AdminDepartments";
 import AdminDesignations from "./pages/admin-designations/AdminDesignations";
 import AdminRoles from "./pages/admin-roles/AdminRoles";
 import AdminLeavePolicy from "./pages/admin-leave-policy/AdminLeavePolicy";
@@ -87,7 +87,6 @@ export default function App() {
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
-      <Route path="/register" element={<Register />} />
 
       {/* All authenticated users */}
       <Route element={<ProtectedRoute />}>
@@ -170,6 +169,7 @@ export default function App() {
           <Route path="/admin/timesheet/export" element={<AdminTimesheetExport />} />
           <Route path="/admin/timesheet/config" element={<AdminTimesheetConfig />} />
           <Route path="/admin/settings/company" element={<AdminCompanySettings />} />
+          <Route path="/admin/settings/departments" element={<AdminDepartments />} />
           <Route path="/admin/settings/designations" element={<AdminDesignations />} />
           <Route path="/admin/settings/roles" element={<AdminRoles />} />
           <Route path="/admin/settings/leave" element={<AdminLeavePolicy />} />

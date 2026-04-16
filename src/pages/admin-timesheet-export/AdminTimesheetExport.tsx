@@ -56,7 +56,7 @@ export default function AdminTimesheetExport() {
   useEffect(() => {
     userApi
       .getAll({ limit: 500 })
-      .then((r) => setEmployees(r.data.data))
+      .then((r) => setEmployees((r.data.data || []).filter((u) => u.role !== "admin")))
       .catch(() => {});
   }, []);
 

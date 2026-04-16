@@ -20,18 +20,18 @@ export const attendanceApi = {
   getLiveStatus: () =>
     api.get<ApiResponse<LiveStatusData>>("/attendance/live-status"),
 
-  getMonthlyReport: (month: string, userId?: string) =>
-    api.get<ApiResponse>("/attendance/report/monthly", { params: { month, userId } }),
+  getReport: (period: "daily" | "weekly" | "monthly", date: string, userId?: string) =>
+    api.get<ApiResponse>("/attendance/report/monthly", { params: { period, date, userId } }),
 
-  exportExcel: (month: string, userId?: string) =>
+  exportExcel: (period: "daily" | "weekly" | "monthly", date: string, userId?: string) =>
     api.get("/attendance/report/export-excel", {
-      params: { month, userId },
+      params: { period, date, userId },
       responseType: "blob",
     }),
 
-  exportPdf: (month: string, userId?: string) =>
+  exportPdf: (period: "daily" | "weekly" | "monthly", date: string, userId?: string) =>
     api.get("/attendance/report/export-pdf", {
-      params: { month, userId },
+      params: { period, date, userId },
       responseType: "blob",
     }),
 };

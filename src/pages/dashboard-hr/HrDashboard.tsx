@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import {
   Users, UserCheck, UserX, TrendingDown, TrendingUp, Building2, ClipboardList,
   FileBarChart, Download, Mail, Calendar, PartyPopper, Clock, ArrowRight,
-  CheckCircle2, AlertCircle, Sparkles, Briefcase,
+  CheckCircle2, AlertCircle, Briefcase,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
@@ -10,6 +10,7 @@ import {
   PieChart, Pie, Cell, RadialBarChart, RadialBar,
 } from "recharts";
 import { dashboardApi, type HrStats, type PendingApprovalItem } from "../../api/dashboardApi";
+import { useCompany } from "../../context/CompanyContext";
 
 type Anniversary = { _id: string; name: string; email: string; department?: string; years: number; eventDate: string };
 
@@ -32,6 +33,8 @@ function Initials({ name }: { name: string }) {
 }
 
 export default function HrDashboard() {
+  const { companyName, logo } = useCompany();
+  const logoSrc = logo ? (/^(https?:|\/)/.test(logo) ? logo : `/${logo}`) : "/logo.png";
   const [stats, setStats] = useState<HrStats | null>(null);
   const [anniversaries, setAnniversaries] = useState<Anniversary[]>([]);
   const [pending, setPending] = useState<{ leaves: PendingApprovalItem[]; timesheets: PendingApprovalItem[] }>({ leaves: [], timesheets: [] });
@@ -114,9 +117,13 @@ export default function HrDashboard() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-widest text-indigo-200">{hero}</p>
             <h1 className="mt-2 text-3xl font-bold sm:text-4xl flex items-center gap-3">
-              <Sparkles className="h-8 w-8" /> HR Command Center
+              <img
+                src={logoSrc}
+                alt={`${companyName} logo`}
+                className="h-10 w-10 rounded-lg bg-white/95 object-contain p-1 shadow-md"
+              />
+              {companyName}
             </h1>
-            <p className="mt-1 text-sm text-indigo-100">People analytics · Workforce health · Compliance at a glance</p>
           </div>
           <Link to="/employees" className="inline-flex items-center gap-2 rounded-xl bg-white/95 px-5 py-3 text-sm font-bold text-indigo-700 shadow-lg hover:scale-105 hover:bg-white transition-all">
             <Users className="h-4 w-4" /> Manage Workforce

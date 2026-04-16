@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 
 import { useAuth } from "../../context/AuthContext";
@@ -10,7 +10,7 @@ export default function Login() {
   const { login } = useAuth();
   const { companyName } = useCompany();
   const navigate = useNavigate();
-  const [email, setEmail] = useState("");
+  const [userId, setUserId] = useState("");
   const [password, setPassword] = useState("");
   const [stayLoggedIn, setStayLoggedIn] = useState(true);
   const [loading, setLoading] = useState(false);
@@ -19,7 +19,7 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     try {
-      await login(email, password, stayLoggedIn);
+      await login(userId, password, stayLoggedIn);
       toast.success("Login successful!");
       navigate("/dashboard");
     } catch {
@@ -39,7 +39,7 @@ export default function Login() {
             <img src="/logo.png" alt="Logo" className="h-12 w-12 rounded-xl object-contain dark:invert" />
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">{companyName}</h1>
           </div>
-          <p className="text-gray-500 dark:text-gray-400">Sign in to manage your conversations</p>
+          <p className="text-gray-500 dark:text-gray-400">Sign in with your user ID and password</p>
         </div>
 
         <form
@@ -48,12 +48,20 @@ export default function Login() {
         >
           <div className="space-y-5">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Email</label>
-              <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className={inputCls} placeholder="you@company.com" />
+              <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">User ID</label>
+              <input
+                type="text"
+                required
+                autoComplete="username"
+                value={userId}
+                onChange={(e) => setUserId(e.target.value)}
+                className={inputCls}
+                placeholder="Your user ID"
+              />
             </div>
             <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700 dark:text-gray-300">Password</label>
-              <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} placeholder="Enter your password" />
+              <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} className={inputCls} placeholder="Enter your password" />
             </div>
 
             {/* Stay logged in */}
@@ -76,11 +84,8 @@ export default function Login() {
             </button>
           </div>
 
-          <p className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-            Don't have an account?{" "}
-            <Link to="/register" className="font-semibold text-indigo-600 hover:text-indigo-500 dark:text-indigo-400 dark:hover:text-indigo-300">
-              Sign up
-            </Link>
+          <p className="mt-6 text-center text-xs text-gray-400 dark:text-gray-500">
+            Accounts are created by your administrator.
           </p>
         </form>
       </div>

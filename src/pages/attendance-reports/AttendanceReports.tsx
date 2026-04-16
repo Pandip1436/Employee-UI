@@ -5,30 +5,49 @@ import { userApi } from "../../api/userApi";
 import type { User } from "../../types";
 import toast from "react-hot-toast";
 
+type Period = "daily" | "weekly" | "monthly";
 const inputCls = "rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
 
+// Pick a sensible default date for each period: today (daily/weekly), current month (monthly).
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
+const currentMonthStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+
 export default function AttendanceReports() {
-  const [month, setMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
+  const [period, setPeriod] = useState<Period>("monthly");
+  const [date, setDate] = useState(() => currentMonthStr());
   const [employees, setEmployees] = useState<User[]>([]);
   const [userId, setUserId] = useState("");
   const [report, setReport] = useState<any>(null);
   const [exporting, setExporting] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => { userApi.getAll({ limit: 200 }).then((r) => setEmployees(r.data.data)).catch(() => { /* interceptor */ }); }, []);
+  useEffect(() => {
+    userApi.getAll({ limit: 500 })
+      .then((r) => setEmployees((r.data.data || []).filter((u) => u.role !== "admin")))
+      .catch(() => { /* interceptor */ });
+  }, []);
+
+  // When the period changes, reset the date to a sensible default for that period.
+  const handlePeriod = (p: Period) => {
+    setPeriod(p);
+    setDate(p === "monthly" ? currentMonthStr() : todayStr());
+  };
 
   const fetchReport = () => {
     setLoading(true);
-    attendanceApi.getMonthlyReport(month, userId || undefined)
+    attendanceApi.getReport(period, date, userId || undefined)
       .then((r) => setReport(r.data.data))
       .catch(() => { /* interceptor */ })
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchReport(); }, [month, userId]);
+  useEffect(() => { fetchReport(); }, [period, date, userId]);
 
   const downloadFile = (data: Blob, filename: string) => {
     const url = window.URL.createObjectURL(data);
@@ -38,13 +57,13 @@ export default function AttendanceReports() {
 
   const handleExcel = async () => {
     setExporting(true);
-    try { const r = await attendanceApi.exportExcel(month, userId || undefined); downloadFile(new Blob([r.data]), `attendance-${month}.xlsx`); toast.success("Excel downloaded!"); }
+    try { const r = await attendanceApi.exportExcel(period, date, userId || undefined); downloadFile(new Blob([r.data]), `attendance-${period}-${date}.xlsx`); toast.success("Excel downloaded!"); }
     catch { /* interceptor */ } finally { setExporting(false); }
   };
 
   const handlePdf = async () => {
     setExporting(true);
-    try { const r = await attendanceApi.exportPdf(month, userId || undefined); downloadFile(new Blob([r.data], { type: "application/pdf" }), `attendance-${month}.pdf`); toast.success("PDF downloaded!"); }
+    try { const r = await attendanceApi.exportPdf(period, date, userId || undefined); downloadFile(new Blob([r.data], { type: "application/pdf" }), `attendance-${period}-${date}.pdf`); toast.success("PDF downloaded!"); }
     catch { /* interceptor */ } finally { setExporting(false); }
   };
 
@@ -54,14 +73,37 @@ export default function AttendanceReports() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Attendance Reports</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">Generate and export monthly attendance reports</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400">Generate and export daily, weekly, or monthly attendance reports</p>
+      </div>
+
+      {/* Period tabs */}
+      <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
+        {(["daily", "weekly", "monthly"] as const).map((p) => (
+          <button
+            key={p}
+            onClick={() => handlePeriod(p)}
+            className={`rounded-lg px-4 py-1.5 text-sm font-medium capitalize transition-all ${
+              period === p
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+          >
+            {p}
+          </button>
+        ))}
       </div>
 
       {/* Filters + Export */}
       <div className="flex flex-col sm:flex-row flex-wrap items-start sm:items-end gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
         <div className="w-full sm:w-auto">
-          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Month</label>
-          <input type="month" value={month} onChange={(e) => setMonth(e.target.value)} className={`w-full sm:w-auto ${inputCls}`} />
+          <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+            {period === "monthly" ? "Month" : period === "weekly" ? "Week of" : "Date"}
+          </label>
+          {period === "monthly" ? (
+            <input type="month" value={date} onChange={(e) => setDate(e.target.value)} className={`w-full sm:w-auto ${inputCls}`} />
+          ) : (
+            <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={`w-full sm:w-auto ${inputCls}`} />
+          )}
         </div>
         <div className="flex-1 min-w-[160px]">
           <label className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Employee</label>
@@ -79,6 +121,13 @@ export default function AttendanceReports() {
           </button>
         </div>
       </div>
+
+      {/* Range label */}
+      {report?.label && (
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Showing: <span className="font-semibold text-gray-700 dark:text-gray-300">{report.label}</span>
+        </p>
+      )}
 
       {/* Summary Cards */}
       {emps.length > 0 && (
@@ -104,7 +153,7 @@ export default function AttendanceReports() {
       {loading ? (
         <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-12 text-center text-gray-400">Loading...</div>
       ) : emps.length === 0 ? (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-12 text-center text-gray-400 dark:text-gray-500">No data for this month.</div>
+        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-12 text-center text-gray-400 dark:text-gray-500">No data for the selected period.</div>
       ) : (
         <>
           {/* Desktop table */}

@@ -6,9 +6,11 @@ export interface User {
   _id: string;
   name: string;
   email: string;
+  userId?: string;
   role: UserRole;
   department?: string;
   isActive: boolean;
+  lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
 }
