@@ -5,7 +5,7 @@ import {
   UsersRound as TeamIcon, PartyPopper, Laptop, Gift, BarChart3,
   Grid3X3, FileCheck, Settings, AlertTriangle, Download,
   Megaphone, Award, ClipboardCheck, Building, Shield, Mail, ScrollText,
-  MessageCircle, BookOpen, GraduationCap,
+  MessageCircle, BookOpen,
   NotebookPen,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
