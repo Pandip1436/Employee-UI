@@ -34,7 +34,7 @@ function Initials({ name }: { name: string }) {
 
 export default function HrDashboard() {
   const { companyName, logo } = useCompany();
-  const logoSrc = logo ? (/^(https?:|\/)/.test(logo) ? logo : `/${logo}`) : "/logo.png";
+  const logoSrc = logo ? (/^(https?:|\/)/.test(logo) ? logo : `/${logo}`) : "/logodarkmode.png";
   const [stats, setStats] = useState<HrStats | null>(null);
   const [anniversaries, setAnniversaries] = useState<Anniversary[]>([]);
   const [pending, setPending] = useState<{ leaves: PendingApprovalItem[]; timesheets: PendingApprovalItem[] }>({ leaves: [], timesheets: [] });
@@ -120,7 +120,7 @@ export default function HrDashboard() {
               <img
                 src={logoSrc}
                 alt={`${companyName} logo`}
-                className="h-10 w-10 rounded-lg bg-white/95 object-contain p-1 shadow-md"
+                className="h-15 w-15 mt-1 "
               />
               {companyName}
             </h1>
