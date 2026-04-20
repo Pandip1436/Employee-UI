@@ -20,7 +20,7 @@ interface LeaveTypeConfig {
 const LEAVE_TYPES: LeaveTypeConfig[] = [
   {
     key: "casual",
-    label: "Casual Leave",
+    label: "Personal Leave",
     icon: <Palmtree className="h-5 w-5" />,
     color: "text-indigo-600 dark:text-indigo-400",
     bgColor: "bg-indigo-50 dark:bg-indigo-500/10",

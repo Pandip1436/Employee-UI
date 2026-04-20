@@ -41,7 +41,7 @@ const typeConfig: Record<string, { dot: string; badge: string; label: string }> 
     dot: "bg-blue-500",
     badge:
       "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20",
-    label: "Casual",
+    label: "Personal",
   },
   sick: {
     dot: "bg-orange-500",
