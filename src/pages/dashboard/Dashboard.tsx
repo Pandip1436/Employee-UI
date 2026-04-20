@@ -57,7 +57,7 @@ export default function Dashboard() {
   void weekly;
 
   const leaveData = leaveBalance ? [
-    { name: "Casual", used: leaveBalance.casual.used, remaining: leaveBalance.casual.remaining },
+    { name: "Personal", used: leaveBalance.casual.used, remaining: leaveBalance.casual.remaining },
     { name: "Sick", used: leaveBalance.sick.used, remaining: leaveBalance.sick.remaining },
     { name: "Comp-Off", used: leaveBalance.compoff.used, remaining: leaveBalance.compoff.remaining },
   ] : [];
