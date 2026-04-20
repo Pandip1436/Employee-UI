@@ -141,7 +141,7 @@ export default function LearningHub() {
               <BookOpen className="inline h-4 w-4 mr-1.5" /> Courses
             </button>
           )}
-          <button
+          {/* <button
             onClick={() => setTab("learners")}
             className={`rounded-lg px-5 py-2 text-sm font-medium transition-all ${
               tab === "learners"
@@ -149,8 +149,8 @@ export default function LearningHub() {
                 : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
             }`}
           >
-            {/* <Users className="inline h-4 w-4 mr-1.5" /> Learners */}
-          </button>
+            <Users className="inline h-4 w-4 mr-1.5" /> Learners
+          </button> */}
         </div>
       )}
 
