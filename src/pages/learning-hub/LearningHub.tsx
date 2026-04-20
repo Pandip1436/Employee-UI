@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   BookOpen, Search, Plus, Clock, User, Users, CheckCircle2,
-  GraduationCap, X, ExternalLink, Filter,
+  GraduationCap, X, ExternalLink, Filter, ChevronDown, ChevronRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { learningApi, type CourseData } from "../../api/learningApi";
+import { learningApi, type CourseData, type LearnerData } from "../../api/learningApi";
 import { useAuth } from "../../context/AuthContext";
 
 const CATEGORIES = ["All", "Technical", "Soft Skills", "Management", "Design", "Data", "Security", "Other"];
@@ -24,7 +24,9 @@ const EMPTY_FORM = { title: "", description: "", category: "Technical", skill: "
 
 export default function LearningHub() {
   const navigate = useNavigate();
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isManager } = useAuth();
+  const canViewLearners = isAdmin || isManager;
+  const [tab, setTab] = useState<"courses" | "learners">(isAdmin ? "learners" : "courses");
   const [courses, setCourses] = useState<CourseData[]>([]);
   const [loading, setLoading] = useState(true);
   const [category, setCategory] = useState("All");
@@ -32,6 +34,12 @@ export default function LearningHub() {
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [submitting, setSubmitting] = useState(false);
+
+  // Learners tab state (admin/manager only)
+  const [learners, setLearners] = useState<LearnerData[]>([]);
+  const [learnersLoading, setLearnersLoading] = useState(false);
+  const [learnerSearch, setLearnerSearch] = useState("");
+  const [expandedLearner, setExpandedLearner] = useState<string | null>(null);
 
   const fetchCourses = useCallback(() => {
     setLoading(true);
@@ -46,6 +54,16 @@ export default function LearningHub() {
   }, [category, search]);
 
   useEffect(() => { fetchCourses(); }, [fetchCourses]);
+
+  useEffect(() => {
+    if (tab === "learners" && canViewLearners) {
+      setLearnersLoading(true);
+      learningApi.getLearners()
+        .then((r) => setLearners(r.data.data ?? []))
+        .catch(() => toast.error("Failed to load learners"))
+        .finally(() => setLearnersLoading(false));
+    }
+  }, [tab, canViewLearners]);
 
   const handleEnroll = async (id: string) => {
     try {
@@ -97,7 +115,7 @@ export default function LearningHub() {
             </h1>
             <p className="mt-1 text-sm text-blue-200">Explore courses, build skills, earn certifications</p>
           </div>
-          {isAdmin && (
+          {!isAdmin && (
             <button
               onClick={() => setShowModal(true)}
               className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-indigo-700 shadow-lg hover:scale-105 transition-all"
@@ -108,7 +126,37 @@ export default function LearningHub() {
         </div>
       </div>
 
-      {/* Filters */}
+      {/* Tabs (Courses / Learners) — admin sees only Learners, manager sees both */}
+      {canViewLearners && (
+        <div className="inline-flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
+          {!isAdmin && (
+            <button
+              onClick={() => setTab("courses")}
+              className={`rounded-lg px-5 py-2 text-sm font-medium transition-all ${
+                tab === "courses"
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              }`}
+            >
+              <BookOpen className="inline h-4 w-4 mr-1.5" /> Courses
+            </button>
+          )}
+          <button
+            onClick={() => setTab("learners")}
+            className={`rounded-lg px-5 py-2 text-sm font-medium transition-all ${
+              tab === "learners"
+                ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+          >
+            <Users className="inline h-4 w-4 mr-1.5" /> Learners
+          </button>
+        </div>
+      )}
+
+      {/* Filters (courses tab — hidden from admin) */}
+      {tab === "courses" && !isAdmin && (
+      <>
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -227,6 +275,155 @@ export default function LearningHub() {
               </div>
             );
           })}
+        </div>
+      )}
+      </>
+      )}
+
+      {/* ───────── Learners Tab (admin/manager only) ───────── */}
+      {tab === "learners" && canViewLearners && (
+        <div className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search learners by name, email, or department..."
+              value={learnerSearch}
+              onChange={(e) => setLearnerSearch(e.target.value)}
+              className={`${inputCls} pl-10`}
+            />
+          </div>
+
+          {learnersLoading ? (
+            <div className="flex justify-center py-20">
+              <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+            </div>
+          ) : (() => {
+            const q = learnerSearch.trim().toLowerCase();
+            const filtered = q
+              ? learners.filter((l) =>
+                  l.name.toLowerCase().includes(q) ||
+                  l.email.toLowerCase().includes(q) ||
+                  (l.department || "").toLowerCase().includes(q))
+              : learners;
+
+            if (filtered.length === 0) {
+              return (
+                <div className={`${card} text-center py-16`}>
+                  <Users className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600 mb-3" />
+                  <p className="text-gray-500 dark:text-gray-400">No learners found.</p>
+                </div>
+              );
+            }
+
+            return (
+              <div className="space-y-3">
+                {filtered.map((l) => {
+                  const isExpanded = expandedLearner === l._id;
+                  return (
+                    <div key={l._id} className={`${card} !p-0 overflow-hidden`}>
+                      <button
+                        onClick={() => setExpandedLearner(isExpanded ? null : l._id)}
+                        className="w-full flex items-center gap-4 p-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors"
+                      >
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
+                          {l.name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-gray-900 dark:text-white truncate">{l.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{l.email}{l.department ? ` · ${l.department}` : ""}</p>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <div className="text-center hidden sm:block">
+                            <p className="text-lg font-bold text-indigo-600 dark:text-indigo-400">{l.inProgressCount}</p>
+                            <p className="text-[10px] uppercase text-gray-400">In Progress</p>
+                          </div>
+                          <div className="text-center hidden sm:block">
+                            <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{l.completedCount}</p>
+                            <p className="text-[10px] uppercase text-gray-400">Completed</p>
+                          </div>
+                          <div className="text-center hidden sm:block">
+                            <p className="text-lg font-bold text-gray-600 dark:text-gray-300">{l.enrolledCount}</p>
+                            <p className="text-[10px] uppercase text-gray-400">Total</p>
+                          </div>
+                          {isExpanded ? <ChevronDown className="h-5 w-5 text-gray-400" /> : <ChevronRight className="h-5 w-5 text-gray-400" />}
+                        </div>
+                      </button>
+
+                      {/* Mobile stats */}
+                      <div className="sm:hidden grid grid-cols-3 gap-2 px-4 pb-3">
+                        <div className="rounded-lg bg-indigo-50 dark:bg-indigo-500/10 py-1.5 text-center">
+                          <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{l.inProgressCount}</p>
+                          <p className="text-[9px] uppercase text-gray-400">In Progress</p>
+                        </div>
+                        <div className="rounded-lg bg-emerald-50 dark:bg-emerald-500/10 py-1.5 text-center">
+                          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{l.completedCount}</p>
+                          <p className="text-[9px] uppercase text-gray-400">Completed</p>
+                        </div>
+                        <div className="rounded-lg bg-gray-50 dark:bg-gray-800 py-1.5 text-center">
+                          <p className="text-sm font-bold text-gray-600 dark:text-gray-300">{l.enrolledCount}</p>
+                          <p className="text-[9px] uppercase text-gray-400">Total</p>
+                        </div>
+                      </div>
+
+                      {/* Expanded course list */}
+                      {isExpanded && (
+                        <div className="border-t border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30 px-4 py-4 space-y-4">
+                          {l.inProgress.length > 0 && (
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2">
+                                <BookOpen className="inline h-3.5 w-3.5 mr-1" /> In Progress ({l.inProgress.length})
+                              </p>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {l.inProgress.map((c) => (
+                                  <div
+                                    key={c._id}
+                                    onClick={() => navigate(`/learning/courses/${c._id}`)}
+                                    className="cursor-pointer rounded-lg border border-indigo-200 dark:border-indigo-500/20 bg-white dark:bg-gray-900 p-3 hover:shadow-md transition-all"
+                                  >
+                                    <p className="font-medium text-sm text-gray-900 dark:text-white">{c.title}</p>
+                                    <div className="flex gap-3 mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                                      {c.category && <span>{c.category}</span>}
+                                      {c.duration && <span><Clock className="inline h-3 w-3 mr-0.5" />{c.duration}</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {l.completed.length > 0 && (
+                            <div>
+                              <p className="text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">
+                                <CheckCircle2 className="inline h-3.5 w-3.5 mr-1" /> Completed ({l.completed.length})
+                              </p>
+                              <div className="grid gap-2 sm:grid-cols-2">
+                                {l.completed.map((c) => (
+                                  <div
+                                    key={c._id}
+                                    onClick={() => navigate(`/learning/courses/${c._id}`)}
+                                    className="cursor-pointer rounded-lg border border-emerald-200 dark:border-emerald-500/20 bg-white dark:bg-gray-900 p-3 hover:shadow-md transition-all"
+                                  >
+                                    <p className="font-medium text-sm text-gray-900 dark:text-white">{c.title}</p>
+                                    <div className="flex gap-3 mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+                                      {c.category && <span>{c.category}</span>}
+                                      {c.duration && <span><Clock className="inline h-3 w-3 mr-0.5" />{c.duration}</span>}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {l.enrolledCount === 0 && (
+                            <p className="text-sm text-gray-400 dark:text-gray-500 text-center py-4">No courses enrolled yet.</p>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </div>
       )}
 

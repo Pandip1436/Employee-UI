@@ -2,11 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, BookOpen, Clock, User, Users, CheckCircle2,
-  GraduationCap, ExternalLink, Mail, Building2,
+  GraduationCap, ExternalLink, Loader2, Pencil, Trash2, X,
 } from "lucide-react";
 import toast from "react-hot-toast";
-import { learningApi, type CourseDetailData, type CourseUser } from "../../api/learningApi";
+import { learningApi, type CourseDetailData } from "../../api/learningApi";
 import { useAuth } from "../../context/AuthContext";
+
+const CATEGORIES = ["Technical", "Soft Skills", "Management", "Design", "Data", "Security", "Other"];
 
 const CATEGORY_COLORS: Record<string, string> = {
   Technical:    "bg-blue-500/10 text-blue-400 border-blue-500/30",
@@ -18,15 +20,15 @@ const CATEGORY_COLORS: Record<string, string> = {
   Other:        "bg-gray-500/10 text-gray-400 border-gray-500/30",
 };
 
-type Tab = "enrolled" | "completed";
-
 export default function CourseDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [course, setCourse] = useState<CourseDetailData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<Tab>("enrolled");
+  const [showEdit, setShowEdit] = useState(false);
+  const [editForm, setEditForm] = useState({ title: "", description: "", category: "Technical", skill: "", duration: "", instructor: "", link: "" });
+  const [submitting, setSubmitting] = useState(false);
 
   const fetchCourse = useCallback(() => {
     if (!id) return;
@@ -61,12 +63,51 @@ export default function CourseDetail() {
     } catch { toast.error("Failed to mark complete"); }
   };
 
+  const isOwner = user && course?.createdBy && (course.createdBy as any)._id === user._id;
+
+  const openEdit = () => {
+    if (!course) return;
+    setEditForm({
+      title: course.title || "",
+      description: course.description || "",
+      category: course.category || "Technical",
+      skill: course.skill || "",
+      duration: course.duration || "",
+      instructor: course.instructor || "",
+      link: course.link || "",
+    });
+    setShowEdit(true);
+  };
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!id || !editForm.title.trim()) return toast.error("Title is required");
+    setSubmitting(true);
+    try {
+      await learningApi.updateCourse(id, editForm);
+      toast.success("Course updated!");
+      setShowEdit(false);
+      fetchCourse();
+    } catch { toast.error("Failed to update course"); }
+    finally { setSubmitting(false); }
+  };
+
+  const handleDelete = async () => {
+    if (!id) return;
+    if (!confirm("Delete this course? This cannot be undone.")) return;
+    try {
+      await learningApi.deleteCourse(id);
+      toast.success("Course deleted!");
+      navigate("/learning");
+    } catch { toast.error("Failed to delete course"); }
+  };
+
   const card = "rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all";
 
   if (loading) {
     return (
       <div className="flex justify-center py-20">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-indigo-500 border-t-transparent" />
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
       </div>
     );
   }
@@ -84,7 +125,13 @@ export default function CourseDetail() {
   }
 
   const catColor = CATEGORY_COLORS[course.category ?? "Other"] ?? CATEGORY_COLORS.Other;
-  const activeList: CourseUser[] = tab === "enrolled" ? course.enrolledUsers : course.completedUsers;
+
+  // Status label
+  const status = isCompleted
+    ? { label: "Completed", bg: "bg-emerald-400/20 border-emerald-300/30 text-emerald-200", icon: <CheckCircle2 className="h-3.5 w-3.5" /> }
+    : isEnrolled
+    ? { label: "In Progress", bg: "bg-amber-400/20 border-amber-300/30 text-amber-200", icon: <Loader2 className="h-3.5 w-3.5 animate-spin" /> }
+    : null;
 
   return (
     <div className="space-y-6">
@@ -101,23 +148,20 @@ export default function CourseDetail() {
         <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5" />
         <div className="absolute -bottom-6 -left-6 h-32 w-32 rounded-full bg-white/5" />
         <div className="relative">
+          {/* Badges */}
           <div className="flex flex-wrap items-center gap-2 mb-3">
             {course.category && (
               <span className="inline-flex items-center gap-1 rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-semibold">
                 {course.category}
               </span>
             )}
-            {isCompleted && (
-              <span className="inline-flex items-center gap-1 rounded-lg border border-emerald-300/30 bg-emerald-400/20 px-2.5 py-1 text-xs font-semibold">
-                <CheckCircle2 className="h-3 w-3" /> Completed
-              </span>
-            )}
-            {isEnrolled && !isCompleted && (
-              <span className="inline-flex items-center gap-1 rounded-lg border border-white/20 bg-white/10 px-2.5 py-1 text-xs font-semibold">
-                <BookOpen className="h-3 w-3" /> Enrolled
+            {status && (
+              <span className={`inline-flex items-center gap-1 rounded-lg border px-2.5 py-1 text-xs font-semibold ${status.bg}`}>
+                {status.icon} {status.label}
               </span>
             )}
           </div>
+
           <h1 className="text-2xl font-bold sm:text-3xl flex items-center gap-2">
             <GraduationCap className="h-7 w-7" /> {course.title}
           </h1>
@@ -133,13 +177,14 @@ export default function CourseDetail() {
             {course.duration && (
               <span className="flex items-center gap-1.5"><Clock className="h-4 w-4" /> {course.duration}</span>
             )}
-            <span className="flex items-center gap-1.5"><Users className="h-4 w-4" /> {course.enrolledUsers.length} enrolled</span>
-            <span className="flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4" /> {course.completedUsers.length} completed</span>
+            {course.skill && (
+              <span className="flex items-center gap-1.5"><GraduationCap className="h-4 w-4" /> {course.skill}</span>
+            )}
           </div>
 
           {/* Actions */}
           <div className="mt-5 flex flex-wrap items-center gap-3">
-            {!isEnrolled && !isCompleted && (
+            {!isAdmin && !isEnrolled && !isCompleted && (
               <button
                 onClick={handleEnroll}
                 className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-indigo-700 shadow-lg hover:scale-105 transition-all"
@@ -147,7 +192,7 @@ export default function CourseDetail() {
                 <BookOpen className="h-4 w-4" /> Enroll Now
               </button>
             )}
-            {isEnrolled && !isCompleted && (
+            {!isAdmin && isEnrolled && !isCompleted && (
               <button
                 onClick={handleComplete}
                 className="flex items-center gap-2 rounded-xl bg-emerald-500 px-5 py-3 text-sm font-bold text-white shadow-lg hover:scale-105 transition-all"
@@ -165,34 +210,120 @@ export default function CourseDetail() {
                 <ExternalLink className="h-4 w-4" /> Open Course
               </a>
             )}
+            {isOwner && (
+              <>
+                <button
+                  onClick={openEdit}
+                  className="flex items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm font-semibold hover:bg-white/20 transition-colors"
+                >
+                  <Pencil className="h-4 w-4" /> Edit
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="flex items-center gap-2 rounded-xl border border-rose-300/30 bg-rose-400/20 px-4 py-3 text-sm font-semibold text-rose-200 hover:bg-rose-400/30 transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" /> Delete
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Course Info Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Course Details Cards */}
+      <div className={`grid grid-cols-1 gap-4 ${isAdmin ? "sm:grid-cols-3 lg:grid-cols-6" : "sm:grid-cols-2 lg:grid-cols-4"}`}>
+        {/* Status — different for admin vs user */}
+        {isAdmin ? (
+          <>
+            <div className={card}>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10">
+                  <Users className="h-5 w-5 text-indigo-500" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{course.enrolledUsers.length}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Enrolled</p>
+                </div>
+              </div>
+            </div>
+            <div className={card}>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500/10">
+                  <Clock className="h-5 w-5 text-amber-500" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-amber-600 dark:text-amber-400">
+                    {course.enrolledUsers.filter((u) => !course.completedUsers.some((c) => c._id === u._id)).length}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">In Progress</p>
+                </div>
+              </div>
+            </div>
+            <div className={card}>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                </div>
+                <div>
+                  <p className="text-xl font-bold text-emerald-600 dark:text-emerald-400">{course.completedUsers.length}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Completed</p>
+                </div>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className={card}>
+            <div className="flex items-center gap-3">
+              <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${
+                isCompleted ? "bg-emerald-500/10" : isEnrolled ? "bg-amber-500/10" : "bg-gray-500/10"
+              }`}>
+                {isCompleted ? (
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                ) : isEnrolled ? (
+                  <Clock className="h-5 w-5 text-amber-500" />
+                ) : (
+                  <BookOpen className="h-5 w-5 text-gray-400" />
+                )}
+              </div>
+              <div>
+                <p className={`text-sm font-bold ${
+                  isCompleted ? "text-emerald-600 dark:text-emerald-400" : isEnrolled ? "text-amber-600 dark:text-amber-400" : "text-gray-500 dark:text-gray-400"
+                }`}>
+                  {isCompleted ? "Completed" : isEnrolled ? "In Progress" : "Not Enrolled"}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Your Status</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Duration */}
         <div className={card}>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-500/10">
-              <Users className="h-5 w-5 text-indigo-500" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/10">
+              <Clock className="h-5 w-5 text-blue-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{course.enrolledUsers.length}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Enrolled Users</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">{course.duration || "—"}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Duration</p>
             </div>
           </div>
         </div>
+
+        {/* Instructor */}
         <div className={card}>
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-500/10">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-500/10">
+              <User className="h-5 w-5 text-purple-500" />
             </div>
             <div>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">{course.completedUsers.length}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Completed Users</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-white">{course.instructor || "—"}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Instructor</p>
             </div>
           </div>
         </div>
+
+        {/* Skill / Category */}
         <div className={card}>
           <div className="flex items-center gap-3">
             <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${catColor.split(" ")[0]}`}>
@@ -206,70 +337,119 @@ export default function CourseDetail() {
         </div>
       </div>
 
-      {/* Tabs: Enrolled / Completed */}
-      <div className={card}>
-        <div className="flex items-center gap-1 border-b border-gray-200 dark:border-gray-800 mb-4">
-          <button
-            onClick={() => setTab("enrolled")}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              tab === "enrolled"
-                ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-            }`}
-          >
-            <span className="flex items-center gap-1.5">
-              <Users className="h-4 w-4" /> Enrolled ({course.enrolledUsers.length})
-            </span>
-          </button>
-          <button
-            onClick={() => setTab("completed")}
-            className={`px-4 py-2.5 text-sm font-semibold border-b-2 transition-colors ${
-              tab === "completed"
-                ? "border-emerald-500 text-emerald-600 dark:text-emerald-400"
-                : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-            }`}
-          >
-            <span className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-4 w-4" /> Completed ({course.completedUsers.length})
-            </span>
-          </button>
+      {/* Full Description */}
+      {course.description && (
+        <div className={card}>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">About this course</h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line leading-relaxed">{course.description}</p>
         </div>
+      )}
 
-        {activeList.length === 0 ? (
-          <div className="text-center py-10">
-            <Users className="mx-auto h-10 w-10 text-gray-400 dark:text-gray-600 mb-2" />
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {tab === "enrolled" ? "No users enrolled yet." : "No users have completed this course yet."}
-            </p>
-          </div>
-        ) : (
+      {/* Admin: Enrolled Users with Status */}
+      {isAdmin && course.enrolledUsers.length > 0 && (
+        <div className={card}>
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+            <Users className="h-4 w-4 text-indigo-500" /> Enrolled Users ({course.enrolledUsers.length})
+          </h3>
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
-            {activeList.map((u) => (
-              <div key={u._id} className="flex items-center gap-4 py-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 font-bold text-sm">
-                  {u.name?.charAt(0)?.toUpperCase() || "?"}
+            {course.enrolledUsers.map((u) => {
+              const completed = course.completedUsers.some((c) => c._id === u._id);
+              return (
+                <div key={u._id} className="flex items-center gap-3 py-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white">
+                    {u.name?.charAt(0)?.toUpperCase() || "?"}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{u.name}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                      {u.email}{u.department ? ` · ${u.department}` : ""}
+                    </p>
+                  </div>
+                  <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${
+                    completed
+                      ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400"
+                      : "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400"
+                  }`}>
+                    {completed ? (
+                      <><CheckCircle2 className="h-3 w-3" /> Completed</>
+                    ) : (
+                      <><Clock className="h-3 w-3" /> In Progress</>
+                    )}
+                  </span>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{u.name}</p>
-                  <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500 dark:text-gray-400">
-                    {u.email && (
-                      <span className="flex items-center gap-1"><Mail className="h-3 w-3" />{u.email}</span>
-                    )}
-                    {u.department && (
-                      <span className="flex items-center gap-1"><Building2 className="h-3 w-3" />{u.department}</span>
-                    )}
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {isAdmin && course.enrolledUsers.length === 0 && (
+        <div className={`${card} text-center py-8`}>
+          <Users className="mx-auto h-10 w-10 text-gray-400 dark:text-gray-600 mb-2" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">No users enrolled in this course yet.</p>
+        </div>
+      )}
+
+      {/* Edit Course Modal */}
+      {showEdit && (() => {
+        const inputCls = "w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-2.5 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none transition-colors";
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-2xl">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Edit Course</h2>
+                <button onClick={() => setShowEdit(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <form onSubmit={handleUpdate} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Title *</label>
+                  <input className={inputCls} value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Description</label>
+                  <textarea rows={3} className={inputCls} value={editForm.description} onChange={(e) => setEditForm({ ...editForm, description: e.target.value })} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Category</label>
+                    <select className={inputCls} value={editForm.category} onChange={(e) => setEditForm({ ...editForm, category: e.target.value })}>
+                      {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Skill</label>
+                    <input className={inputCls} value={editForm.skill} onChange={(e) => setEditForm({ ...editForm, skill: e.target.value })} />
                   </div>
                 </div>
-                {tab === "enrolled" && course.completedUsers.some((c) => c._id === u._id) && (
-                  <span className="inline-flex items-center gap-1 rounded-lg border bg-emerald-500/10 text-emerald-400 border-emerald-500/30 px-2 py-0.5 text-xs font-semibold">
-                    <CheckCircle2 className="h-3 w-3" /> Done
-                  </span>
-                )}
-              </div>
-            ))}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Duration</label>
+                    <input className={inputCls} placeholder="e.g. 4 hours" value={editForm.duration} onChange={(e) => setEditForm({ ...editForm, duration: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Instructor</label>
+                    <input className={inputCls} value={editForm.instructor} onChange={(e) => setEditForm({ ...editForm, instructor: e.target.value })} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Link</label>
+                  <input className={inputCls} placeholder="https://..." value={editForm.link} onChange={(e) => setEditForm({ ...editForm, link: e.target.value })} />
+                </div>
+                <div className="flex justify-end gap-3 pt-2">
+                  <button type="button" onClick={() => setShowEdit(false)} className="rounded-xl border border-gray-300 dark:border-gray-700 px-5 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={submitting} className="rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors">
+                    {submitting ? "Saving..." : "Update Course"}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-        )}
-      </div>
+        );
+      })()}
     </div>
   );
 }

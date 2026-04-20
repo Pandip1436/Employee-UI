@@ -22,4 +22,13 @@ export const learningApi = {
   getTrainings: () => api.get<ApiResponse<TrainingData[]>>("/learning/trainings"),
   createTraining: (data: Record<string, unknown>) => api.post<ApiResponse<TrainingData>>("/learning/trainings", data),
   getCalendar: () => api.get<ApiResponse<TrainingData[]>>("/learning/calendar"),
+
+  getLearners: () => api.get<ApiResponse<LearnerData[]>>("/learning/learners"),
 };
+
+export interface LearnerCourse { _id: string; title: string; category: string; skill: string; duration: string; }
+export interface LearnerData {
+  _id: string; name: string; email: string; department: string; userId: string;
+  enrolledCount: number; completedCount: number; inProgressCount: number;
+  enrolled: LearnerCourse[]; completed: LearnerCourse[]; inProgress: LearnerCourse[];
+}
