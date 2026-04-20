@@ -101,7 +101,7 @@ export default function TimesheetDetail() {
           Timesheet not found
         </p>
         <Link
-          to="/timesheet/history"
+          to="/timesheet"
           className="mt-4 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-700"
         >
           Back to History
