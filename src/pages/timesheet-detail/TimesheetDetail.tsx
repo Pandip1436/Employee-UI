@@ -116,7 +116,7 @@ export default function TimesheetDetail() {
     <div className="space-y-6">
       {/* ── Back button ── */}
       <Link
-        to="/timesheet/history"
+        to="/timesheet"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
       >
         <ArrowLeft className="h-4 w-4" />
