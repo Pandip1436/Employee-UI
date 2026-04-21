@@ -7,7 +7,7 @@ import { holidayApi } from "../../api/holidayApi";
 import type { WeeklyTimesheetData, Project, TimesheetEntry, Holiday } from "../../types";
 import toast from "react-hot-toast";
 
-const MIN_WEEK_HOURS = 40;
+const MIN_WEEK_HOURS = 20;
 const MAX_DAY_HOURS = 24;
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -277,7 +277,7 @@ export default function TimesheetWeekly() {
                   <th key={d} className={`px-1 py-3 text-center text-xs font-semibold uppercase tracking-wider w-16 ${dayCellStyle(i)} ${
                     holiday ? "text-blue-600 dark:text-blue-400" : weekend ? "text-gray-400" : "text-gray-500 dark:text-gray-400"
                   }`}>
-                    {d}<br/><span className="text-[10px] text-gray-400">{dt?.getDate()} · {dayTotal(i)}h</span>
+                    {d}<br/><span className="text-[10px] text-gray-400">{dt?.getDate()} </span>
                   </th>
                 );
               })}

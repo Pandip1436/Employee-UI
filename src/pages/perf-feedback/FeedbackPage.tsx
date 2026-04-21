@@ -57,7 +57,7 @@ export default function FeedbackPage() {
   useEffect(() => {
     userApi.getAll({ limit: 500 }).then((r) => {
       const all = r.data.data ?? [];
-      setUsers(all.filter((u) => u._id !== user?._id));
+      setUsers(all.filter((u) => u._id !== user?._id && u.role !== "admin"));
     }).catch(() => {});
   }, [user]);
 

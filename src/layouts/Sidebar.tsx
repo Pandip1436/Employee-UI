@@ -6,7 +6,7 @@ import {
   Grid3X3, FileCheck, AlertTriangle, Download,
   Megaphone, Award, ClipboardCheck, Building, Shield, Mail, ScrollText,
   MessageCircle, BookOpen,
-  NotebookPen,
+  NotebookPen, CalendarClock,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCompany } from "../context/CompanyContext";
@@ -37,6 +37,7 @@ const links: SidebarLink[] = [
   { to: "/daily-updates", label: "My Updates", icon: NotebookPen, roles: [],excludeRoles: ["admin"], section: "Daily Updates" },
   { to: "/daily-updates/team", label: "Team Updates", icon: NotebookPen, roles: ["admin", "manager"], section: "Daily Updates" },
   { to: "/timesheet", label: "Timesheet Home", icon: Clock, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
+  { to: "/timesheet/daily", label: "Daily Works", icon: CalendarClock, roles: [],  section: "Timesheet" },
   { to: "/timesheet/weekly", label: "Weekly Grid", icon: Grid3X3, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
   { to: "/timesheet/approvals", label: "Approvals", icon: FileCheck, roles: ["admin", "manager"], section: "Timesheet" },
   { to: "/admin/timesheet/missing", label: "Missing", icon: AlertTriangle, roles: ["admin"], section: "Timesheet" },
@@ -59,7 +60,7 @@ const links: SidebarLink[] = [
   { to: "/admin/settings/company", label: "Company", icon: Building, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/departments", label: "Departments", icon: Laptop, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/designations", label: "Designations", icon: Shield, roles: ["admin"], section: "Settings" },
-  { to: "/admin/settings/roles", label: "Roles", icon: Award, roles: ["admin"], section: "Settings" },
+  // { to: "/admin/settings/roles", label: "Roles", icon: Award, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/leave", label: "Leave Policy", icon: CalendarDays, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/emails", label: "Email Templates", icon: Mail, roles: ["admin"], section: "Settings" },
   { to: "/admin/audit", label: "Audit Log", icon: ScrollText, roles: ["admin"], section: "Settings" },

@@ -360,3 +360,20 @@ export interface EmployeeTimesheetStatus {
   managerComment: string | null;
   sheetId: string | null;
 }
+
+export interface AdminDailyEntry {
+  projectId: string | null;
+  projectName: string;
+  client: string | null;
+  task: string;
+  activityType: string;
+  hours: number;
+  notes: string | null;
+}
+
+export interface AdminDailyRow {
+  user: { _id: string; name: string; email: string; department: string | null };
+  status: "draft" | "submitted" | "approved" | "rejected";
+  totalHours: number;
+  entries: AdminDailyEntry[];
+}

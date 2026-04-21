@@ -8,15 +8,27 @@ const inputCls =
   "rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
 
 function getMondayOfWeek(dateStr: string): string {
+  // All-UTC math so the result is independent of the client's timezone.
+  // Previously mixed local date fields with toISOString(), which shifted
+  // the returned date into the prior day for users in ahead-of-UTC zones.
   const d = new Date(dateStr);
-  const day = d.getDay();
-  const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-  const monday = new Date(d.getFullYear(), d.getMonth(), diff);
+  const dow = d.getUTCDay(); // 0=Sun..6=Sat
+  const monday = new Date(
+    Date.UTC(
+      d.getUTCFullYear(),
+      d.getUTCMonth(),
+      d.getUTCDate() - ((dow + 6) % 7),
+    ),
+  );
   return monday.toISOString().slice(0, 10);
 }
 
 function getCurrentMonday(): string {
-  return getMondayOfWeek(new Date().toISOString().slice(0, 10));
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return getMondayOfWeek(`${y}-${m}-${d}`);
 }
 
 function getInitials(name: string) {
@@ -64,11 +76,17 @@ export default function AdminMissingTimesheet() {
     fetchMissing();
   }, [weekStart]);
 
-  const weekLabel = new Date(getMondayOfWeek(weekStart)).toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const weekLabel = (() => {
+    // Build the label from calendar parts so toLocaleDateString doesn't
+    // re-apply a timezone shift (UTC midnight would render as the prior day
+    // in west-of-UTC zones).
+    const [yy, mm, dd] = getMondayOfWeek(weekStart).split("-").map(Number);
+    return new Date(yy, mm - 1, dd).toLocaleDateString("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    });
+  })();
 
   return (
     <div className="space-y-6">
