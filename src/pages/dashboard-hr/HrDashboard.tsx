@@ -293,7 +293,7 @@ export default function HrDashboard() {
                       <Initials name={l.employee.name} />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{l.employee.name}</p>
-                        <p className="truncate text-xs text-gray-500 dark:text-gray-400 capitalize">{LEAVE_TYPE_LABELS[l.leaveType] ?? l.leaveType} leave · {l.days} day{(l.days ?? 0) > 1 ? "s" : ""}</p>
+                        <p className="truncate text-xs text-gray-500 dark:text-gray-400 capitalize">{(l.leaveType && LEAVE_TYPE_LABELS[l.leaveType]) ?? l.leaveType} leave · {l.days} day{(l.days ?? 0) > 1 ? "s" : ""}</p>
                       </div>
                     </div>
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
