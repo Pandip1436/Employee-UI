@@ -59,6 +59,9 @@ const badgeFor = (type: string) =>
   leaveTypeColor[type.toLowerCase()] ??
   "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300";
 
+const leaveTypeLabel = (type: string) =>
+  type?.toLowerCase() === "casual" ? "Personal" : type;
+
 /* ------------------------------------------------------------------ */
 /*  Component                                                         */
 /* ------------------------------------------------------------------ */
@@ -363,7 +366,7 @@ export default function ManagerDashboard() {
                         {item.type === "leave" ? (
                           <>
                             <span className="capitalize">
-                              {item.leaveType}
+                              {leaveTypeLabel(item.leaveType ?? "")}
                             </span>{" "}
                             &middot; {item.days} day{item.days !== 1 ? "s" : ""}{" "}
                             &middot; {fmtShort(item.startDate)}
@@ -442,7 +445,7 @@ export default function ManagerDashboard() {
                   <p className="mt-2 text-sm text-gray-600 dark:text-gray-300">
                     {item.type === "leave" ? (
                       <>
-                        <span className="capitalize">{item.leaveType}</span>{" "}
+                        <span className="capitalize">{leaveTypeLabel(item.leaveType ?? "")}</span>{" "}
                         &middot; {item.days} day{item.days !== 1 ? "s" : ""}{" "}
                         &middot; {fmtShort(item.startDate)}
                       </>

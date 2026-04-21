@@ -16,11 +16,15 @@ type Anniversary = { _id: string; name: string; email: string; department?: stri
 
 const ATTENDANCE_COLORS = ["#10b981", "#ef4444"];
 const LEAVE_COLORS: Record<string, string> = {
-  Casual: "#6366f1",
+  Personal: "#6366f1",
   Sick: "#f59e0b",
   Earned: "#10b981",
   Unpaid: "#ef4444",
   Compoff: "#8b5cf6",
+};
+
+const LEAVE_TYPE_LABELS: Record<string, string> = {
+  casual: "Personal",
 };
 
 function Initials({ name }: { name: string }) {
@@ -46,7 +50,7 @@ export default function HrDashboard() {
   }, []);
 
   const leaveData = (stats?.leaveStats ?? []).map((l) => ({
-    type: l._id.charAt(0).toUpperCase() + l._id.slice(1),
+    type: LEAVE_TYPE_LABELS[l._id] ?? l._id.charAt(0).toUpperCase() + l._id.slice(1),
     totalDays: l.totalDays,
     count: l.count,
   }));
@@ -289,7 +293,7 @@ export default function HrDashboard() {
                       <Initials name={l.employee.name} />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{l.employee.name}</p>
-                        <p className="truncate text-xs text-gray-500 dark:text-gray-400 capitalize">{l.leaveType} leave · {l.days} day{(l.days ?? 0) > 1 ? "s" : ""}</p>
+                        <p className="truncate text-xs text-gray-500 dark:text-gray-400 capitalize">{LEAVE_TYPE_LABELS[l.leaveType] ?? l.leaveType} leave · {l.days} day{(l.days ?? 0) > 1 ? "s" : ""}</p>
                       </div>
                     </div>
                     <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
