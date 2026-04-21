@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, BookOpen, Clock, User, Users, CheckCircle2,
   GraduationCap, ExternalLink, Loader2, Pencil, Trash2, X,
+  AlertTriangle,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { learningApi, type CourseDetailData } from "../../api/learningApi";
@@ -29,6 +30,8 @@ export default function CourseDetail() {
   const [showEdit, setShowEdit] = useState(false);
   const [editForm, setEditForm] = useState({ title: "", description: "", category: "Technical", skill: "", duration: "", instructor: "", link: "" });
   const [submitting, setSubmitting] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const fetchCourse = useCallback(() => {
     if (!id) return;
@@ -92,14 +95,17 @@ export default function CourseDetail() {
     finally { setSubmitting(false); }
   };
 
-  const handleDelete = async () => {
+  const confirmDelete = async () => {
     if (!id) return;
-    if (!confirm("Delete this course? This cannot be undone.")) return;
+    setDeleting(true);
     try {
       await learningApi.deleteCourse(id);
       toast.success("Course deleted!");
       navigate("/learning");
-    } catch { toast.error("Failed to delete course"); }
+    } catch {
+      toast.error("Failed to delete course");
+      setDeleting(false);
+    }
   };
 
   const card = "rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all";
@@ -219,7 +225,7 @@ export default function CourseDetail() {
                   <Pencil className="h-4 w-4" /> Edit
                 </button>
                 <button
-                  onClick={handleDelete}
+                  onClick={() => setShowDelete(true)}
                   className="flex items-center gap-2 rounded-xl border border-rose-300/30 bg-rose-400/20 px-4 py-3 text-sm font-semibold text-rose-200 hover:bg-rose-400/30 transition-colors"
                 >
                   <Trash2 className="h-4 w-4" /> Delete
@@ -387,6 +393,58 @@ export default function CourseDetail() {
         <div className={`${card} text-center py-8`}>
           <Users className="mx-auto h-10 w-10 text-gray-400 dark:text-gray-600 mb-2" />
           <p className="text-sm text-gray-500 dark:text-gray-400">No users enrolled in this course yet.</p>
+        </div>
+      )}
+
+      {/* Delete Course Modal */}
+      {showDelete && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          onClick={() => !deleting && setShowDelete(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="delete-course-title"
+            className="w-full max-w-md rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-4">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-rose-100 dark:bg-rose-500/10">
+                <AlertTriangle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+              </div>
+              <div className="min-w-0">
+                <h2 id="delete-course-title" className="text-base font-bold text-gray-900 dark:text-white">
+                  Delete course?
+                </h2>
+                <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                  <span className="font-medium text-gray-700 dark:text-gray-300">{course.title}</span> will be removed along with its enrolments. This cannot be undone.
+                </p>
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowDelete(false)}
+                disabled={deleting}
+                className="rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={confirmDelete}
+                disabled={deleting}
+                className="inline-flex items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 disabled:opacity-60 transition-colors"
+              >
+                {deleting ? (
+                  <><Loader2 className="h-4 w-4 animate-spin" /> Deleting...</>
+                ) : (
+                  <><Trash2 className="h-4 w-4" /> Delete course</>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
