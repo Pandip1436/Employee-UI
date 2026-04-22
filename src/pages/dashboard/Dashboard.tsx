@@ -1,5 +1,9 @@
 import { useState, useEffect } from "react";
-import { Clock, FolderKanban, CheckCircle, AlertCircle, CalendarDays, FileText, LogIn } from "lucide-react";
+import {
+  Clock, FolderKanban, CheckCircle, AlertCircle, CalendarDays, FileText, LogIn,
+  ArrowRight, User, UserCheck, History, Home, PartyPopper, TrendingUp, BarChart3,
+  Heart,
+} from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -63,87 +67,149 @@ export default function Dashboard() {
   ] : [];
 
   const quickActions = [
-    { label: "Log Time", to: "/timesheet/log", icon: Clock, color: "bg-indigo-600 hover:bg-indigo-700" },
-    { label: "Apply Leave", to: "/leave/apply", icon: CalendarDays, color: "bg-emerald-600 hover:bg-emerald-700" },
-    { label: "Weekly Grid", to: "/timesheet/weekly", icon: FolderKanban, color: "bg-blue-600 hover:bg-blue-700" },
-    { label: "Documents", to: "/documents", icon: FileText, color: "bg-purple-600 hover:bg-purple-700" },
+    { label: "Log Time", to: "/timesheet/log", icon: Clock, gradient: "from-indigo-500 to-purple-600" },
+    { label: "Apply Leave", to: "/leave/apply", icon: CalendarDays, gradient: "from-emerald-500 to-teal-600" },
+    { label: "Weekly Grid", to: "/timesheet/weekly", icon: FolderKanban, gradient: "from-sky-500 to-blue-600" },
+    { label: "Documents", to: "/documents", icon: FileText, gradient: "from-fuchsia-500 to-purple-600" },
   ];
 
-  const card = "rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md dark:hover:shadow-gray-800/30";
+  const card =
+    "rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]";
+  const sectionLabel = "text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500";
 
   return (
     <div className="space-y-6">
-      {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 p-6 sm:p-8 text-white shadow-xl">
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5" />
-        <div className="absolute -bottom-6 -left-6 h-32 w-32 rounded-full bg-white/5" />
-        <div className="relative flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 p-6 text-white shadow-xl ring-1 ring-white/10 sm:p-8 dark:from-black dark:via-indigo-950 dark:to-black">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-indigo-500/30 blur-3xl" />
+          <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
+          <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
+        </div>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px)",
+            backgroundSize: "36px 36px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+          }}
+        />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm text-indigo-200">
+            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
-            <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Welcome back, {user?.name?.split(" ")[0]}!</h1>
-            <p className="mt-1 text-sm text-indigo-200">Here's your work overview for today</p>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+              Welcome back, <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">{user?.name?.split(" ")[0]}</span>
+            </h1>
+            <p className="mt-1 text-sm text-indigo-200/70">Here's your work overview for today</p>
           </div>
           <div className="flex items-center gap-3">
             {kpis?.todayStatus ? (
-              <div className="rounded-xl bg-white/10 backdrop-blur-sm px-5 py-3 text-center">
-                <p className="text-xs text-indigo-200">Today</p>
-                <p className="text-lg font-bold capitalize">{kpis.todayStatus.status}</p>
+              <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Today</p>
+                <p className="text-base font-bold capitalize">{kpis.todayStatus.status}</p>
               </div>
             ) : (
-              <Link to="/attendance" className="flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-sm font-bold text-indigo-700 shadow-lg hover:scale-105 transition-all">
+              <Link
+                to="/attendance"
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+              >
                 <LogIn className="h-4 w-4" /> Clock In
               </Link>
             )}
-            <div className="rounded-xl bg-white/10 backdrop-blur-sm px-5 py-3 text-center">
-              <p className="text-xs text-indigo-200">This Month</p>
-              <p className="text-lg font-bold">{kpis?.totalHoursThisMonth || 0}h</p>
+            <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">This Month</p>
+              <p className="text-base font-bold">{kpis?.totalHoursThisMonth || 0}h</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      {/* ── KPI Tiles ── */}
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
-          { label: "Attendance", value: `${kpis?.attendancePercent || 0}%`, sub: `${kpis?.attendanceDays || 0} days`, icon: CheckCircle, color: "text-emerald-600 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-500/20" },
-          { label: "Hours Logged", value: `${kpis?.totalHoursThisMonth || 0}h`, sub: "This month", icon: Clock, color: "text-indigo-600 dark:text-indigo-400", border: "border-indigo-200 dark:border-indigo-500/20" },
-          { label: "Leaves Taken", value: `${kpis?.leaveDaysTaken || 0}`, sub: "This month", icon: CalendarDays, color: "text-amber-600 dark:text-amber-400", border: "border-amber-200 dark:border-amber-500/20" },
-          { label: "Pending TS", value: `${kpis?.pendingTimesheets || 0}`, sub: "Draft sheets", icon: AlertCircle, color: "text-rose-600 dark:text-rose-400", border: "border-rose-200 dark:border-rose-500/20" },
+          { label: "Attendance", value: `${kpis?.attendancePercent || 0}%`, sub: `${kpis?.attendanceDays || 0} days this month`, icon: CheckCircle, gradient: "from-emerald-500 to-teal-600" },
+          { label: "Hours Logged", value: `${kpis?.totalHoursThisMonth || 0}h`, sub: "This month", icon: Clock, gradient: "from-indigo-500 to-purple-600" },
+          { label: "Leaves Taken", value: `${kpis?.leaveDaysTaken || 0}`, sub: "This month", icon: CalendarDays, gradient: "from-amber-500 to-orange-600" },
+          { label: "Pending TS", value: `${kpis?.pendingTimesheets || 0}`, sub: "Draft sheets", icon: AlertCircle, gradient: "from-rose-500 to-pink-600" },
         ].map((s) => (
-          <div key={s.label} className={`rounded-xl border ${s.border} bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md`}>
-            <div className="flex items-center justify-between">
-              <s.icon className={`h-5 w-5 ${s.color}`} />
-              <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
+          <div key={s.label} className={`${card} group relative overflow-hidden`}>
+            <div
+              aria-hidden
+              className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${s.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-20`}
+            />
+            <div className="flex items-start justify-between">
+              <div className="min-w-0">
+                <p className={sectionLabel}>{s.label}</p>
+                <p className="mt-2.5 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+              </div>
+              <div className={`rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
+                <s.icon className="h-5 w-5 text-white" />
+              </div>
             </div>
-            <p className="mt-1 text-xs font-medium text-gray-500 dark:text-gray-400">{s.label}</p>
-            <p className="text-[10px] text-gray-400 dark:text-gray-500">{s.sub}</p>
+            <p className="mt-3 truncate text-xs text-gray-500 dark:text-gray-400">{s.sub}</p>
           </div>
         ))}
       </div>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {quickActions.map((a) => (
-          <Link key={a.to} to={a.to} className={`flex items-center gap-3 rounded-xl ${a.color} px-4 py-3.5 text-sm font-semibold text-white shadow-lg transition-all hover:scale-[1.02] active:scale-100`}>
-            <a.icon className="h-5 w-5" /> {a.label}
-          </Link>
-        ))}
+      {/* ── Quick Actions ── */}
+      <div>
+        <p className={`mb-3 ${sectionLabel}`}>Quick Actions</p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {quickActions.map((a) => (
+            <Link
+              key={a.to}
+              to={a.to}
+              className="group relative flex items-center gap-3 overflow-hidden rounded-2xl border border-gray-200/70 bg-white/80 px-4 py-4 text-sm font-semibold text-gray-800 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md dark:border-gray-800/80 dark:bg-gray-900/80 dark:text-gray-100 dark:ring-white/[0.03] dark:hover:border-gray-700"
+            >
+              <div className={`rounded-xl bg-gradient-to-br ${a.gradient} p-2.5 shadow-lg shadow-black/10 ring-1 ring-white/10 transition-transform group-hover:scale-105`}>
+                <a.icon className="h-5 w-5 text-white" />
+              </div>
+              <span className="flex-1">{a.label}</span>
+              <ArrowRight className="h-4 w-4 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-indigo-500" />
+            </Link>
+          ))}
+        </div>
       </div>
 
-      {/* Charts Row */}
+      {/* ── Charts Row ── */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className={`${card} lg:col-span-2`}>
-          <h3 className="mb-4 text-sm font-semibold text-gray-900 dark:text-white">Weekly Hours</h3>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-lg bg-indigo-50 p-2 ring-1 ring-indigo-500/10 dark:bg-indigo-500/10 dark:ring-indigo-400/20">
+                <BarChart3 className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Weekly Hours</h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Mon–Fri · current work week</p>
+              </div>
+            </div>
+            <Link to="/timesheet" className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10">
+              Details <ArrowRight className="h-3 w-3" />
+            </Link>
+          </div>
           <div className="h-56 min-w-0">
             <ResponsiveContainer width="100%" height="100%" minWidth={200}>
-              <BarChart data={barData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" strokeOpacity={0.2} />
-                <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#9ca3af" }} />
-                <YAxis tick={{ fontSize: 12, fill: "#9ca3af" }} />
-                <Tooltip contentStyle={{ backgroundColor: "#1f2937", border: "1px solid #374151", borderRadius: "8px", color: "#f3f4f6" }} />
-                <Bar dataKey="hours" fill="#6366f1" radius={[4, 4, 0, 0]} />
+              <BarChart data={barData} margin={{ top: 10, right: 6, left: -12, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="barHours" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#818cf8" stopOpacity={1} />
+                    <stop offset="100%" stopColor="#4f46e5" stopOpacity={0.85} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#9ca3af" strokeOpacity={0.15} vertical={false} />
+                <XAxis dataKey="day" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
+                <Tooltip
+                  cursor={{ fill: "rgba(99,102,241,0.06)" }}
+                  contentStyle={{ backgroundColor: "#111827", border: "none", borderRadius: "12px", color: "#f3f4f6", boxShadow: "0 10px 40px rgba(0,0,0,0.2)" }}
+                />
+                <Bar dataKey="hours" fill="url(#barHours)" radius={[8, 8, 0, 0]} maxBarSize={44} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -151,44 +217,85 @@ export default function Dashboard() {
         <TimerWidget />
       </div>
 
-      {/* Leave Balance + Quick links */}
+      {/* ── Leave Balance + Quick links ── */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className={card}>
-          <h3 className="mb-4 text-sm font-semibold text-gray-900 dark:text-white">Leave Balance</h3>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="rounded-lg bg-emerald-50 p-2 ring-1 ring-emerald-500/10 dark:bg-emerald-500/10 dark:ring-emerald-400/20">
+              <Heart className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Leave Balance</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Days remaining</p>
+            </div>
+          </div>
           {leaveData.length > 0 ? (
-            <div className="space-y-3">
-              {leaveData.map((l) => (
-                <div key={l.name}>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">{l.name}</span>
-                    <span className="font-semibold text-gray-900 dark:text-white">{l.remaining} left</span>
+            <div className="space-y-4">
+              {leaveData.map((l, i) => {
+                const total = l.used + l.remaining;
+                const pct = total > 0 ? (l.used / total) * 100 : 0;
+                const colors = [
+                  "from-indigo-500 to-purple-600",
+                  "from-amber-500 to-orange-600",
+                  "from-sky-500 to-blue-600",
+                ];
+                return (
+                  <div key={l.name}>
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-gray-700 dark:text-gray-300">{l.name}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        <span className="font-semibold text-gray-900 dark:text-white">{l.remaining}</span> / {total} left
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${colors[i % colors.length]} transition-all duration-500`}
+                        style={{ width: `${Math.min(100, pct)}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="mt-1 h-2 rounded-full bg-gray-100 dark:bg-gray-800">
-                    <div className="h-full rounded-full bg-indigo-500 transition-all" style={{ width: `${Math.min(100, (l.used / (l.used + l.remaining)) * 100)}%` }} />
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <p className="py-4 text-center text-sm text-gray-400 dark:text-gray-500">No leave data</p>
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
+                <CalendarDays className="h-5 w-5 text-gray-400" />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">No leave data</p>
+            </div>
           )}
         </div>
 
         <div className={`${card} lg:col-span-2`}>
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Quick Links</h3>
+          <div className="mb-4 flex items-center gap-3">
+            <div className="rounded-lg bg-purple-50 p-2 ring-1 ring-purple-500/10 dark:bg-purple-500/10 dark:ring-purple-400/20">
+              <TrendingUp className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Quick Links</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Your most-used destinations</p>
+            </div>
           </div>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
             {[
-              { label: "My Profile", to: "/profile", icon: "👤" },
-              { label: "Attendance", to: "/attendance", icon: "📋" },
-              { label: "Timesheets", to: "/timesheet", icon: "⏱️" },
-              { label: "Leave History", to: "/leaves", icon: "📅" },
-              { label: "WFH Requests", to: "/attendance/wfh", icon: "🏠" },
-              { label: "Holidays", to: "/attendance/holidays", icon: "🎉" },
+              { label: "My Profile", to: "/profile", icon: User, color: "text-indigo-500" },
+              { label: "Attendance", to: "/attendance", icon: UserCheck, color: "text-emerald-500" },
+              { label: "Timesheets", to: "/timesheet", icon: Clock, color: "text-sky-500" },
+              { label: "Leave History", to: "/leaves", icon: History, color: "text-amber-500" },
+              { label: "WFH Requests", to: "/attendance/wfh", icon: Home, color: "text-fuchsia-500" },
+              { label: "Holidays", to: "/attendance/holidays", icon: PartyPopper, color: "text-rose-500" },
             ].map((l) => (
-              <Link key={l.to} to={l.to} className="flex items-center gap-2.5 rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                <span>{l.icon}</span> {l.label}
+              <Link
+                key={l.to}
+                to={l.to}
+                className="group flex items-center gap-2.5 rounded-xl border border-transparent bg-gray-50/70 px-3 py-2.5 text-sm font-medium text-gray-700 transition-all hover:-translate-y-0.5 hover:border-gray-200 hover:bg-white hover:shadow-sm dark:bg-gray-800/40 dark:text-gray-300 dark:hover:border-gray-700 dark:hover:bg-gray-800"
+              >
+                <div className="rounded-lg bg-white p-1.5 ring-1 ring-gray-200/60 dark:bg-gray-900 dark:ring-gray-700/60">
+                  <l.icon className={`h-3.5 w-3.5 ${l.color}`} />
+                </div>
+                <span className="flex-1 truncate">{l.label}</span>
+                <ArrowRight className="h-3.5 w-3.5 text-gray-300 transition-all group-hover:translate-x-0.5 group-hover:text-indigo-500" />
               </Link>
             ))}
           </div>

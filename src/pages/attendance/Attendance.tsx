@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { LogIn, LogOut, Clock, Calendar, Timer, X, Activity, Users, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { LogIn, LogOut, Clock, Calendar, Timer, X, Activity, Users, AlertTriangle, CheckCircle2, UserX } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
 import { useAuth } from "../../context/AuthContext";
@@ -8,21 +8,23 @@ import toast from "react-hot-toast";
 import AttendanceCalendar from "../attendance-calendar/AttendanceCalendar";
 
 const statusStyle: Record<string, { bg: string; dot: string; label: string }> = {
-  present: { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", label: "Present" },
-  absent: { bg: "bg-red-100 text-red-700 dark:bg-red-500/10 dark:text-red-400", dot: "bg-red-500", label: "Absent" },
-  late: { bg: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400", dot: "bg-amber-500", label: "Late" },
-  "half-day": { bg: "bg-orange-100 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400", dot: "bg-orange-500", label: "Half Day" },
-  "on-leave": { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500", label: "On Leave" },
+  present: { bg: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20", dot: "bg-emerald-500", label: "Present" },
+  absent: { bg: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20", dot: "bg-rose-500", label: "Absent" },
+  late: { bg: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20", dot: "bg-amber-500", label: "Late" },
+  "half-day": { bg: "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-400/20", dot: "bg-orange-500", label: "Half Day" },
+  "on-leave": { bg: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-400/20", dot: "bg-sky-500", label: "On Leave" },
 };
 
 const liveStyles: Record<string, { bg: string; dot: string; label: string; pulse: boolean }> = {
-  "clocked-in": { bg: "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400", dot: "bg-emerald-500", label: "Logged In", pulse: true },
-  late: { bg: "bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400", dot: "bg-amber-500", label: "Late Login", pulse: true },
-  "clocked-out": { bg: "bg-blue-100 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400", dot: "bg-blue-500", label: "Logged Out", pulse: false },
-  "not-marked": { bg: "bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-400", dot: "bg-gray-400", label: "Not Marked", pulse: false },
+  "clocked-in": { bg: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20", dot: "bg-emerald-500", label: "Logged In", pulse: true },
+  late: { bg: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20", dot: "bg-amber-500", label: "Late Login", pulse: true },
+  "clocked-out": { bg: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-400/20", dot: "bg-sky-500", label: "Logged Out", pulse: false },
+  "not-marked": { bg: "bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-600/20", dot: "bg-gray-400", label: "Not Marked", pulse: false },
 };
 
-const inputCls = "rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
+const inputCls = "rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-3 py-2 text-sm outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20";
+const cardCls = "rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]";
+const labelCls = "text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500";
 
 export default function Attendance() {
   const { isAdmin, isManager } = useAuth();
@@ -122,41 +124,66 @@ export default function Attendance() {
   return (
     <div className="space-y-6">
 
-      {/* ━━━ Hero Clock Card ━━━ */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 via-indigo-700 to-purple-700 p-6 sm:p-8 text-white shadow-xl">
-        <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/5" />
-        <div className="absolute -bottom-6 -left-6 h-32 w-32 rounded-full bg-white/5" />
+      {/* ── Hero Clock Card ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 p-6 text-white shadow-xl ring-1 ring-white/10 sm:p-8 dark:from-black dark:via-indigo-950 dark:to-black">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-indigo-500/30 blur-3xl" />
+          <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
+          <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
+        </div>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px)",
+            backgroundSize: "36px 36px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+          }}
+        />
 
         <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-sm font-medium text-indigo-200">
+          <div className="min-w-0">
+            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
-            <h1 className="mt-1 text-2xl font-bold sm:text-3xl">Attendance & Time Tracking</h1>
+            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+              Attendance & <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Time Tracking</span>
+            </h1>
 
             {/* Live timer */}
             {today?.clockIn && !today?.clockOut && (
-              <p className="mt-3 font-mono text-4xl font-bold tracking-wider sm:text-5xl">{fmtTime(elapsed)}</p>
+              <div className="mt-4 inline-flex items-baseline gap-2 rounded-2xl bg-white/5 px-4 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Elapsed</span>
+                <span className="font-mono text-3xl font-bold tracking-wider sm:text-4xl">{fmtTime(elapsed)}</span>
+              </div>
             )}
 
             {/* Time chips */}
-            <div className="mt-4 flex flex-wrap gap-3">
-              <div className="rounded-lg bg-white/10 backdrop-blur-sm px-3 py-1.5 text-sm">
-                <span className="text-indigo-200">In:</span> <strong>{fmtClock(today?.clockIn ?? null)}</strong>
+            <div className="mt-4 flex flex-wrap gap-2">
+              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                <LogIn className="h-3.5 w-3.5 text-indigo-200" />
+                <span className="text-indigo-200/80">In</span>
+                <span className="font-semibold">{fmtClock(today?.clockIn ?? null)}</span>
               </div>
-              <div className="rounded-lg bg-white/10 backdrop-blur-sm px-3 py-1.5 text-sm">
-                <span className="text-indigo-200">Out:</span> <strong>{fmtClock(today?.clockOut ?? null)}</strong>
+              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                <LogOut className="h-3.5 w-3.5 text-indigo-200" />
+                <span className="text-indigo-200/80">Out</span>
+                <span className="font-semibold">{fmtClock(today?.clockOut ?? null)}</span>
               </div>
               {today?.totalHours != null && (
-                <div className="rounded-lg bg-white/10 backdrop-blur-sm px-3 py-1.5 text-sm">
-                  <span className="text-indigo-200">Total:</span> <strong>{today.totalHours}h</strong>
+                <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <Timer className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Total</span>
+                  <span className="font-semibold">{today.totalHours}h</span>
                 </div>
               )}
             </div>
 
             {/* Late badge */}
             {today?.status === "late" && (
-              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-500/20 px-3 py-1 text-xs font-semibold text-rose-200">
+              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
                 <span className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />
                 Late — {today?.lateByMinutes ? `${today?.lateByMinutes} min` : "after office hours"}
               </div>
@@ -166,50 +193,73 @@ export default function Attendance() {
           {/* Clock button */}
           <div className="shrink-0">
             {!today?.clockIn ? (
-              <button onClick={handleClockIn} disabled={loading} className="flex items-center gap-2.5 rounded-xl bg-white px-6 py-4 text-base font-bold text-indigo-700 shadow-lg transition-all hover:scale-105 hover:shadow-xl active:scale-100 disabled:opacity-50">
-                <LogIn className="h-5 w-5" /> Clock In
+              <button
+                onClick={handleClockIn}
+                disabled={loading}
+                className="group inline-flex items-center gap-2.5 rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98] disabled:opacity-50"
+              >
+                <span className="rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 p-1.5">
+                  <LogIn className="h-4 w-4 text-white" />
+                </span>
+                Clock In
               </button>
             ) : !today?.clockOut ? (
-              <button onClick={handleClockOut} disabled={loading} className="flex items-center gap-2.5 rounded-xl bg-rose-500 px-6 py-4 text-base font-bold text-white shadow-lg transition-all hover:scale-105 hover:bg-rose-600 hover:shadow-xl active:scale-100 disabled:opacity-50">
-                <LogOut className="h-5 w-5" /> Clock Out
+              <button
+                onClick={handleClockOut}
+                disabled={loading}
+                className="group inline-flex items-center gap-2.5 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/15 transition-all hover:shadow-xl hover:shadow-rose-500/40 active:scale-[0.98] disabled:opacity-50"
+              >
+                <span className="rounded-lg bg-white/15 p-1.5">
+                  <LogOut className="h-4 w-4" />
+                </span>
+                Clock Out
               </button>
             ) : (
-              <div className="flex items-center gap-2.5 rounded-xl bg-white/10 backdrop-blur-sm px-6 py-4 text-base font-semibold">
-                <CheckCircle2 className="h-5 w-5 text-emerald-300" /> Day Complete
+              <div className="inline-flex items-center gap-2.5 rounded-2xl bg-emerald-500/15 px-6 py-3.5 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                <span className="rounded-lg bg-emerald-500/25 p-1.5">
+                  <CheckCircle2 className="h-4 w-4" />
+                </span>
+                Day Complete
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {/* ━━━ Quick Stats ━━━ */}
+      {/* ── Quick Stats ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          { icon: Timer, label: "Today's Hours", value: today?.totalHours ? `${today.totalHours}h` : today?.clockIn ? fmtTime(elapsed) : "—", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10" },
-          { icon: Calendar, label: "Status", value: today?.status ? statusStyle[today.status]?.label || today.status : "Not Marked", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10" },
-          { icon: Activity, label: "Clock In", value: fmtClock(today?.clockIn ?? null), color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10" },
-          { icon: Clock, label: "Clock Out", value: fmtClock(today?.clockOut ?? null), color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10" },
-          { icon: Timer, label: "Weekly Hours", value: `${weeklyHours}h`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10" },
-          { icon: Calendar, label: "Monthly Hours", value: `${monthlyHours}h`, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10" },
+          { icon: Timer, label: "Today's Hours", value: today?.totalHours ? `${today.totalHours}h` : today?.clockIn ? fmtTime(elapsed) : "—", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10", ring: "ring-indigo-500/10 dark:ring-indigo-400/20" },
+          { icon: Calendar, label: "Status", value: today?.status ? statusStyle[today.status]?.label || today.status : "Not Marked", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", ring: "ring-emerald-500/10 dark:ring-emerald-400/20" },
+          { icon: Activity, label: "Clock In", value: fmtClock(today?.clockIn ?? null), color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50 dark:bg-sky-500/10", ring: "ring-sky-500/10 dark:ring-sky-400/20" },
+          { icon: Clock, label: "Clock Out", value: fmtClock(today?.clockOut ?? null), color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10", ring: "ring-purple-500/10 dark:ring-purple-400/20" },
+          { icon: Timer, label: "Weekly Hours", value: `${weeklyHours}h`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", ring: "ring-amber-500/10 dark:ring-amber-400/20" },
+          { icon: Calendar, label: "Monthly Hours", value: `${monthlyHours}h`, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", ring: "ring-rose-500/10 dark:ring-rose-400/20" },
         ].map((s) => (
-          <div key={s.label} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md dark:hover:shadow-gray-800/30">
+          <div key={s.label} className={`${cardCls} p-4`}>
             <div className="flex items-center gap-3">
-              <div className={`rounded-lg p-2 ${s.bg}`}><s.icon className={`h-4 w-4 ${s.color}`} /></div>
+              <div className={`rounded-lg p-2 ring-1 ${s.bg} ${s.ring}`}>
+                <s.icon className={`h-4 w-4 ${s.color}`} />
+              </div>
               <div className="min-w-0">
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 uppercase tracking-wider">{s.label}</p>
-                <p className="truncate text-base font-bold text-gray-900 dark:text-white capitalize">{s.value}</p>
+                <p className={labelCls}>{s.label}</p>
+                <p className="mt-0.5 truncate text-base font-bold capitalize tracking-tight text-gray-900 dark:text-white">{s.value}</p>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* ━━━ Tabs ━━━ */}
-      <div className="flex overflow-x-auto gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 scrollbar-hide">
+      {/* ── Tabs ── */}
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-white/60 p-1 ring-1 ring-black/[0.02] backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-900/60 dark:ring-white/[0.03]">
         {(canViewAll ? (["my", "calendar", "all", "live", "absent"] as const) : (["my", "calendar"] as const)).map((t) => (
-          <button key={t} onClick={() => { setTab(t); setPage(1); }}
-            className={`flex-1 sm:flex-none whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-              tab === t ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+          <button
+            key={t}
+            onClick={() => { setTab(t); setPage(1); }}
+            className={`flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-[13px] font-semibold transition-all sm:flex-none ${
+              tab === t
+                ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
+                : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white"
             }`}
           >
             {t === "my" ? "My Attendance" : t === "calendar" ? "Calendar" : t === "all" ? "All Employees" : t === "live" ? "Live Status" : "Today Absents"}
@@ -226,162 +276,185 @@ export default function Attendance() {
           {liveData?.summary && (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               {[
-                { label: "Logged In", value: liveData.summary.clockedIn, icon: Users, color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", border: "border-emerald-200 dark:border-emerald-500/20" },
-                { label: "Late Login", value: liveData.summary.late, icon: AlertTriangle, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", border: "border-amber-200 dark:border-amber-500/20" },
-                { label: "Logged Out", value: liveData.summary.clockedOut, icon: CheckCircle2, color: "text-blue-600 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-500/10", border: "border-blue-200 dark:border-blue-500/20" },
-                { label: "Not Marked", value: liveData.summary.notMarked, icon: Clock, color: "text-gray-500 dark:text-gray-400", bg: "bg-gray-50 dark:bg-gray-800", border: "border-gray-200 dark:border-gray-700" },
+                { label: "Logged In", value: liveData.summary.clockedIn, icon: Users, gradient: "from-emerald-500 to-teal-600" },
+                { label: "Late Login", value: liveData.summary.late, icon: AlertTriangle, gradient: "from-amber-500 to-orange-600" },
+                { label: "Logged Out", value: liveData.summary.clockedOut, icon: CheckCircle2, gradient: "from-sky-500 to-blue-600" },
+                { label: "Not Marked", value: liveData.summary.notMarked, icon: Clock, gradient: "from-gray-500 to-gray-600" },
               ].map((c) => (
-                <div key={c.label} className={`rounded-xl border ${c.border} bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md`}>
-                  <div className="flex items-center justify-between">
-                    <div className={`rounded-lg p-2 ${c.bg}`}><c.icon className={`h-4 w-4 ${c.color}`} /></div>
-                    <p className={`text-2xl font-bold ${c.color}`}>{c.value}</p>
+                <div key={c.label} className={`${cardCls} group relative overflow-hidden p-4`}>
+                  <div
+                    aria-hidden
+                    className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${c.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`}
+                  />
+                  <div className="flex items-start justify-between">
+                    <div className="min-w-0">
+                      <p className={labelCls}>{c.label}</p>
+                      <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+                    </div>
+                    <div className={`rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
+                      <c.icon className="h-4 w-4 text-white" />
+                    </div>
                   </div>
-                  <p className="mt-2 text-xs font-medium text-gray-500 dark:text-gray-400">{c.label}</p>
                 </div>
               ))}
             </div>
           )}
 
           {/* Desktop table */}
-          <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                <tr>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Employee</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Dept</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">In</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Out</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hours</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {!liveData?.employees?.length ? (
-                  <tr><td colSpan={6} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No employees found.</td></tr>
-                ) : liveData.employees.map((emp: LiveEmployee) => {
-                  const s = liveStyles[emp.liveStatus] || liveStyles["not-marked"];
-                  return (
-                    <tr key={emp._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-xs font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400">{emp.name?.charAt(0).toUpperCase()}</div>
-                          <div className="min-w-0"><p className="truncate font-medium text-gray-900 dark:text-white">{emp.name}</p><p className="truncate text-xs text-gray-500 dark:text-gray-400">{emp.email}</p></div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{emp.department || "—"}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${s.bg}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${s.dot} ${s.pulse ? "animate-pulse" : ""}`} />{s.label}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{emp.clockIn ? fmtClock(emp.clockIn) : "—"}</td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{emp.clockOut ? fmtClock(emp.clockOut) : "—"}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{emp.totalHours ? `${emp.totalHours}h` : "—"}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className={`${cardCls} hidden overflow-hidden p-0 md:block`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-gray-200/70 bg-gray-50/60 dark:border-gray-800/80 dark:bg-gray-800/40">
+                  <tr>
+                    {["Employee", "Dept", "Status", "In", "Out", "Hours"].map((h) => (
+                      <th key={h} className={`px-4 py-3 ${labelCls}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {!liveData?.employees?.length ? (
+                    <tr><td colSpan={6} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">No employees found.</td></tr>
+                  ) : liveData.employees.map((emp: LiveEmployee) => {
+                    const s = liveStyles[emp.liveStatus] || liveStyles["not-marked"];
+                    return (
+                      <tr key={emp._id} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar name={emp.name} />
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-gray-900 dark:text-white">{emp.name}</p>
+                              <p className="truncate text-xs text-gray-500 dark:text-gray-400">{emp.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{emp.department || "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.bg}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${s.dot} ${s.pulse ? "animate-pulse" : ""}`} />{s.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{emp.clockIn ? fmtClock(emp.clockIn) : "—"}</td>
+                        <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{emp.clockOut ? fmtClock(emp.clockOut) : "—"}</td>
+                        <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">{emp.totalHours ? `${emp.totalHours}h` : "—"}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Mobile cards for live status */}
-          <div className="md:hidden space-y-3">
+          <div className="space-y-3 md:hidden">
             {!liveData?.employees?.length ? (
-              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-12 text-center text-gray-400 dark:text-gray-500">No employees found.</div>
+              <div className={`${cardCls} py-12 text-center text-sm text-gray-400 dark:text-gray-500`}>No employees found.</div>
             ) : liveData.employees.map((emp: LiveEmployee) => {
               const s = liveStyles[emp.liveStatus] || liveStyles["not-marked"];
               return (
-                <div key={emp._id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-sm font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400">{emp.name?.charAt(0).toUpperCase()}</div>
+                <div key={emp._id} className={`${cardCls} p-4`}>
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex min-w-0 items-center gap-3">
+                      <Avatar name={emp.name} size="lg" />
                       <div className="min-w-0">
                         <p className="truncate font-semibold text-gray-900 dark:text-white">{emp.name}</p>
                         <p className="truncate text-xs text-gray-500 dark:text-gray-400">{emp.department || "No Dept"}</p>
                       </div>
                     </div>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${s.bg}`}>
+                    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.bg}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${s.dot} ${s.pulse ? "animate-pulse" : ""}`} />{s.label}
                     </span>
                   </div>
                   <div className="mt-3 grid grid-cols-3 gap-2">
-                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-2 text-center">
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">In</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{emp.clockIn ? fmtClock(emp.clockIn) : "—"}</p>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-2 text-center">
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Out</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{emp.clockOut ? fmtClock(emp.clockOut) : "—"}</p>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-2 text-center">
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Hours</p>
-                      <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{emp.totalHours ? `${emp.totalHours}h` : "—"}</p>
-                    </div>
+                    <MiniTile label="In" value={emp.clockIn ? fmtClock(emp.clockIn) : "—"} />
+                    <MiniTile label="Out" value={emp.clockOut ? fmtClock(emp.clockOut) : "—"} />
+                    <MiniTile label="Hours" value={emp.totalHours ? `${emp.totalHours}h` : "—"} accent />
                   </div>
                 </div>
               );
             })}
           </div>
-          <p className="text-xs text-gray-400 dark:text-gray-500 text-center">Auto-refreshes every 30 seconds</p>
+          <p className="flex items-center justify-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+            <span className="relative flex h-1.5 w-1.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+              <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            </span>
+            Auto-refreshes every 30 seconds
+          </p>
         </div>
       )}
 
-      {/* ━━━ Admin Filters ━━━ */}
+      {/* ── Admin Filters ── */}
       {canViewAll && tab === "all" && (
-        <div className="flex flex-wrap items-end gap-3 rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+        <div className={`${cardCls} flex flex-wrap items-end gap-3 p-4`}>
           <div className="w-full sm:w-auto">
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Date</label>
+            <label className={`mb-1.5 block ${labelCls}`}>Date</label>
             <input type="date" value={filterDate} onChange={(e) => { setFilterDate(e.target.value); setPage(1); }} className={`w-full sm:w-auto ${inputCls}`} />
           </div>
-          <div className="flex-1 min-w-[140px]">
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Employee</label>
+          <div className="min-w-[140px] flex-1">
+            <label className={`mb-1.5 block ${labelCls}`}>Employee</label>
             <select value={filterUserId} onChange={(e) => { setFilterUserId(e.target.value); setPage(1); }} className={`w-full ${inputCls}`}>
               <option value="">All Employees</option>
               {employees.map((u) => (<option key={u._id} value={u._id}>{u.name}</option>))}
             </select>
           </div>
           <div className="w-full sm:w-auto">
-            <label className="mb-1 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Status</label>
+            <label className={`mb-1.5 block ${labelCls}`}>Status</label>
             <select value={filterStatus} onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }} className={`w-full sm:w-auto ${inputCls}`}>
               <option value="">All Status</option>
               <option value="present">Present</option><option value="late">Late</option><option value="half-day">Half Day</option><option value="absent">Absent</option><option value="on-leave">On Leave</option>
             </select>
           </div>
           {(filterDate || filterUserId || filterStatus) && (
-            <button onClick={() => { setFilterDate(""); setFilterUserId(""); setFilterStatus(""); setPage(1); }}
-              className="flex items-center gap-1.5 rounded-lg border border-gray-300 dark:border-gray-600 px-3 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+            <button
+              onClick={() => { setFilterDate(""); setFilterUserId(""); setFilterStatus(""); setPage(1); }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-600 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
               <X className="h-3.5 w-3.5" /> Clear
             </button>
           )}
         </div>
       )}
 
-      {/* ━━━ Today Absents ━━━ */}
+      {/* ── Today Absents ── */}
       {tab === "absent" && canViewAll && (
-        <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-          <div className="border-b border-gray-200 dark:border-gray-800 px-5 py-4">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-              Absent Today — {liveData?.employees.filter((e) => e.status === "absent").length ?? 0}
-            </p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
+        <div className={`${cardCls} overflow-hidden p-0`}>
+          <div className="flex items-center gap-3 border-b border-gray-200/70 bg-gray-50/60 px-5 py-4 dark:border-gray-800/80 dark:bg-gray-800/40">
+            <div className="rounded-lg bg-rose-50 p-2 ring-1 ring-rose-500/10 dark:bg-rose-500/10 dark:ring-rose-400/20">
+              <UserX className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                Absent Today — {liveData?.employees.filter((e) => e.status === "absent").length ?? 0}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">{new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}</p>
+            </div>
           </div>
           {(() => {
             const absents = liveData?.employees.filter((e) => e.status === "absent") ?? [];
             if (absents.length === 0) {
-              return <div className="py-12 text-center text-gray-400 dark:text-gray-500">No absent employees today 🎉</div>;
+              return (
+                <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+                  <div className="rounded-full bg-gradient-to-br from-emerald-100 to-emerald-50 p-3 ring-1 ring-emerald-500/10 dark:from-emerald-500/20 dark:to-emerald-500/5 dark:ring-emerald-400/20">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-600 dark:text-gray-300">All clear!</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">No absent employees today</p>
+                </div>
+              );
             }
             return (
-              <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+              <ul className="divide-y divide-gray-100 dark:divide-gray-800">
                 {absents.map((emp) => (
-                  <li key={emp._id} className="flex items-center gap-4 px-5 py-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-100 text-sm font-semibold text-rose-700 dark:bg-rose-500/20 dark:text-rose-400">
-                      {emp.name?.charAt(0).toUpperCase()}
-                    </div>
+                  <li key={emp._id} className="flex items-center gap-4 px-5 py-3 transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
+                    <Avatar name={emp.name} palette="rose" />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{emp.name}</p>
                       <p className="truncate text-xs text-gray-500 dark:text-gray-400">{emp.email}{emp.department ? ` · ${emp.department}` : ""}</p>
                     </div>
-                    <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-medium text-rose-700 dark:bg-rose-500/10 dark:text-rose-400">Absent</span>
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                      Absent
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -390,17 +463,17 @@ export default function Attendance() {
         </div>
       )}
 
-      {/* ━━━ My Status Filter ━━━ */}
+      {/* ── My Status Filter ── */}
       {tab === "my" && (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-1.5">
           {(["all", "present", "late", "half-day", "absent"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setMyStatusFilter(s)}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold capitalize transition-all ${
+              className={`rounded-full px-3.5 py-1.5 text-xs font-semibold capitalize transition-all ${
                 myStatusFilter === s
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+                  ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-sm shadow-indigo-500/30 ring-1 ring-white/10"
+                  : "border border-gray-200/70 bg-white/80 text-gray-600 shadow-sm hover:border-gray-300 hover:bg-white dark:border-gray-800/80 dark:bg-gray-900/80 dark:text-gray-300 dark:hover:border-gray-700 dark:hover:bg-gray-800"
               }`}
             >
               {s === "all" ? "All" : s.replace("-", " ")}
@@ -409,78 +482,93 @@ export default function Attendance() {
         </div>
       )}
 
-      {/* ━━━ Records ━━━ */}
+      {/* ── Records ── */}
       {tab !== "live" && tab !== "absent" && tab !== "calendar" && (
         <>
           {/* Desktop table */}
-          <div className="hidden md:block overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
-            <table className="w-full text-left text-sm">
-              <thead className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
-                <tr>
-                  {tab === "all" && <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Employee</th>}
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Date</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Clock In</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Clock Out</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Hours</th>
-                  <th className="px-4 py-3 text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Status</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {records.length === 0 ? (
-                  <tr><td colSpan={tab === "all" ? 6 : 5} className="px-4 py-12 text-center text-gray-400 dark:text-gray-500">No records found.</td></tr>
-                ) : records.map((r) => {
-                  const s = statusStyle[r.status] || statusStyle.present;
-                  return (
-                    <tr key={r._id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
-                      {tab === "all" && (
-                        <td className="px-4 py-3"><p className="font-medium text-gray-900 dark:text-white">{(r.userId as User)?.name || "—"}</p><p className="text-xs text-gray-500 dark:text-gray-400">{(r.userId as User)?.department || ""}</p></td>
-                      )}
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{new Date(r.date).toLocaleDateString()}</td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(r.clockIn)}</td>
-                      <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(r.clockOut)}</td>
-                      <td className="px-4 py-3 font-semibold text-gray-900 dark:text-white">{r.totalHours ? `${r.totalHours}h` : "—"}</td>
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${s.bg}`}>
-                          <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />{s.label}
-                        </span>
+          <div className={`${cardCls} hidden overflow-hidden p-0 md:block`}>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-sm">
+                <thead className="border-b border-gray-200/70 bg-gray-50/60 dark:border-gray-800/80 dark:bg-gray-800/40">
+                  <tr>
+                    {tab === "all" && <th className={`px-4 py-3 ${labelCls}`}>Employee</th>}
+                    {["Date", "Clock In", "Clock Out", "Hours", "Status"].map((h) => (
+                      <th key={h} className={`px-4 py-3 ${labelCls}`}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {records.length === 0 ? (
+                    <tr>
+                      <td colSpan={tab === "all" ? 6 : 5} className="px-4 py-16 text-center">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
+                            <Calendar className="h-5 w-5 text-gray-400" />
+                          </div>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">No records found</p>
+                        </div>
                       </td>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  ) : records.map((r) => {
+                    const s = statusStyle[r.status] || statusStyle.present;
+                    return (
+                      <tr key={r._id} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
+                        {tab === "all" && (
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-3">
+                              <Avatar name={(r.userId as User)?.name || "?"} />
+                              <div className="min-w-0">
+                                <p className="truncate font-semibold text-gray-900 dark:text-white">{(r.userId as User)?.name || "—"}</p>
+                                <p className="truncate text-xs text-gray-500 dark:text-gray-400">{(r.userId as User)?.department || ""}</p>
+                              </div>
+                            </div>
+                          </td>
+                        )}
+                        <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{new Date(r.date).toLocaleDateString()}</td>
+                        <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(r.clockIn)}</td>
+                        <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(r.clockOut)}</td>
+                        <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">{r.totalHours ? `${r.totalHours}h` : "—"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.bg}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />{s.label}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Mobile cards */}
-          <div className="md:hidden space-y-3">
+          <div className="space-y-3 md:hidden">
             {records.length === 0 ? (
-              <div className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 py-12 text-center text-gray-400 dark:text-gray-500">No records found.</div>
+              <div className={`${cardCls} flex flex-col items-center gap-2 py-12 text-center`}>
+                <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
+                  <Calendar className="h-5 w-5 text-gray-400" />
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400">No records found</p>
+              </div>
             ) : records.map((r) => {
               const s = statusStyle[r.status] || statusStyle.present;
               return (
-                <div key={r._id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 transition-all hover:shadow-md">
-                  <div className="flex items-center justify-between mb-3">
+                <div key={r._id} className={`${cardCls} p-4`}>
+                  <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="min-w-0">
-                      {tab === "all" && <p className="truncate font-semibold text-gray-900 dark:text-white">{(r.userId as User)?.name || "—"}</p>}
-                      <p className="text-sm text-gray-500 dark:text-gray-400">{new Date(r.date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</p>
+                      {tab === "all" && (
+                        <p className="truncate font-semibold text-gray-900 dark:text-white">{(r.userId as User)?.name || "—"}</p>
+                      )}
+                      <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(r.date).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</p>
                     </div>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${s.bg}`}>
+                    <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.bg}`}>
                       <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />{s.label}
                     </span>
                   </div>
                   <div className="grid grid-cols-3 gap-2">
-                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-2 text-center">
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">In</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{fmtClock(r.clockIn)}</p>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-2 text-center">
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Out</p>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white">{fmtClock(r.clockOut)}</p>
-                    </div>
-                    <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-2.5 py-2 text-center">
-                      <p className="text-[10px] text-gray-400 dark:text-gray-500 uppercase">Hours</p>
-                      <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{r.totalHours ? `${r.totalHours}h` : "—"}</p>
-                    </div>
+                    <MiniTile label="In" value={fmtClock(r.clockIn)} />
+                    <MiniTile label="Out" value={fmtClock(r.clockOut)} />
+                    <MiniTile label="Hours" value={r.totalHours ? `${r.totalHours}h` : "—"} accent />
                   </div>
                 </div>
               );
@@ -489,16 +577,66 @@ export default function Attendance() {
 
           {/* Pagination */}
           {pagination && pagination.pages > 1 && (
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-500 dark:text-gray-400">Page {pagination.page} of {pagination.pages}</p>
+            <div className={`${cardCls} flex items-center justify-between p-3`}>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Page <span className="font-semibold text-gray-900 dark:text-white">{pagination.page}</span> of {pagination.pages}
+              </p>
               <div className="flex gap-2">
-                <button disabled={page <= 1} onClick={() => setPage(page - 1)} className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Previous</button>
-                <button disabled={page >= pagination.pages} onClick={() => setPage(page + 1)} className="rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition-colors">Next</button>
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage(page - 1)}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={page >= pagination.pages}
+                  onClick={() => setPage(page + 1)}
+                  className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Next
+                </button>
               </div>
             </div>
           )}
         </>
       )}
+    </div>
+  );
+}
+
+/* ── Helpers ── */
+const PALETTES = [
+  "from-indigo-500 to-purple-600",
+  "from-sky-500 to-indigo-600",
+  "from-emerald-500 to-teal-600",
+  "from-amber-500 to-orange-600",
+  "from-rose-500 to-pink-600",
+  "from-fuchsia-500 to-purple-600",
+];
+
+function paletteFor(name: string): string {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return PALETTES[Math.abs(hash) % PALETTES.length];
+}
+
+function Avatar({ name, size = "md", palette }: { name: string; size?: "md" | "lg"; palette?: "rose" }) {
+  const init = (name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
+  const sz = size === "lg" ? "h-10 w-10 text-sm" : "h-9 w-9 text-[11px]";
+  const grad = palette === "rose" ? "from-rose-500 to-pink-600" : paletteFor(name || "?");
+  return (
+    <div className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900 ${sz} ${grad}`}>
+      {init}
+    </div>
+  );
+}
+
+function MiniTile({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
+  return (
+    <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{label}</p>
+      <p className={`text-sm font-bold tracking-tight ${accent ? "text-indigo-600 dark:text-indigo-400" : "text-gray-900 dark:text-white"}`}>{value}</p>
     </div>
   );
 }
