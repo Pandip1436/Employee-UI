@@ -1,65 +1,86 @@
 import { useState, useEffect } from "react";
 import {
-  CheckCircle,
-  XCircle,
-  CalendarDays,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  AlertTriangle,
-  MessageSquare,
+  CheckCircle, XCircle, CalendarDays, ChevronLeft, ChevronRight, X,
+  AlertTriangle, MessageSquare, Sparkles, Inbox,
 } from "lucide-react";
 import { leaveApi } from "../../api/leaveApi";
 import type { LeaveRequest, Pagination } from "../../types";
 import toast from "react-hot-toast";
 
-/* ── config maps ── */
+/* ── Shared tokens ── */
+const cardCls =
+  "rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]";
+const labelCls = "text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500";
 
-const statusConfig: Record<string, { dot: string; badge: string; label: string }> = {
+const PALETTES = [
+  "from-indigo-500 to-purple-600",
+  "from-sky-500 to-indigo-600",
+  "from-emerald-500 to-teal-600",
+  "from-amber-500 to-orange-600",
+  "from-rose-500 to-pink-600",
+  "from-fuchsia-500 to-purple-600",
+];
+const paletteFor = (name: string): string => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return PALETTES[Math.abs(hash) % PALETTES.length];
+};
+
+function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
+  const init = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
+  const sz = size === "lg" ? "h-11 w-11 text-sm" : "h-10 w-10 text-[11px]";
+  return (
+    <div className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(name || "?")} font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900 ${sz}`}>
+      {init}
+    </div>
+  );
+}
+
+const statusConfig: Record<string, { dot: string; badge: string; label: string; gradient: string }> = {
   pending: {
     dot: "bg-amber-500",
-    badge:
-      "bg-amber-50 text-amber-700 ring-1 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-500/20",
+    badge: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20",
     label: "Pending",
+    gradient: "from-amber-500 to-orange-600",
   },
   approved: {
     dot: "bg-emerald-500",
-    badge:
-      "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-600/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20",
+    badge: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20",
     label: "Approved",
+    gradient: "from-emerald-500 to-teal-600",
   },
   rejected: {
     dot: "bg-rose-500",
-    badge:
-      "bg-rose-50 text-rose-700 ring-1 ring-rose-600/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20",
+    badge: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20",
     label: "Rejected",
+    gradient: "from-rose-500 to-pink-600",
   },
 };
 
-const typeConfig: Record<string, { dot: string; badge: string; label: string }> = {
+const typeConfig: Record<string, { dot: string; badge: string; label: string; gradient: string }> = {
   casual: {
-    dot: "bg-blue-500",
-    badge:
-      "bg-blue-50 text-blue-700 ring-1 ring-blue-600/20 dark:bg-blue-500/10 dark:text-blue-400 dark:ring-blue-500/20",
+    dot: "bg-sky-500",
+    badge: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-400/20",
     label: "Personal",
+    gradient: "from-sky-500 to-indigo-600",
   },
   sick: {
     dot: "bg-orange-500",
-    badge:
-      "bg-orange-50 text-orange-700 ring-1 ring-orange-600/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-500/20",
+    badge: "bg-orange-50 text-orange-700 ring-1 ring-inset ring-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-400/20",
     label: "Sick",
+    gradient: "from-orange-500 to-rose-600",
   },
   earned: {
     dot: "bg-purple-500",
-    badge:
-      "bg-purple-50 text-purple-700 ring-1 ring-purple-600/20 dark:bg-purple-500/10 dark:text-purple-400 dark:ring-purple-500/20",
+    badge: "bg-purple-50 text-purple-700 ring-1 ring-inset ring-purple-500/20 dark:bg-purple-500/10 dark:text-purple-400 dark:ring-purple-400/20",
     label: "Earned",
+    gradient: "from-purple-500 to-fuchsia-600",
   },
   unpaid: {
     dot: "bg-gray-400",
-    badge:
-      "bg-gray-50 text-gray-600 ring-1 ring-gray-500/20 dark:bg-gray-500/10 dark:text-gray-300 dark:ring-gray-500/20",
+    badge: "bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-700/50 dark:text-gray-300 dark:ring-gray-500/20",
     label: "Unpaid",
+    gradient: "from-gray-500 to-gray-600",
   },
 };
 
@@ -71,19 +92,13 @@ const tabs: { key: Tab; label: string }[] = [
   { key: "rejected", label: "Rejected" },
 ];
 
-/* ── component ── */
-
 export default function LeaveApprovals() {
   const [tab, setTab] = useState<Tab>("pending");
   const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
-
-  // Rejection modal
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectComment, setRejectComment] = useState("");
-
-  /* ── data fetching ── */
 
   const fetchLeaves = () => {
     leaveApi
@@ -103,16 +118,12 @@ export default function LeaveApprovals() {
     fetchLeaves();
   }, [page, tab]);
 
-  /* ── actions ── */
-
   const handleApprove = async (id: string) => {
     try {
       await leaveApi.approve(id, { status: "approved" });
       toast.success("Leave approved!");
       fetchLeaves();
-    } catch {
-      // handled by interceptor
-    }
+    } catch { /* interceptor */ }
   };
 
   const handleReject = async () => {
@@ -126,79 +137,86 @@ export default function LeaveApprovals() {
       setRejectId(null);
       setRejectComment("");
       fetchLeaves();
-    } catch {
-      // handled by interceptor
-    }
+    } catch { /* interceptor */ }
   };
 
-  /* ── helpers ── */
-
   const fmtDate = (iso: string) =>
-    new Date(iso).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-
-  const getInitials = (name: string) =>
-    name
-      .split(" ")
-      .map((w) => w[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
-
-  /* ── render ── */
+    new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/20">
-          <CalendarDays className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 p-6 text-white shadow-xl ring-1 ring-white/10 sm:p-8 dark:from-black dark:via-indigo-950 dark:to-black">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-indigo-500/30 blur-3xl" />
+          <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
+          <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-emerald-500/15 blur-3xl" />
         </div>
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-            Leave Approvals
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            Review and manage employee leave requests
-          </p>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px)",
+            backgroundSize: "36px 36px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+          }}
+        />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+              <CalendarDays className="h-10 w-10 text-emerald-200" />
+            </div>
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                <Sparkles className="h-3.5 w-3.5" />
+                Manager workspace
+              </p>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                Leave <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Approvals</span>
+              </h1>
+              <p className="mt-1 text-sm text-indigo-200/70">Review and manage employee leave requests</p>
+            </div>
+          </div>
+          {pagination && (
+            <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
+              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">{tabs.find((t) => t.key === tab)?.label}</p>
+              <p className="text-xl font-bold tracking-tight">{pagination.total ?? leaves.length}</p>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="rounded-xl bg-gray-100 dark:bg-gray-800 p-1">
-        <div className="flex overflow-x-auto scrollbar-hide">
-          {tabs.map((t) => (
+      {/* ── Tabs ── */}
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-white/60 p-1 ring-1 ring-black/[0.02] backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-900/60 dark:ring-white/[0.03]">
+        {tabs.map((t) => {
+          const active = tab === t.key;
+          return (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`flex-1 whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                tab === t.key
-                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              className={`inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
+                active
+                  ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
+                  : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white"
               }`}
             >
+              <span className={`h-1.5 w-1.5 rounded-full ${statusConfig[t.key].dot}`} />
               {t.label}
             </button>
-          ))}
-        </div>
+          );
+        })}
       </div>
 
-      {/* Cards */}
+      {/* ── Cards ── */}
       <div className="space-y-3">
         {leaves.length === 0 ? (
-          <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-20 px-4 text-center">
-            <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-4 mb-4">
-              <CalendarDays className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+          <div className={`${cardCls} flex flex-col items-center gap-2 py-16 text-center`}>
+            <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
+              <Inbox className="h-5 w-5 text-gray-400" />
             </div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-              No {tab} leave requests
-            </p>
-            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-              Leave requests will appear here once submitted by employees
-            </p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No {tab} leave requests</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">Requests will appear here once submitted</p>
           </div>
         ) : (
           leaves.map((leave) => {
@@ -207,35 +225,66 @@ export default function LeaveApprovals() {
             const user = leave.userId as any;
             const userName: string = user?.name || "Unknown";
             const userEmail: string = user?.email || "";
+            const start = new Date(leave.startDate);
 
             return (
-              <div
-                key={leave._id}
-                className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 sm:p-5 transition-all hover:shadow-md"
-              >
-                {/* Top: avatar + info + actions */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  {/* Avatar + user info */}
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
-                      {getInitials(userName)}
+              <div key={leave._id} className={`${cardCls} p-5`}>
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 flex-1 items-start gap-4">
+                    <div className={`flex h-14 w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${tConfig.gradient} text-white shadow-lg ring-1 ring-white/10`}>
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-white/90">
+                        {start.toLocaleDateString(undefined, { month: "short" })}
+                      </p>
+                      <p className="text-lg font-bold leading-none">{start.getDate()}</p>
                     </div>
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold text-gray-900 dark:text-white">
-                        {userName}
-                      </p>
-                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                        {userEmail}
-                      </p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-3">
+                        <Avatar name={userName} />
+                        <div className="min-w-0">
+                          <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>
+                          <p className="truncate text-xs text-gray-500 dark:text-gray-400">{userEmail}</p>
+                        </div>
+                      </div>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${tConfig.badge}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${tConfig.dot}`} />
+                          {tConfig.label}
+                        </span>
+                        <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${sConfig.badge}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${sConfig.dot}`} />
+                          {sConfig.label}
+                        </span>
+                        <span className="rounded-md border border-gray-200/70 bg-gray-50/80 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300">
+                          {leave.days} day{leave.days > 1 ? "s" : ""}
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400">
+                          <CalendarDays className="h-3 w-3" />
+                          {fmtDate(leave.startDate)} — {fmtDate(leave.endDate)}
+                        </span>
+                      </div>
+                      {leave.reason && (
+                        <p className="mt-2 rounded-lg border border-gray-200/70 bg-gray-50/60 px-3 py-2 text-sm leading-relaxed text-gray-700 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300">
+                          <span className={`${labelCls} mb-1 block`}>Reason</span>
+                          {leave.reason}
+                        </p>
+                      )}
+                      {leave.rejectionComment && (
+                        <div className="mt-2 flex items-start gap-2 rounded-lg border border-rose-200/70 bg-rose-50/60 px-3 py-2 dark:border-rose-500/20 dark:bg-rose-500/10">
+                          <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" />
+                          <div>
+                            <span className={`${labelCls} text-rose-600 dark:text-rose-400`}>Rejection Reason</span>
+                            <p className="mt-0.5 text-sm text-rose-700 dark:text-rose-300">{leave.rejectionComment}</p>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
-                  {/* Action buttons (pending tab only) */}
                   {tab === "pending" && leave.status === "pending" && (
-                    <div className="flex shrink-0 gap-2">
+                    <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-start">
                       <button
                         onClick={() => handleApprove(leave._id)}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 sm:flex-none"
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl active:scale-[0.98] sm:w-auto"
                       >
                         <CheckCircle className="h-4 w-4" />
                         Approve
@@ -245,99 +294,32 @@ export default function LeaveApprovals() {
                           setRejectId(leave._id);
                           setRejectComment("");
                         }}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-500 sm:flex-none"
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition-all hover:bg-rose-50 dark:border-rose-500/30 dark:bg-gray-900 dark:text-rose-400 dark:hover:bg-rose-500/10 sm:w-auto"
                       >
                         <XCircle className="h-4 w-4" />
                         Reject
                       </button>
                     </div>
                   )}
-
-                  {/* Status badge (approved / rejected tabs) */}
-                  {tab !== "pending" && (
-                    <span
-                      className={`inline-flex items-center gap-1.5 self-start rounded-full px-2.5 py-0.5 text-xs font-medium ${sConfig.badge}`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${sConfig.dot}`} />
-                      {sConfig.label}
-                    </span>
-                  )}
                 </div>
-
-                {/* Detail chips */}
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                      Leave Type
-                    </p>
-                    <div className="mt-1">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium ${tConfig.badge}`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${tConfig.dot}`} />
-                        {tConfig.label}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                      Date Range
-                    </p>
-                    <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">
-                      {fmtDate(leave.startDate)} &mdash; {fmtDate(leave.endDate)}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                      Days
-                    </p>
-                    <p className="mt-0.5 text-sm font-bold text-gray-900 dark:text-white">
-                      {leave.days} day{leave.days > 1 ? "s" : ""}
-                    </p>
-                  </div>
-                  <div className="rounded-lg bg-gray-50 dark:bg-gray-800 px-3 py-2">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-                      Reason
-                    </p>
-                    <p className="mt-0.5 truncate text-sm font-bold text-gray-900 dark:text-white">
-                      {leave.reason || "\u2014"}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Rejection comment */}
-                {leave.rejectionComment && (
-                  <div className="mt-3 flex items-start gap-2 rounded-lg bg-rose-50 dark:bg-rose-500/10 border border-rose-200 dark:border-rose-500/20 px-3 py-2.5">
-                    <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-rose-500 dark:text-rose-400" />
-                    <p className="text-sm text-rose-700 dark:text-rose-300">
-                      {leave.rejectionComment}
-                    </p>
-                  </div>
-                )}
               </div>
             );
           })
         )}
       </div>
 
-      {/* Pagination */}
+      {/* ── Pagination ── */}
       {pagination && pagination.pages > 1 && (
-        <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+        <div className={`${cardCls} flex items-center justify-between p-3`}>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Page{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {pagination.page}
-            </span>{" "}
-            of{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">
-              {pagination.pages}
-            </span>
+            Page <span className="font-semibold text-gray-900 dark:text-white">{pagination.page}</span> of{" "}
+            <span className="font-semibold text-gray-900 dark:text-white">{pagination.pages}</span>
           </p>
           <div className="flex gap-2">
             <button
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Previous</span>
@@ -345,7 +327,7 @@ export default function LeaveApprovals() {
             <button
               disabled={page >= pagination.pages}
               onClick={() => setPage(page + 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-40 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               <span className="hidden sm:inline">Next</span>
               <ChevronRight className="h-4 w-4" />
@@ -354,56 +336,53 @@ export default function LeaveApprovals() {
         </div>
       )}
 
-      {/* Rejection Modal */}
+      {/* ── Reject Modal ── */}
       {rejectId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm dark:bg-black/60 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-2xl dark:shadow-black/40 border border-gray-200 dark:border-gray-800">
-            {/* Modal header */}
-            <div className="mb-5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-rose-100 dark:bg-rose-500/20">
-                  <AlertTriangle className="h-5 w-5 text-rose-600 dark:text-rose-400" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4">
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
+            <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-rose-50 to-white p-5 dark:border-gray-800/80 dark:from-rose-500/10 dark:to-gray-900">
+              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-rose-400/25 blur-2xl" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 p-2.5 shadow-lg shadow-rose-500/30 ring-1 ring-white/10">
+                    <AlertTriangle className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white">Reject Leave</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Provide a reason for rejection</p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                    Reject Leave
-                  </h2>
-                  <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">
-                    Provide a reason for rejection
-                  </p>
-                </div>
+                <button
+                  onClick={() => setRejectId(null)}
+                  aria-label="Close"
+                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                onClick={() => setRejectId(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-lg text-gray-400 dark:text-gray-500 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-300"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
-
-            {/* Textarea */}
-            <textarea
-              rows={3}
-              placeholder="Reason for rejection (optional)"
-              value={rejectComment}
-              onChange={(e) => setRejectComment(e.target.value)}
-              className="mb-5 w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 outline-none transition-colors focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 dark:focus:ring-indigo-400/20"
-            />
-
-            {/* Modal actions */}
-            <div className="flex gap-3">
-              <button
-                onClick={() => setRejectId(null)}
-                className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleReject}
-                className="flex-1 rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-rose-700 dark:bg-rose-600 dark:hover:bg-rose-500"
-              >
-                Reject
-              </button>
+            <div className="p-5">
+              <textarea
+                rows={3}
+                placeholder="Reason for rejection (optional)"
+                value={rejectComment}
+                onChange={(e) => setRejectComment(e.target.value)}
+                className="mb-4 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+              />
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setRejectId(null)}
+                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleReject}
+                  className="flex-1 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl"
+                >
+                  Reject
+                </button>
+              </div>
             </div>
           </div>
         </div>

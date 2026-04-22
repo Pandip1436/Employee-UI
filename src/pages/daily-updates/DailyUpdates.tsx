@@ -15,6 +15,8 @@ import {
   Image,
   Eye,
   MessageSquare,
+  Sparkles,
+  NotebookPen,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { dailyUpdateApi } from "../../api/dailyUpdateApi";
@@ -66,8 +68,26 @@ const getUserName = (u: DailyUpdateData["userId"]): string =>
 const getInitials = (name: string) =>
   name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
+const PALETTES = [
+  "from-indigo-500 to-purple-600",
+  "from-sky-500 to-indigo-600",
+  "from-emerald-500 to-teal-600",
+  "from-amber-500 to-orange-600",
+  "from-rose-500 to-pink-600",
+  "from-fuchsia-500 to-purple-600",
+];
+
+const paletteFor = (name: string): string => {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return PALETTES[Math.abs(hash) % PALETTES.length];
+};
+
+const cardCls =
+  "rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]";
+
 const labelClasses =
-  "mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500";
+  "mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500";
 
 const inputClass =
   "w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white px-4 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-colors placeholder:text-gray-400 dark:placeholder:text-gray-500";
@@ -181,46 +201,64 @@ export default function DailyUpdates() {
 
   return (
     <div className="space-y-6">
-      {/* ── Header ── */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/20">
-            <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-              Daily Updates
-            </h1>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Post your end-of-day work updates
-            </p>
-          </div>
+      {/* ── Hero ── */}
+      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 p-6 text-white shadow-xl ring-1 ring-white/10 sm:p-8 dark:from-black dark:via-indigo-950 dark:to-black">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-indigo-500/30 blur-3xl" />
+          <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
+          <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
         </div>
-        <button
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98]"
-        >
-          <Plus className="h-4 w-4" />
-          New Update
-        </button>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 opacity-[0.08]"
+          style={{
+            backgroundImage:
+              "linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px)",
+            backgroundSize: "36px 36px",
+            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
+          }}
+        />
+        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-4">
+            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+              <NotebookPen className="h-10 w-10 text-indigo-200" />
+            </div>
+            <div className="min-w-0">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                <Sparkles className="h-3.5 w-3.5" />
+                End-of-day workflow
+              </p>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                Daily <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Updates</span>
+              </h1>
+              <p className="mt-1 text-sm text-indigo-200/70">Post your end-of-day work updates & plan for tomorrow</p>
+            </div>
+          </div>
+          <button
+            onClick={() => { resetForm(); setShowModal(true); }}
+            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+          >
+            <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
+              <Plus className="h-3.5 w-3.5 text-white" />
+            </span>
+            New Update
+          </button>
+        </div>
       </div>
 
       {/* ── Content ── */}
       {loading ? (
-        <div className="flex items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-20">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600" />
+        <div className={`${cardCls} flex flex-col items-center gap-3 py-16 text-center`}>
+          <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600 dark:border-gray-700 dark:border-t-indigo-400" />
+          <p className="text-sm text-gray-500 dark:text-gray-400">Loading updates...</p>
         </div>
       ) : updates.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 dark:border-gray-700 py-20 px-4 text-center">
-          <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-4 mb-4">
-            <FileText className="h-8 w-8 text-gray-300 dark:text-gray-600" />
+        <div className={`${cardCls} flex flex-col items-center gap-2 py-16 text-center`}>
+          <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
+            <FileText className="h-5 w-5 text-gray-400" />
           </div>
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
-            No updates yet
-          </p>
-          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">
-            Submit your first daily work update
-          </p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No updates yet</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Submit your first daily work update</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -228,18 +266,19 @@ export default function DailyUpdates() {
             const sConfig = statusConfig[u.status] || statusConfig.completed;
             const StatusIcon = sConfig.icon;
             const linksList = parseLinks(u.links);
+            const userName = getUserName(u.userId);
 
             return (
               <div
                 key={u._id}
                 onClick={() => setDetailUpdate(u)}
-                className="cursor-pointer rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 transition-all hover:shadow-md hover:border-indigo-200 dark:hover:border-indigo-500/30"
+                className={`${cardCls} cursor-pointer p-5 hover:-translate-y-0.5`}
               >
                 {/* Top row */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
-                      {getInitials(getUserName(u.userId))}
+                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(userName)} text-sm font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
+                      {getInitials(userName)}
                     </div>
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-900 dark:text-white">
@@ -316,7 +355,7 @@ export default function DailyUpdates() {
 
       {/* ── Pagination ── */}
       {pagination && pagination.pages > 1 && (
-        <div className="flex items-center justify-between rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3">
+        <div className={`${cardCls} flex items-center justify-between p-3`}>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Page{" "}
             <span className="font-semibold text-gray-900 dark:text-white">{pagination.page}</span>{" "}
@@ -327,7 +366,7 @@ export default function DailyUpdates() {
             <button
               disabled={page <= 1}
               onClick={() => setPage(page - 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               <ChevronLeft className="h-4 w-4" />
               <span className="hidden sm:inline">Previous</span>
@@ -335,7 +374,7 @@ export default function DailyUpdates() {
             <button
               disabled={page >= pagination.pages}
               onClick={() => setPage(page + 1)}
-              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 dark:border-gray-700 px-3 py-1.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="inline-flex items-center gap-1 rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
             >
               <span className="hidden sm:inline">Next</span>
               <ChevronRight className="h-4 w-4" />
@@ -347,14 +386,14 @@ export default function DailyUpdates() {
       {/* ── Detail Modal ── */}
       {detailUpdate && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm dark:bg-black/60 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setDetailUpdate(null); }}
         >
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-4 rounded-t-2xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between rounded-t-2xl border-b border-gray-200/70 bg-gradient-to-br from-indigo-50/60 via-white/80 to-white/80 px-6 py-4 backdrop-blur-xl dark:border-gray-800/80 dark:from-indigo-500/10 dark:via-gray-900/80 dark:to-gray-900/80">
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white shadow-sm">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(getUserName(detailUpdate.userId))} text-sm font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
                   {getInitials(getUserName(detailUpdate.userId))}
                 </div>
                 <div>
@@ -536,31 +575,35 @@ export default function DailyUpdates() {
       {/* ── Create/Edit Modal ── */}
       {showModal && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm dark:bg-black/60 px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4"
           onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}
         >
-          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 shadow-2xl border border-gray-200 dark:border-gray-800">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
             {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 px-6 py-4 rounded-t-2xl">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/20">
-                  <FileText className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            <div className="sticky top-0 z-10 overflow-hidden rounded-t-2xl border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white px-6 py-4 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
+              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/20 blur-2xl" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
+                    <FileText className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                      {editing ? "Edit Update" : "Daily Work Update"}
+                    </h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">
+                      {editing ? "Modify your submitted update" : "Submit your end-of-day update"}
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">
-                    {editing ? "Edit Update" : "Daily Work Update"}
-                  </h2>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">
-                    {editing ? "Modify your submitted update" : "Submit your end-of-day update"}
-                  </p>
-                </div>
+                <button
+                  onClick={resetForm}
+                  aria-label="Close"
+                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
-              <button
-                onClick={resetForm}
-                className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
 
             {/* Form */}
@@ -671,18 +714,18 @@ export default function DailyUpdates() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 border-t border-gray-100 dark:border-gray-800 pt-5">
+              <div className="flex gap-3 border-t border-gray-200/70 pt-5 dark:border-gray-800/80">
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="flex-1 rounded-xl border border-gray-300 dark:border-gray-700 px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 transition-colors hover:bg-gray-50 dark:hover:bg-gray-800"
+                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="flex-1 rounded-xl bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.98] disabled:opacity-50"
+                  className="flex-1 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl disabled:opacity-60"
                 >
                   {saving ? "Saving..." : editing ? "Save Changes" : "Submit Update"}
                 </button>
