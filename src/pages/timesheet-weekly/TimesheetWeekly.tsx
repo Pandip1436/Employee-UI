@@ -221,7 +221,6 @@ export default function TimesheetWeekly() {
     if (isToday(d)) return "bg-indigo-50/60 dark:bg-indigo-500/5";
     return "";
   };
-  const fmtDate = (d: string | Date) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   const fmtDateLong = (d: string | Date) => new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
   const weekRangeEnd = weekDates[6];
 
