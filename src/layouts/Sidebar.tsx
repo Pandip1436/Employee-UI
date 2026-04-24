@@ -4,7 +4,7 @@ import {
   UserCheck, CalendarDays, FileText, UsersRound,
   UsersRound as TeamIcon, PartyPopper, Laptop, Gift, BarChart3,
   Grid3X3, FileCheck, AlertTriangle, Download,
-  Megaphone, Award, ClipboardCheck, Building, Shield, Mail, ScrollText,
+  Megaphone, Award, ClipboardCheck, Building, Mail, ScrollText,
   MessageCircle, BookOpen,
   NotebookPen, CalendarClock,
 } from "lucide-react";
@@ -58,8 +58,7 @@ const links: SidebarLink[] = [
   { to: "/admin/announcements", label: "Post Manager", icon: Megaphone, roles: ["admin", "manager"], section: "Settings" },
   { to: "/users", label: "User Mgmt", icon: Users, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/company", label: "Company", icon: Building, roles: ["admin"], section: "Settings" },
-  { to: "/admin/settings/departments", label: "Departments", icon: Laptop, roles: ["admin"], section: "Settings" },
-  { to: "/admin/settings/designations", label: "Designations", icon: Shield, roles: ["admin"], section: "Settings" },
+  { to: "/admin/settings/org-structure", label: "Org Structure", icon: Laptop, roles: ["admin"], section: "Settings" },
   // { to: "/admin/settings/roles", label: "Roles", icon: Award, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/leave", label: "Leave Policy", icon: CalendarDays, roles: ["admin"], section: "Settings" },
   { to: "/admin/settings/emails", label: "Email Templates", icon: Mail, roles: ["admin"], section: "Settings" },

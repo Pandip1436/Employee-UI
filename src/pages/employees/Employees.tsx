@@ -329,7 +329,7 @@ export default function Employees() {
           <div className="relative flex flex-col items-center gap-6 sm:flex-row sm:items-center">
             <div className="relative shrink-0">
               <div className="rounded-full bg-white/10 p-1.5 ring-1 ring-white/15 backdrop-blur-sm">
-                <Avatar name={profileUser.name} size="xl" photo={p?.profilePhoto} />
+                <Avatar name={profileUser.name} size="xl" photo={p?.profilePhotoUrl} />
               </div>
               <span
                 className={`absolute bottom-1 right-1 h-4 w-4 rounded-full ring-4 ring-gray-900 ${
@@ -568,7 +568,7 @@ export default function Employees() {
               </div>
             )}
 
-            {(p?.offerLetterPath || (p?.certificatePaths?.length || 0) > 0) && (
+            {(p?.offerLetterUrl || (p?.certificateUrls?.length || 0) > 0) && (
               <div className={`${cardCls} p-5`}>
                 <div className="mb-3 flex items-center gap-3">
                   <div className="rounded-lg bg-rose-50 p-2 ring-1 ring-rose-500/10 dark:bg-rose-500/10 dark:ring-rose-400/20">
@@ -577,9 +577,9 @@ export default function Employees() {
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Documents</h3>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  {p?.offerLetterPath && (
+                  {p?.offerLetterUrl && (
                     <a
-                      href={`/${p.offerLetterPath}`}
+                      href={p.offerLetterUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/60 px-3 py-2 text-sm font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
@@ -587,10 +587,10 @@ export default function Employees() {
                       <FileText className="h-4 w-4" /> Offer Letter
                     </a>
                   )}
-                  {p?.certificatePaths?.map((path, i) => (
+                  {p?.certificateUrls?.map((url, i) => (
                     <a
                       key={i}
-                      href={`/${path}`}
+                      href={url}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/60 px-3 py-2 text-sm font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-indigo-400 dark:hover:bg-indigo-500/10"

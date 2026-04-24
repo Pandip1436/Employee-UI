@@ -149,8 +149,8 @@ export default function Profile() {
           {/* Avatar */}
           <div className="relative group">
             <div className="flex h-24 w-24 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm text-3xl font-bold shadow-lg ring-4 ring-white/20 overflow-hidden">
-              {profile?.profilePhoto ? (
-                <img src={`/${profile.profilePhoto}`} alt="" className="h-full w-full object-cover" />
+              {profile?.profilePhotoUrl ? (
+                <img src={profile.profilePhotoUrl} alt="" className="h-full w-full object-cover" />
               ) : (
                 user.name.charAt(0).toUpperCase()
               )}
@@ -348,11 +348,11 @@ export default function Profile() {
               {/* Offer Letter */}
               <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-5">
                 <p className={labelCls}>Offer Letter</p>
-                {profile?.offerLetterPath ? (
+                {profile?.offerLetterUrl ? (
                   <div className="flex items-center gap-2 mt-2">
                     <FileText className="h-5 w-5 text-emerald-500" />
                     <span className="text-sm text-gray-700 dark:text-gray-300 truncate flex-1">Uploaded</span>
-                    <a href={`/${profile.offerLetterPath}`} target="_blank" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View</a>
+                    <a href={profile.offerLetterUrl} target="_blank" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View</a>
                   </div>
                 ) : (
                   <p className="mt-1 text-xs text-gray-400">Not uploaded</p>
@@ -366,13 +366,13 @@ export default function Profile() {
               {/* Certificates */}
               <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-5">
                 <p className={labelCls}>Certificates</p>
-                {(profile?.certificatePaths?.length || 0) > 0 ? (
+                {(profile?.certificateUrls?.length || 0) > 0 ? (
                   <div className="mt-2 space-y-1.5">
-                    {profile!.certificatePaths!.map((p, i) => (
+                    {profile!.certificateUrls!.map((url, i) => (
                       <div key={i} className="flex items-center gap-2 text-sm">
                         <FileText className="h-4 w-4 text-gray-400" />
                         <span className="truncate flex-1 text-gray-700 dark:text-gray-300">Certificate {i + 1}</span>
-                        <a href={`/${p}`} target="_blank" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View</a>
+                        <a href={url} target="_blank" className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline">View</a>
                       </div>
                     ))}
                   </div>

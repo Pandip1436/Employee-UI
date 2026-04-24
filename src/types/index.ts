@@ -233,6 +233,10 @@ export interface EmployeeProfile {
   passportNumberMasked?: string;
   offerLetterPath?: string;
   certificatePaths?: string[];
+  // Signed URLs for file assets (populated by API on read, 1-hour TTL)
+  profilePhotoUrl?: string;
+  offerLetterUrl?: string;
+  certificateUrls?: string[];
   workHistory?: WorkHistoryEntry[];
   skills?: string[];
   certifications?: CertificationEntry[];

@@ -52,8 +52,7 @@ import SurveyResults from "./pages/survey-results/SurveyResults";
 
 // Admin Settings
 import AdminCompanySettings from "./pages/admin-company/AdminCompanySettings";
-import AdminDepartments from "./pages/admin-departments/AdminDepartments";
-import AdminDesignations from "./pages/admin-designations/AdminDesignations";
+import AdminOrgStructure from "./pages/admin-org-structure/AdminOrgStructure";
 import AdminRoles from "./pages/admin-roles/AdminRoles";
 import AdminLeavePolicy from "./pages/admin-leave-policy/AdminLeavePolicy";
 import AdminEmailTemplates from "./pages/admin-emails/AdminEmailTemplates";
@@ -169,8 +168,9 @@ export default function App() {
           <Route path="/admin/timesheet/export" element={<AdminTimesheetExport />} />
           <Route path="/admin/timesheet/config" element={<AdminTimesheetConfig />} />
           <Route path="/admin/settings/company" element={<AdminCompanySettings />} />
-          <Route path="/admin/settings/departments" element={<AdminDepartments />} />
-          <Route path="/admin/settings/designations" element={<AdminDesignations />} />
+          <Route path="/admin/settings/org-structure" element={<AdminOrgStructure />} />
+          <Route path="/admin/settings/departments" element={<Navigate to="/admin/settings/org-structure" replace />} />
+          <Route path="/admin/settings/designations" element={<Navigate to="/admin/settings/org-structure" replace />} />
           <Route path="/admin/settings/roles" element={<AdminRoles />} />
           <Route path="/admin/settings/leave" element={<AdminLeavePolicy />} />
           <Route path="/admin/performance/calibrate" element={<Calibration />} />
