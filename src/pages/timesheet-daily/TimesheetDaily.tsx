@@ -242,7 +242,7 @@ function PersonalDailyView() {
                             </span>
                           </td>
                           <td className="px-5 py-3 text-right text-sm font-bold tracking-tight text-gray-900 dark:text-white">
-                            {entry.hours}h
+                            {entry.hours}
                           </td>
                         </tr>
                       ))}
@@ -482,7 +482,7 @@ function AdminDailyView() {
                               </span>
                             </td>
                             <td className="px-5 py-2.5 text-right text-sm font-bold tracking-tight text-gray-900 dark:text-white">
-                              {entry.hours}h
+                              {entry.hours}
                             </td>
                           </tr>
                         ))}

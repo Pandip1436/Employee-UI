@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { LogIn, LogOut, Clock, Calendar, Timer, X, Activity, Users, AlertTriangle, CheckCircle2, UserX } from "lucide-react";
+import { LogIn, LogOut, Clock, Calendar, Timer, X, Activity, Users, AlertTriangle, CheckCircle2, UserX, Power, Loader2 } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
 import { useAuth } from "../../context/AuthContext";
@@ -45,6 +45,8 @@ export default function Attendance() {
   const [weeklyHours, setWeeklyHours] = useState(0);
   const [monthlyHours, setMonthlyHours] = useState(0);
   const [employees, setEmployees] = useState<User[]>([]);
+  const [autoClockOut, setAutoClockOut] = useState(true);
+  const [prefSaving, setPrefSaving] = useState(false);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // ── Helpers ──
@@ -72,6 +74,20 @@ export default function Attendance() {
     catch { /* handled by interceptor */ } finally { setLoading(false); }
   };
 
+  const toggleAutoClockOut = async () => {
+    const next = !autoClockOut;
+    setAutoClockOut(next);
+    setPrefSaving(true);
+    try {
+      await attendanceApi.updatePreferences(next);
+      toast.success(next ? "Auto clock-out enabled" : "Auto clock-out disabled");
+    } catch {
+      setAutoClockOut(!next); // revert
+    } finally {
+      setPrefSaving(false);
+    }
+  };
+
   // ── Fetchers ──
   const fetchToday = () => { attendanceApi.getMyToday().then((r) => setToday(r.data.data ?? null)).catch(() => {}); };
   const fetchHistory = () => { attendanceApi.getMyHistory({ page, limit: 10 }).then((r) => { setHistory(r.data.data); setPagination(r.data.pagination); }).catch(() => {}); };
@@ -83,7 +99,13 @@ export default function Attendance() {
   };
   const fetchLive = () => { if (canViewAll) attendanceApi.getLiveStatus().then((r) => setLiveData(r.data.data ?? null)).catch(() => {}); };
 
-  useEffect(() => { fetchToday(); }, []);
+  useEffect(() => {
+    fetchToday();
+    attendanceApi
+      .getPreferences()
+      .then((r) => setAutoClockOut(r.data.data?.autoClockOutEnabled ?? true))
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -188,6 +210,45 @@ export default function Attendance() {
                 Late — {today?.lateByMinutes ? `${today?.lateByMinutes} min` : "after office hours"}
               </div>
             )}
+
+            {/* Auto clock-out toggle */}
+            <div className="mt-4 inline-flex max-w-md items-center gap-3 rounded-2xl bg-white/5 px-3.5 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
+              <div
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                  autoClockOut
+                    ? "bg-emerald-500/20 text-emerald-300 ring-1 ring-emerald-400/30"
+                    : "bg-gray-500/20 text-gray-300 ring-1 ring-gray-400/20"
+                }`}
+              >
+                <Power className="h-4 w-4" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold text-white">Auto clock-out at 7:00 PM</p>
+                <p className="text-[11px] text-indigo-200/70 leading-snug">
+                  {autoClockOut
+                    ? "Open shifts will be closed automatically"
+                    : "You'll need to clock out manually"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={toggleAutoClockOut}
+                disabled={prefSaving}
+                aria-pressed={autoClockOut}
+                aria-label="Toggle auto clock-out"
+                className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors disabled:opacity-60 ${
+                  autoClockOut ? "bg-emerald-500" : "bg-gray-600"
+                }`}
+              >
+                <span
+                  className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-white shadow-md transition-transform ${
+                    autoClockOut ? "translate-x-5" : "translate-x-0.5"
+                  }`}
+                >
+                  {prefSaving && <Loader2 className="h-3 w-3 animate-spin text-gray-500" />}
+                </span>
+              </button>
+            </div>
           </div>
 
           {/* Clock button */}

@@ -34,4 +34,12 @@ export const attendanceApi = {
       params: { period, date, userId },
       responseType: "blob",
     }),
+
+  getPreferences: () =>
+    api.get<ApiResponse<{ autoClockOutEnabled: boolean }>>("/attendance/preferences"),
+
+  updatePreferences: (autoClockOutEnabled: boolean) =>
+    api.put<ApiResponse<{ autoClockOutEnabled: boolean }>>("/attendance/preferences", {
+      autoClockOutEnabled,
+    }),
 };
