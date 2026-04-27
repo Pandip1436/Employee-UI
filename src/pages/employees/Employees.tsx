@@ -976,11 +976,11 @@ export default function Employees() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <LabelText>Role</LabelText>
-                    <select value={formRole} onChange={(e) => setFormRole(e.target.value as UserRole)} className={fieldCls()}>
-                      <option value="employee">Employee</option>
-                      <option value="manager">Manager</option>
-                      <option value="admin">Admin</option>
-                    </select>
+                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/40 px-3.5 py-2.5 ring-1 ring-gray-200 dark:ring-gray-700/80">
+                      <span className="h-2 w-2 rounded-full bg-gray-500" />
+                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Employee</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">· Standard access</p>
+                    </div>
                   </div>
                   <div>
                     <LabelText>Department</LabelText>

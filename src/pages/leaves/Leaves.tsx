@@ -2,7 +2,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import {
   Plus, X, CheckCircle, XCircle, CalendarDays, Clock, Briefcase, Heart,
   ChevronLeft, ChevronRight, Trash2, Laptop, Gift, LayoutDashboard, Sparkles,
-  Palmtree,
+  
 } from "lucide-react";
 import { leaveApi } from "../../api/leaveApi";
 import { useAuth } from "../../context/AuthContext";
@@ -195,7 +195,7 @@ export default function Leaves() {
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-4">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <Palmtree className="h-10 w-10 text-emerald-200" />
+              <CalendarDays className="h-10 w-10 text-emerald-200" />
             </div>
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">

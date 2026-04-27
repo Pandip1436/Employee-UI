@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import {  useSearchParams } from "react-router-dom";
 import {
-  CalendarDays, Send, X, Palmtree, ThermometerSun, Ban, Gift,
-  Sparkles, Briefcase, Heart, Clock, FileText, ArrowLeft,
+  CalendarDays, Send, Palmtree, ThermometerSun, Ban, Gift,
+  Sparkles, Briefcase, Heart, Clock, FileText,
 } from "lucide-react";
 import { leaveApi } from "../../api/leaveApi";
 import type { LeaveBalance } from "../../types";
@@ -24,7 +24,6 @@ const leaveTypes = [
 ];
 
 export default function LeaveApply() {
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
   const [type, setType] = useState(searchParams.get("type") || "");
@@ -68,7 +67,6 @@ export default function LeaveApply() {
       .apply({ type, startDate, endDate, reason: reason.trim() })
       .then(() => {
         toast.success("Leave application submitted successfully");
-        navigate("/leaves");
       })
       .catch(() => toast.error("Failed to submit leave application"))
       .finally(() => setSubmitting(false));
@@ -94,15 +92,10 @@ export default function LeaveApply() {
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-4">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <Palmtree className="h-10 w-10 text-emerald-200" />
+              <CalendarDays className="h-10 w-10 text-emerald-200" />
             </div>
             <div className="min-w-0">
-              <button
-                onClick={() => navigate(-1)}
-                className="mb-1 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80 transition-colors hover:text-white"
-              >
-                <ArrowLeft className="h-3 w-3" /> Back
-              </button>
+              
               <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
                 Apply for <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Leave</span>
               </h1>
@@ -225,14 +218,7 @@ export default function LeaveApply() {
 
               {/* Actions */}
               <div className="flex items-center justify-end gap-3 border-t border-gray-200/70 pt-5 dark:border-gray-800/80">
-                <button
-                  type="button"
-                  onClick={() => navigate(-1)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  <X className="h-4 w-4" />
-                  Cancel
-                </button>
+                
                 <button
                   type="submit"
                   disabled={submitting}

@@ -10,7 +10,6 @@ import {
   Users,
   Shield,
   Search,
-  Filter,
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
@@ -25,20 +24,6 @@ const TYPE_CFG: Record<
   string,
   { label: string; dot: string; bg: string; text: string; ring: string }
 > = {
-  peer: {
-    label: "Peer",
-    dot: "bg-sky-400",
-    bg: "bg-sky-50 dark:bg-sky-500/10",
-    text: "text-sky-700 dark:text-sky-300",
-    ring: "ring-sky-500/20",
-  },
-  subordinate: {
-    label: "Subordinate",
-    dot: "bg-emerald-400",
-    bg: "bg-emerald-50 dark:bg-emerald-500/10",
-    text: "text-emerald-700 dark:text-emerald-300",
-    ring: "ring-emerald-500/20",
-  },
   manager: {
     label: "Manager",
     dot: "bg-violet-400",
@@ -136,7 +121,7 @@ export default function FeedbackPage() {
   // Give Feedback state
   const [users, setUsers] = useState<User[]>([]);
   const [toUser, setToUser] = useState("");
-  const [type, setType] = useState("peer");
+  const [type, setType] = useState("manager");
   const [rating, setRating] = useState(0);
   const [strengths, setStrengths] = useState("");
   const [improvements, setImprovements] = useState("");
@@ -148,7 +133,6 @@ export default function FeedbackPage() {
   const [feedback, setFeedback] = useState<FeedbackData[]>([]);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   useEffect(() => {
     if (!canGiveFeedback) return;
@@ -178,26 +162,24 @@ export default function FeedbackPage() {
     const avg = withRating.length
       ? withRating.reduce((s, f) => s + (f.rating || 0), 0) / withRating.length
       : 0;
-    const peers = feedback.filter((f) => f.type === "peer").length;
-    const fiveStarPct = withRating.length
-      ? Math.round((withRating.filter((f) => f.rating === 5).length / withRating.length) * 100)
+    const rated = withRating.length;
+    const fiveStarPct = rated
+      ? Math.round((withRating.filter((f) => f.rating === 5).length / rated) * 100)
       : 0;
-    return { count, avg, peers, fiveStarPct };
+    return { count, avg, rated, fiveStarPct };
   }, [feedback]);
 
   const filteredFeedback = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return feedback.filter((f) => {
-      if (typeFilter !== "all" && f.type !== typeFilter) return false;
-      if (!q) return true;
-      return (
+    if (!q) return feedback;
+    return feedback.filter(
+      (f) =>
         f.strengths?.toLowerCase().includes(q) ||
         f.improvements?.toLowerCase().includes(q) ||
         f.comments?.toLowerCase().includes(q) ||
         f.fromUser?.name?.toLowerCase().includes(q)
-      );
-    });
-  }, [feedback, search, typeFilter]);
+    );
+  }, [feedback, search]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -217,7 +199,7 @@ export default function FeedbackPage() {
       });
       toast.success("Feedback submitted");
       setToUser("");
-      setType("peer");
+      setType("manager");
       setRating(0);
       setStrengths("");
       setImprovements("");
@@ -296,9 +278,9 @@ export default function FeedbackPage() {
           />
           <StatCard
             icon={Users}
-            label="From peers"
-            value={stats.peers}
-            sublabel={`${feedback.length - stats.peers} from managers & reports`}
+            label="Rated"
+            value={stats.rated}
+            sublabel={`${feedback.length - stats.rated} without rating`}
             tint="emerald"
           />
           <StatCard
@@ -342,30 +324,18 @@ export default function FeedbackPage() {
                 </span>
                 <h2 className="text-sm font-semibold text-gray-900 dark:text-white">Who is this feedback for?</h2>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                    Employee
-                  </label>
-                  <select className={input} value={toUser} onChange={(e) => setToUser(e.target.value)}>
-                    <option value="">Select employee…</option>
-                    {users.map((u) => (
-                      <option key={u._id} value={u._id}>
-                        {u.name} — {u.department || u.email}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
-                    Relationship
-                  </label>
-                  <select className={input} value={type} onChange={(e) => setType(e.target.value)}>
-                    <option value="peer">Peer</option>
-                    <option value="subordinate">Subordinate</option>
-                    <option value="manager">Manager</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
+                  Employee
+                </label>
+                <select className={input} value={toUser} onChange={(e) => setToUser(e.target.value)}>
+                  <option value="">Select employee…</option>
+                  {users.map((u) => (
+                    <option key={u._id} value={u._id}>
+                      {u.name} — {u.department || u.email}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
 
@@ -612,23 +582,6 @@ export default function FeedbackPage() {
                     className={`${input} pl-10`}
                   />
                 </div>
-                <div className="flex items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-3 py-1 text-sm">
-                  <Filter className="h-4 w-4 text-gray-400" />
-                  {(["all", "peer", "subordinate", "manager"] as const).map((t) => (
-                    <button
-                      key={t}
-                      type="button"
-                      onClick={() => setTypeFilter(t)}
-                      className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-colors ${
-                        typeFilter === t
-                          ? "bg-indigo-600 text-white"
-                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      }`}
-                    >
-                      {t === "all" ? "All" : TYPE_CFG[t].label}
-                    </button>
-                  ))}
-                </div>
               </div>
 
               {/* Feedback grid */}
@@ -639,7 +592,7 @@ export default function FeedbackPage() {
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                   {filteredFeedback.map((fb) => {
-                    const cfg = TYPE_CFG[fb.type] || TYPE_CFG.peer;
+                    const cfg = TYPE_CFG[fb.type] || TYPE_CFG.manager;
                     return (
                       <div
                         key={fb._id}
