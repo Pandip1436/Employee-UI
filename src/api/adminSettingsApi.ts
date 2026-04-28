@@ -40,4 +40,7 @@ export const adminSettingsApi = {
   getEmailTemplates: () => api.get<ApiResponse<CompanySettingsData["emailTemplates"]>>("/admin/settings/email-templates"),
   updateEmailTemplates: (templates: CompanySettingsData["emailTemplates"]) => api.put<ApiResponse>("/admin/settings/email-templates", { templates }),
   getAuditLogs: (params?: Record<string, string | number>) => api.get<PaginatedResponse<AuditLogEntry>>("/admin/settings/audit-logs", { params }),
+  deleteAuditLog: (id: string) => api.delete<ApiResponse>(`/admin/settings/audit-logs/${id}`),
+  clearAuditLogs: (params?: Record<string, string>) =>
+    api.delete<ApiResponse<{ deletedCount: number }>>("/admin/settings/audit-logs", { params }),
 };

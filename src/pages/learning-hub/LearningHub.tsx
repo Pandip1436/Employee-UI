@@ -192,7 +192,7 @@ export default function LearningHub() {
                 <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Completed</p>
                   <p className="text-xl font-bold tracking-tight">
-                    {completedCount}<span className="text-sm font-normal text-indigo-200/60"> / {enrolledCount + completedCount || totalCourses}</span>
+                    {completedCount}<span className="text-sm font-normal text-indigo-200/60"> / {enrolledCount || totalCourses}</span>
                   </p>
                 </div>
                 <button

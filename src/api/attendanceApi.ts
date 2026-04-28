@@ -17,8 +17,8 @@ export const attendanceApi = {
   getAll: (params?: Record<string, string | number>) =>
     api.get<PaginatedResponse<AttendanceRecord>>("/attendance", { params }),
 
-  getLiveStatus: () =>
-    api.get<ApiResponse<LiveStatusData>>("/attendance/live-status"),
+  getLiveStatus: (params?: { date?: string }) =>
+    api.get<ApiResponse<LiveStatusData>>("/attendance/live-status", { params }),
 
   getReport: (period: "daily" | "weekly" | "monthly", date: string, userId?: string) =>
     api.get<ApiResponse>("/attendance/report/monthly", { params: { period, date, userId } }),

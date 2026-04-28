@@ -1,7 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Users, UserCheck, UserX, Clock, AlertTriangle, CheckCircle2, X, Filter } from "lucide-react";
+import { Search, Users, UserCheck, UserX, Clock, AlertTriangle, CheckCircle2, X, Filter, Calendar } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import type { LiveStatusData, LiveEmployee } from "../../types";
+
+function todayKey() {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 const liveStyles: Record<string, { bg: string; dot: string; label: string; pulse: boolean }> = {
   "clocked-in": { bg: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20", dot: "bg-emerald-500", label: "Logged In", pulse: true },
@@ -57,16 +63,24 @@ export default function TeamAttendance() {
   const [deptFilter, setDeptFilter] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
   const [viewTab, setViewTab] = useState<ViewTab>("all");
+  const [dateFilter, setDateFilter] = useState<string>(todayKey());
 
-  const fetchData = () => {
-    attendanceApi.getLiveStatus().then((r) => {
-      setLiveData(r.data.data ?? null);
-      const depts = [...new Set((r.data.data?.employees || []).map((e: LiveEmployee) => e.department).filter(Boolean))] as string[];
-      setDepartments(depts);
-    }).catch(() => { /* interceptor */ });
-  };
+  const isToday = dateFilter === todayKey();
 
-  useEffect(() => { fetchData(); const id = setInterval(fetchData, 30000); return () => clearInterval(id); }, []);
+  useEffect(() => {
+    const fetchData = () => {
+      const params = isToday ? undefined : { date: dateFilter };
+      attendanceApi.getLiveStatus(params).then((r) => {
+        setLiveData(r.data.data ?? null);
+        const depts = [...new Set((r.data.data?.employees || []).map((e: LiveEmployee) => e.department).filter(Boolean))] as string[];
+        setDepartments(depts);
+      }).catch(() => { /* interceptor */ });
+    };
+    fetchData();
+    if (!isToday) return;
+    const id = setInterval(fetchData, 30000);
+    return () => clearInterval(id);
+  }, [dateFilter, isToday]);
 
   const absentStatuses = ["not-marked"];
   const presentStatuses = ["clocked-in", "late", "clocked-out"];
@@ -109,16 +123,29 @@ export default function TeamAttendance() {
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-              <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-                <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              </span>
-              Live · Auto-refresh 30s
+              {isToday ? (
+                <>
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                  </span>
+                  Live · Auto-refresh 30s
+                </>
+              ) : (
+                <>
+                  <Calendar className="h-3 w-3" />
+                  Historical View
+                </>
+              )}
             </p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
               Team <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Attendance</span>
             </h1>
-            <p className="mt-1 text-sm text-indigo-200/70">Real-time view of your team's attendance today</p>
+            <p className="mt-1 text-sm text-indigo-200/70">
+              {isToday
+                ? "Real-time view of your team's attendance today"
+                : `Attendance for ${new Date(dateFilter + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`}
+            </p>
           </div>
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
@@ -193,6 +220,24 @@ export default function TeamAttendance() {
           ))}
         </div>
         <div className="flex flex-wrap gap-2">
+          <div className="relative">
+            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+            <input
+              type="date"
+              value={dateFilter}
+              max={todayKey()}
+              onChange={(e) => setDateFilter(e.target.value || todayKey())}
+              className={`${inputCls} pl-8`}
+            />
+            {!isToday && (
+              <button
+                onClick={() => setDateFilter(todayKey())}
+                className="ml-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+              >
+                Today
+              </button>
+            )}
+          </div>
           <div className="relative min-w-[200px] flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
@@ -314,13 +359,15 @@ export default function TeamAttendance() {
         })}
       </div>
 
-      <p className="flex items-center justify-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        </span>
-        Auto-refreshes every 30 seconds
-      </p>
+      {isToday && (
+        <p className="flex items-center justify-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+          </span>
+          Auto-refreshes every 30 seconds
+        </p>
+      )}
     </div>
   );
 }

@@ -12,7 +12,8 @@ import {
 } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { holidayApi } from "../../api/holidayApi";
-import type { AttendanceRecord, Holiday } from "../../types";
+import { leaveApi } from "../../api/leaveApi";
+import type { AttendanceRecord, Holiday, LeaveRequest } from "../../types";
 
 /* ── Status style map ── */
 const statusStyles: Record<
@@ -103,6 +104,18 @@ function isSameDate(a: string, b: string) {
   return a.slice(0, 10) === b.slice(0, 10);
 }
 
+const LEAVE_TYPE_LABELS: Record<string, string> = {
+  casual: "Personal",
+  sick: "Sick",
+  earned: "Earned",
+  unpaid: "Unpaid",
+  compoff: "Comp-Off",
+};
+
+function leaveTypeLabel(type: string) {
+  return LEAVE_TYPE_LABELS[type] ?? type;
+}
+
 const labelClasses =
   "text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500";
 
@@ -113,6 +126,7 @@ export default function AttendanceCalendar() {
   const [month, setMonth] = useState(today.getMonth());
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
@@ -131,7 +145,12 @@ export default function AttendanceCalendar() {
       .then((res) => setHolidays(res.data.data ?? []))
       .catch(() => {});
 
-    Promise.all([attendancePromise, holidayPromise]).finally(() =>
+    const leavePromise = leaveApi
+      .getMyLeaves({ status: "approved", limit: 100 })
+      .then((res) => setLeaves(res.data.data ?? []))
+      .catch(() => {});
+
+    Promise.all([attendancePromise, holidayPromise, leavePromise]).finally(() =>
       setLoading(false)
     );
   }, [year, month]);
@@ -178,6 +197,17 @@ export default function AttendanceCalendar() {
   const holidayMap = new Map<string, Holiday>();
   holidays.forEach((h) => holidayMap.set(h.date.slice(0, 10), h));
 
+  // Expand each approved leave (start..end inclusive) into a per-day map so
+  // future/un-backfilled leaves still render on the calendar.
+  const leaveMap = new Map<string, LeaveRequest>();
+  leaves.forEach((lv) => {
+    const start = new Date(lv.startDate.slice(0, 10) + "T00:00:00");
+    const end = new Date(lv.endDate.slice(0, 10) + "T00:00:00");
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      leaveMap.set(toDateKey(d), lv);
+    }
+  });
+
   /* ── Resolve cell status ── */
   function getCellInfo(dayNum: number) {
     const d = new Date(year, month, dayNum);
@@ -188,36 +218,39 @@ export default function AttendanceCalendar() {
     const isWeekend = dow === 0 || dow === 6;
     const holiday = holidayMap.get(key);
     const record = recordMap.get(key);
+    const leave = leaveMap.get(key);
 
     let status: string | null = null;
-    if (isFuture) status = null;
-    else if (holiday) status = "holiday";
+    if (holiday) status = "holiday";
     else if (record) status = record.status;
+    else if (leave) status = "on-leave";
+    else if (isFuture) status = null;
     else if (isWeekend) status = "weekend";
 
-    return { key, isToday, isFuture, isWeekend, holiday, record, status };
+    return { key, isToday, isFuture, isWeekend, holiday, record, leave, status };
   }
 
   /* ── Monthly summary stats ── */
   const stats = {
     present: 0,
-    late: 0,
+    halfDays: 0,
     absent: 0,
     leaves: 0,
     holidays: 0,
   };
   for (let d = 1; d <= daysInMonth; d++) {
     const { status } = getCellInfo(d);
-    if (status === "present") stats.present++;
-    else if (status === "late") stats.late++;
+    if (status === "present" || status === "late") stats.present++;
+    else if (status === "half-day") stats.halfDays++;
     else if (status === "absent") stats.absent++;
-    else if (status === "on-leave" || status === "half-day") stats.leaves++;
+    else if (status === "on-leave") stats.leaves++;
     else if (status === "holiday") stats.holidays++;
   }
 
   /* ── Detail panel data ── */
   const detailRecord = selectedDay ? recordMap.get(selectedDay) : null;
   const detailHoliday = selectedDay ? holidayMap.get(selectedDay) : null;
+  const detailLeave = selectedDay ? leaveMap.get(selectedDay) : null;
 
   /* ── Detail panel renderer (shared between desktop sidebar & mobile sheet) ── */
   const renderDetail = (showClose: boolean) => {
@@ -242,6 +275,12 @@ export default function AttendanceCalendar() {
               <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-purple-50 dark:bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-400 ring-1 ring-purple-600/20 dark:ring-purple-500/20">
                 <span className="h-1.5 w-1.5 rounded-full bg-purple-500" />
                 {detailHoliday.name}
+              </div>
+            )}
+            {!detailHoliday && detailLeave && (
+              <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-blue-50 dark:bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-400 ring-1 ring-blue-600/20 dark:ring-blue-500/20">
+                <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
+                {leaveTypeLabel(detailLeave.type)} Leave
               </div>
             )}
           </div>
@@ -330,6 +369,37 @@ export default function AttendanceCalendar() {
               </div>
             )}
           </div>
+        ) : detailLeave ? (
+          <div className="space-y-3 flex-1">
+            <div className="rounded-xl bg-gray-50 dark:bg-gray-800/80 p-3.5">
+              <div className="flex items-center gap-1.5 mb-2">
+                <CalendarDays className="h-3.5 w-3.5 text-blue-500" />
+                <span className={labelClasses}>Leave Period</span>
+              </div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                {new Date(detailLeave.startDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+                {" – "}
+                {new Date(detailLeave.endDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+                <span className="ml-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                  ({detailLeave.days} day{detailLeave.days > 1 ? "s" : ""})
+                </span>
+              </p>
+            </div>
+            {detailLeave.reason && (
+              <div className="flex items-start gap-2.5 rounded-xl bg-gray-50 dark:bg-gray-800/80 px-3.5 py-3">
+                <Info className="h-4 w-4 text-gray-400 mt-0.5 shrink-0" />
+                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
+                  {detailLeave.reason}
+                </p>
+              </div>
+            )}
+          </div>
         ) : !detailHoliday ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-8">
             <div className="rounded-full bg-gray-100 dark:bg-gray-800 p-3 mb-3">
@@ -377,7 +447,7 @@ export default function AttendanceCalendar() {
       <div className="grid grid-cols-5 gap-2 sm:gap-3">
         {[
           { label: "Present", value: stats.present, cls: "text-emerald-600 dark:text-emerald-400" },
-          { label: "Late", value: stats.late, cls: "text-amber-600 dark:text-amber-400" },
+          { label: "Half Days", value: stats.halfDays, cls: "text-orange-600 dark:text-orange-400" },
           { label: "Absent", value: stats.absent, cls: "text-red-600 dark:text-red-400" },
           { label: "Leaves", value: stats.leaves, cls: "text-blue-600 dark:text-blue-400" },
           { label: "Holidays", value: stats.holidays, cls: "text-purple-600 dark:text-purple-400" },
@@ -505,7 +575,7 @@ export default function AttendanceCalendar() {
                       >
                         {dayNum}
                       </span>
-                      {style && !isFuture && (
+                      {style && (
                         <span
                           className={`h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full ${style.dot}`}
                         />

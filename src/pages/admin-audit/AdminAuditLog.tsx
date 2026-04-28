@@ -10,10 +10,12 @@ import {
   Sparkles,
   Database,
   TrendingUp,
+  Trash2,
 } from "lucide-react";
 import { adminSettingsApi } from "../../api/adminSettingsApi";
 import type { AuditLogEntry } from "../../api/adminSettingsApi";
 import toast from "react-hot-toast";
+import ConfirmDialog from "../../components/ConfirmDialog";
 
 const MODULES = [
   "all",
@@ -127,6 +129,9 @@ export default function AdminAuditLog() {
   const [moduleFilter, setModuleFilter] = useState("all");
   const [actionSearch, setActionSearch] = useState("");
   const [debouncedAction, setDebouncedAction] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<AuditLogEntry | null>(null);
+  const [confirmClear, setConfirmClear] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const timer = setTimeout(() => setDebouncedAction(actionSearch), 400);
@@ -160,6 +165,43 @@ export default function AdminAuditLog() {
   useEffect(() => {
     setPage(1);
   }, [moduleFilter, debouncedAction]);
+
+  const handleDeleteOne = async () => {
+    if (!deleteTarget) return;
+    setBusy(true);
+    try {
+      await adminSettingsApi.deleteAuditLog(deleteTarget._id);
+      toast.success("Audit log deleted");
+      setDeleteTarget(null);
+      // If the only row on this page was deleted, step back a page
+      if (logs.length === 1 && page > 1) setPage((p) => p - 1);
+      else fetchLogs();
+    } catch {
+      toast.error("Failed to delete audit log");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleClear = async () => {
+    setBusy(true);
+    try {
+      const params: Record<string, string> = {};
+      if (moduleFilter !== "all") params.module = moduleFilter;
+      if (debouncedAction.trim()) params.action = debouncedAction.trim();
+      const res = await adminSettingsApi.clearAuditLogs(params);
+      toast.success(`Cleared ${res.data.data?.deletedCount ?? 0} entries`);
+      setConfirmClear(false);
+      setPage(1);
+      fetchLogs();
+    } catch {
+      toast.error("Failed to clear audit logs");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const isFiltered = moduleFilter !== "all" || debouncedAction.trim().length > 0;
 
   // Stats from current page (best-effort — full counts come from totalCount)
   const stats = useMemo(() => {
@@ -258,15 +300,26 @@ export default function AdminAuditLog() {
             );
           })}
         </div>
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search actions…"
-            value={actionSearch}
-            onChange={(e) => setActionSearch(e.target.value)}
-            className={`${input} pl-10`}
-          />
+        <div className="flex flex-1 gap-2 sm:flex-initial sm:max-w-md">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search actions…"
+              value={actionSearch}
+              onChange={(e) => setActionSearch(e.target.value)}
+              className={`${input} pl-10`}
+            />
+          </div>
+          <button
+            onClick={() => setConfirmClear(true)}
+            disabled={totalCount === 0}
+            title={isFiltered ? "Clear filtered logs" : "Clear all logs"}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-sm font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+          >
+            <Trash2 className="h-4 w-4" />
+            <span className="hidden sm:inline">{isFiltered ? "Clear filtered" : "Clear all"}</span>
+          </button>
         </div>
       </div>
 
@@ -301,6 +354,7 @@ export default function AdminAuditLog() {
                     <th className="px-4 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Module</th>
                     <th className="px-4 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">Details</th>
                     <th className="px-4 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 text-right">When</th>
+                    <th className="px-2 py-3.5 w-10" aria-label="Actions"></th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
@@ -351,6 +405,15 @@ export default function AdminAuditLog() {
                             </span>
                           </div>
                         </td>
+                        <td className="px-2 py-3.5 text-right">
+                          <button
+                            onClick={() => setDeleteTarget(log)}
+                            title="Delete entry"
+                            className="rounded-lg p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </td>
                       </tr>
                     );
                   })}
@@ -396,7 +459,16 @@ export default function AdminAuditLog() {
                       <Clock className="h-3 w-3" />
                       {timeAgo(log.createdAt)}
                     </span>
-                    <span className="tabular-nums">{formatDate(log.createdAt)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="tabular-nums">{formatDate(log.createdAt)}</span>
+                      <button
+                        onClick={() => setDeleteTarget(log)}
+                        title="Delete entry"
+                        className="rounded-md p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );
@@ -432,6 +504,41 @@ export default function AdminAuditLog() {
         </>
       )}
 
+      <ConfirmDialog
+        open={!!deleteTarget}
+        title="Delete this audit log entry?"
+        description={
+          deleteTarget ? (
+            <>
+              <span className="font-semibold text-gray-900 dark:text-white">{deleteTarget.action}</span>
+              {deleteTarget.userId?.name ? <> by {deleteTarget.userId.name}</> : null}
+              <span className="block text-xs text-gray-400 mt-1">{formatDate(deleteTarget.createdAt)}</span>
+            </>
+          ) : null
+        }
+        confirmLabel="Delete"
+        variant="danger"
+        loading={busy}
+        onConfirm={handleDeleteOne}
+        onCancel={() => !busy && setDeleteTarget(null)}
+      />
+
+      <ConfirmDialog
+        open={confirmClear}
+        title={isFiltered ? "Clear filtered audit logs?" : "Clear all audit logs?"}
+        description={
+          <>
+            This will permanently delete{" "}
+            <span className="font-semibold text-gray-900 dark:text-white">{totalCount.toLocaleString()}</span>{" "}
+            {isFiltered ? "matching entr" : "entr"}{totalCount === 1 ? "y" : "ies"}. This action cannot be undone.
+          </>
+        }
+        confirmLabel={isFiltered ? "Clear filtered" : "Clear all"}
+        variant="danger"
+        loading={busy}
+        onConfirm={handleClear}
+        onCancel={() => !busy && setConfirmClear(false)}
+      />
     </div>
   );
 }
