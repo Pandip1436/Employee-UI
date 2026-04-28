@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, type FormEvent } from "react";
+import { useState, useEffect, useMemo, type FormEvent, type ComponentType, type SVGProps } from "react";
 import {
   Pencil, Trash2, X, ShieldCheck, ShieldAlert, User as UserIcon,
  Eye, EyeOff, Search, CheckCircle, XCircle, Sparkles, Users as UsersIcon,
@@ -39,6 +39,15 @@ function validateEdit(f: { name: string; email: string; userId: string; password
   return e;
 }
 
+function PasswordRuleItem({ ok, text }: { ok: boolean; text: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1 text-[10px] ${ok ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}`}>
+      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"}`} />
+      {text}
+    </span>
+  );
+}
+
 function PasswordStrength({ pw }: { pw: string }) {
   if (!pw) return null;
   const c = checkPassword(pw);
@@ -46,12 +55,6 @@ function PasswordStrength({ pw }: { pw: string }) {
   const barColor = score <= 2 ? "bg-rose-500" : score === 3 ? "bg-amber-500" : score === 4 ? "bg-lime-500" : "bg-emerald-500";
   const label = score <= 2 ? "Weak" : score === 3 ? "Fair" : score === 4 ? "Good" : "Strong";
   const labelColor = score <= 2 ? "text-rose-600 dark:text-rose-400" : score === 3 ? "text-amber-600 dark:text-amber-400" : score === 4 ? "text-lime-600 dark:text-lime-400" : "text-emerald-600 dark:text-emerald-400";
-  const Item = ({ ok, text }: { ok: boolean; text: string }) => (
-    <span className={`inline-flex items-center gap-1 text-[10px] ${ok ? "text-emerald-600 dark:text-emerald-400" : "text-gray-400 dark:text-gray-500"}`}>
-      <span className={`h-1.5 w-1.5 rounded-full ${ok ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"}`} />
-      {text}
-    </span>
-  );
   return (
     <div className="mt-1.5">
       <div className="flex items-center gap-2">
@@ -61,11 +64,11 @@ function PasswordStrength({ pw }: { pw: string }) {
         <span className={`text-[10px] font-semibold uppercase ${labelColor}`}>{label}</span>
       </div>
       <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5">
-        <Item ok={c.length} text="8+ chars" />
-        <Item ok={c.upper} text="A-Z" />
-        <Item ok={c.lower} text="a-z" />
-        <Item ok={c.digit} text="0-9" />
-        <Item ok={c.symbol} text="symbol" />
+        <PasswordRuleItem ok={c.length} text="8+ chars" />
+        <PasswordRuleItem ok={c.upper} text="A-Z" />
+        <PasswordRuleItem ok={c.lower} text="a-z" />
+        <PasswordRuleItem ok={c.digit} text="0-9" />
+        <PasswordRuleItem ok={c.symbol} text="symbol" />
       </div>
     </div>
   );
@@ -132,7 +135,7 @@ function StatCard({
   sublabel,
   tint,
 }: {
-  icon: any;
+  icon: ComponentType<SVGProps<SVGSVGElement> & { strokeWidth?: number }>;
   label: string;
   value: string | number;
   sublabel?: string;

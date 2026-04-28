@@ -61,11 +61,13 @@ export default function HrDashboard() {
     dashboardApi.getPendingApprovals().then((r) => setPending(r.data.data ?? { leaves: [], timesheets: [] })).catch(() => {});
   }, []);
 
-  const leaveData = (stats?.leaveStats ?? []).map((l) => ({
-    type: LEAVE_TYPE_LABELS[l._id] ?? l._id.charAt(0).toUpperCase() + l._id.slice(1),
-    totalDays: l.totalDays,
-    count: l.count,
-  }));
+  const leaveData = (stats?.leaveStats ?? [])
+    .filter((l) => l._id !== "earned")
+    .map((l) => ({
+      type: LEAVE_TYPE_LABELS[l._id] ?? l._id.charAt(0).toUpperCase() + l._id.slice(1),
+      totalDays: l.totalDays,
+      count: l.count,
+    }));
 
   const attendanceTotal = (stats?.todayPresent ?? 0) + (stats?.todayAbsent ?? 0);
   const attendanceRate = attendanceTotal > 0 ? Math.round((stats!.todayPresent / attendanceTotal) * 100) : 0;
