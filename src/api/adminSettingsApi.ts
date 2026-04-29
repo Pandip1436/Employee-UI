@@ -11,6 +11,8 @@ export interface CompanySettingsData {
   designations: { name: string; level: number; grade: string }[];
   roles: { name: string; description?: string; permissions: string[] }[];
   leavePolicy: Record<string, { total: number; carryForward: boolean; maxCarry?: number }>;
+  attendancePolicy: { officeStartTime: string; graceMinutes: number };
+  notificationEmails: string[];
   emailTemplates: { key: string; subject: string; body: string }[];
 }
 

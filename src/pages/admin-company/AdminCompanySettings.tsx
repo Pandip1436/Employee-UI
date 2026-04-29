@@ -10,6 +10,9 @@ import {
   AlertCircle,
   RotateCcw,
   Check,
+  Clock,
+  Mail,
+  X,
 } from "lucide-react";
 import { adminSettingsApi } from "../../api/adminSettingsApi";
 import type { CompanySettingsData } from "../../api/adminSettingsApi";
@@ -114,13 +117,21 @@ const sig = (s: {
   timezone: string;
   fiscalYearStart: string;
   workingDays: string[];
+  officeStartTime: string;
+  graceMinutes: number;
+  notificationEmails: string[];
 }) =>
   JSON.stringify({
     companyName: s.companyName.trim(),
     timezone: s.timezone,
     fiscalYearStart: s.fiscalYearStart,
     workingDays: [...s.workingDays].sort(),
+    officeStartTime: s.officeStartTime,
+    graceMinutes: s.graceMinutes,
+    notificationEmails: [...s.notificationEmails].sort(),
   });
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function AdminCompanySettings() {
   const { refresh: refreshCompany } = useCompany();
@@ -131,6 +142,10 @@ export default function AdminCompanySettings() {
   const [timezone, setTimezone] = useState("UTC");
   const [fiscalYearStart, setFiscalYearStart] = useState("January");
   const [workingDays, setWorkingDays] = useState<string[]>(["Mon", "Tue", "Wed", "Thu", "Fri"]);
+  const [officeStartTime, setOfficeStartTime] = useState("09:00");
+  const [graceMinutes, setGraceMinutes] = useState(0);
+  const [notificationEmails, setNotificationEmails] = useState<string[]>([]);
+  const [emailDraft, setEmailDraft] = useState("");
   const [origSig, setOrigSig] = useState<string>("");
 
   const fetchSettings = () => {
@@ -145,11 +160,17 @@ export default function AdminCompanySettings() {
             timezone: d.timezone || "UTC",
             fiscalYearStart: d.fiscalYearStart || "January",
             workingDays: d.workingDays || ["Mon", "Tue", "Wed", "Thu", "Fri"],
+            officeStartTime: d.attendancePolicy?.officeStartTime || "09:00",
+            graceMinutes: Number.isFinite(d.attendancePolicy?.graceMinutes) ? d.attendancePolicy.graceMinutes : 0,
+            notificationEmails: d.notificationEmails || [],
           };
           setCompanyName(next.companyName);
           setTimezone(next.timezone);
           setFiscalYearStart(next.fiscalYearStart);
           setWorkingDays(next.workingDays);
+          setOfficeStartTime(next.officeStartTime);
+          setGraceMinutes(next.graceMinutes);
+          setNotificationEmails(next.notificationEmails);
           setOrigSig(sig(next));
         }
       })
@@ -162,8 +183,8 @@ export default function AdminCompanySettings() {
   }, []);
 
   const dirty = useMemo(
-    () => sig({ companyName, timezone, fiscalYearStart, workingDays }) !== origSig,
-    [companyName, timezone, fiscalYearStart, workingDays, origSig]
+    () => sig({ companyName, timezone, fiscalYearStart, workingDays, officeStartTime, graceMinutes, notificationEmails }) !== origSig,
+    [companyName, timezone, fiscalYearStart, workingDays, officeStartTime, graceMinutes, notificationEmails, origSig]
   );
 
   useEffect(() => {
@@ -182,6 +203,37 @@ export default function AdminCompanySettings() {
     );
   };
 
+  const addEmail = (raw: string) => {
+    const value = raw.trim().replace(/[,;]\s*$/, "");
+    if (!value) return;
+    if (!EMAIL_RE.test(value)) {
+      toast.error(`"${value}" is not a valid email`);
+      return;
+    }
+    if (notificationEmails.some((e) => e.toLowerCase() === value.toLowerCase())) {
+      setEmailDraft("");
+      return;
+    }
+    setNotificationEmails((prev) => [...prev, value]);
+    setEmailDraft("");
+  };
+
+  const handleEmailKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" || e.key === "," || e.key === ";") {
+      e.preventDefault();
+      addEmail(emailDraft);
+    } else if (e.key === "Backspace" && !emailDraft && notificationEmails.length) {
+      setNotificationEmails((prev) => prev.slice(0, -1));
+    }
+  };
+
+  const handleEmailPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData("text");
+    if (!/[,;\s]/.test(text)) return;
+    e.preventDefault();
+    text.split(/[,;\s]+/).forEach((tok) => addEmail(tok));
+  };
+
   const handleReset = async () => {
     if (!dirty) return;
     const ok = await confirm({
@@ -196,6 +248,12 @@ export default function AdminCompanySettings() {
 
   const handleSave = async () => {
     if (!companyName.trim()) return toast.error("Company name is required");
+    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(officeStartTime)) {
+      return toast.error("Office start time must be in HH:MM format");
+    }
+    if (graceMinutes < 0 || graceMinutes > 240) {
+      return toast.error("Grace period must be between 0 and 240 minutes");
+    }
     setSaving(true);
     try {
       await adminSettingsApi.updateCompanySettings({
@@ -203,8 +261,10 @@ export default function AdminCompanySettings() {
         timezone,
         fiscalYearStart,
         workingDays,
+        attendancePolicy: { officeStartTime, graceMinutes },
+        notificationEmails,
       } as Partial<CompanySettingsData>);
-      setOrigSig(sig({ companyName, timezone, fiscalYearStart, workingDays }));
+      setOrigSig(sig({ companyName, timezone, fiscalYearStart, workingDays, officeStartTime, graceMinutes, notificationEmails }));
       toast.success("Company settings saved");
       await refreshCompany();
     } catch {
@@ -353,6 +413,94 @@ export default function AdminCompanySettings() {
           </div>
           <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
             Selected: <span className="font-bold text-gray-900 dark:text-white">{fiscalYearStart}</span>
+          </p>
+        </SettingCard>
+
+        {/* Attendance Policy */}
+        <SettingCard
+          icon={Clock}
+          title="Attendance Policy"
+          subtitle="Office start time & grace period for late detection"
+          tint="emerald"
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+                Office start time
+              </label>
+              <input
+                type="time"
+                value={officeStartTime}
+                onChange={(e) => setOfficeStartTime(e.target.value)}
+                className={input}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+                Grace minutes
+              </label>
+              <input
+                type="number"
+                min={0}
+                max={240}
+                value={graceMinutes}
+                onChange={(e) => setGraceMinutes(Math.max(0, Math.min(240, Number(e.target.value) || 0)))}
+                className={input}
+              />
+            </div>
+          </div>
+          <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
+            Clock-ins after{" "}
+            <span className="font-bold text-gray-900 dark:text-white tabular-nums">
+              {officeStartTime}
+              {graceMinutes > 0 ? ` + ${graceMinutes}m` : ""}
+            </span>{" "}
+            (in <span className="font-semibold">{timezone}</span>) are flagged as late.
+          </p>
+        </SettingCard>
+
+        {/* Notification Emails */}
+        <SettingCard
+          icon={Mail}
+          title="Notification Emails"
+          subtitle="Recipients for clock-in/out and late alerts"
+          tint="indigo"
+          className="md:col-span-2"
+        >
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-2.5 py-2 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
+            {notificationEmails.map((e) => (
+              <span
+                key={e}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/15 px-2 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/20"
+              >
+                {e}
+                <button
+                  type="button"
+                  onClick={() => setNotificationEmails((prev) => prev.filter((x) => x !== e))}
+                  className="rounded-md p-0.5 text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-500/30"
+                  aria-label={`Remove ${e}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            <input
+              type="email"
+              value={emailDraft}
+              onChange={(e) => setEmailDraft(e.target.value)}
+              onKeyDown={handleEmailKey}
+              onPaste={handleEmailPaste}
+              onBlur={() => emailDraft.trim() && addEmail(emailDraft)}
+              placeholder={notificationEmails.length === 0 ? "admin@example.com, hr@example.com…" : "Add another…"}
+              className="flex-1 min-w-[180px] bg-transparent px-1 py-1 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none"
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+            Press <kbd className="rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-mono">Enter</kbd> or{" "}
+            <kbd className="rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-mono">,</kbd> to add.
+            {notificationEmails.length === 0 && (
+              <span className="ml-1 text-amber-600 dark:text-amber-400">Empty list will fall back to the <code>ADMIN_EMAILS</code> env value.</span>
+            )}
           </p>
         </SettingCard>
 
