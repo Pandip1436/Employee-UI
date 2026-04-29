@@ -15,9 +15,28 @@ export default function TimerWidget() {
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
 
+  const refreshRunning = () =>
+    timerApi
+      .getRunning()
+      .then((res) => setRunning(res.data.data ?? null))
+      .catch(() => {});
+
   useEffect(() => {
-    timerApi.getRunning().then((res) => setRunning(res.data.data ?? null)).catch(() => {});
+    refreshRunning();
     projectApi.getAll({ limit: 100 }).then((res) => setProjects(res.data.data)).catch(() => {});
+  }, []);
+
+  // Re-sync with the server when the tab regains focus or becomes visible —
+  // covers the case where the timer was stopped from another tab/device.
+  useEffect(() => {
+    const onFocus = () => refreshRunning();
+    const onVisible = () => { if (document.visibilityState === "visible") refreshRunning(); };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, []);
 
   useEffect(() => {
@@ -44,7 +63,12 @@ export default function TimerWidget() {
       setRunning(res.data.data!);
       setDescription("");
       toast.success("Timer started!");
-    } catch { /* interceptor */ } finally { setLoading(false); }
+    } catch (err: unknown) {
+      // If a timer is already running (e.g. started from another tab), pull it in
+      // so the user sees the correct running state instead of staying on the start screen.
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 400) await refreshRunning();
+    } finally { setLoading(false); }
   };
 
   const handleStop = async () => {
@@ -54,7 +78,14 @@ export default function TimerWidget() {
       await timerApi.stop(running._id);
       setRunning(null);
       toast.success("Timer stopped! Timesheet entry created.");
-    } catch { /* interceptor */ } finally { setLoading(false); }
+    } catch (err: unknown) {
+      // Server says it's already stopped / not found — our state is stale (e.g. another tab stopped it).
+      // Re-sync and clear so the UI doesn't get stuck.
+      const status = (err as { response?: { status?: number } })?.response?.status;
+      if (status === 400 || status === 404) {
+        await refreshRunning();
+      }
+    } finally { setLoading(false); }
   };
 
   return (
