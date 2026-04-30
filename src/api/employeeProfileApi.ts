@@ -23,6 +23,12 @@ export const employeeProfileApi = {
       headers: { "Content-Type": "multipart/form-data" },
     }),
 
+  deleteOfferLetter: () =>
+    api.delete<ApiResponse<EmployeeProfile>>("/employee-profile/me/offer-letter"),
+
+  deleteCertificate: (index: number) =>
+    api.delete<ApiResponse<EmployeeProfile>>(`/employee-profile/me/certificates/${index}`),
+
   getByUserId: (id: string) =>
     api.get<ApiResponse<EmployeeProfile>>(`/employee-profile/${id}`),
 

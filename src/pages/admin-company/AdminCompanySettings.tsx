@@ -113,6 +113,8 @@ const sig = (s: {
   workingDays: string[];
   officeStartTime: string;
   graceMinutes: number;
+  autoClockOutTime: string;
+  autoMarkAbsentTime: string;
   notificationEmails: string[];
 }) =>
   JSON.stringify({
@@ -122,6 +124,8 @@ const sig = (s: {
     workingDays: [...s.workingDays].sort(),
     officeStartTime: s.officeStartTime,
     graceMinutes: s.graceMinutes,
+    autoClockOutTime: s.autoClockOutTime,
+    autoMarkAbsentTime: s.autoMarkAbsentTime,
     notificationEmails: [...s.notificationEmails].sort(),
   });
 
@@ -138,6 +142,8 @@ export default function AdminCompanySettings() {
   const [workingDays, setWorkingDays] = useState<string[]>(["Mon", "Tue", "Wed", "Thu", "Fri"]);
   const [officeStartTime, setOfficeStartTime] = useState("09:00");
   const [graceMinutes, setGraceMinutes] = useState(0);
+  const [autoClockOutTime, setAutoClockOutTime] = useState("19:00");
+  const [autoMarkAbsentTime, setAutoMarkAbsentTime] = useState("01:00");
   const [notificationEmails, setNotificationEmails] = useState<string[]>([]);
   const [emailDraft, setEmailDraft] = useState("");
   const [origSig, setOrigSig] = useState<string>("");
@@ -156,6 +162,8 @@ export default function AdminCompanySettings() {
             workingDays: d.workingDays || ["Mon", "Tue", "Wed", "Thu", "Fri"],
             officeStartTime: d.attendancePolicy?.officeStartTime || "09:00",
             graceMinutes: Number.isFinite(d.attendancePolicy?.graceMinutes) ? d.attendancePolicy.graceMinutes : 0,
+            autoClockOutTime: d.attendancePolicy?.autoClockOutTime || "19:00",
+            autoMarkAbsentTime: d.attendancePolicy?.autoMarkAbsentTime || "01:00",
             notificationEmails: d.notificationEmails || [],
           };
           setCompanyName(next.companyName);
@@ -164,6 +172,8 @@ export default function AdminCompanySettings() {
           setWorkingDays(next.workingDays);
           setOfficeStartTime(next.officeStartTime);
           setGraceMinutes(next.graceMinutes);
+          setAutoClockOutTime(next.autoClockOutTime);
+          setAutoMarkAbsentTime(next.autoMarkAbsentTime);
           setNotificationEmails(next.notificationEmails);
           setOrigSig(sig(next));
         }
@@ -177,8 +187,8 @@ export default function AdminCompanySettings() {
   }, []);
 
   const dirty = useMemo(
-    () => sig({ companyName, timezone, fiscalYearStart, workingDays, officeStartTime, graceMinutes, notificationEmails }) !== origSig,
-    [companyName, timezone, fiscalYearStart, workingDays, officeStartTime, graceMinutes, notificationEmails, origSig]
+    () => sig({ companyName, timezone, fiscalYearStart, workingDays, officeStartTime, graceMinutes, autoClockOutTime, autoMarkAbsentTime, notificationEmails }) !== origSig,
+    [companyName, timezone, fiscalYearStart, workingDays, officeStartTime, graceMinutes, autoClockOutTime, autoMarkAbsentTime, notificationEmails, origSig]
   );
 
   useEffect(() => {
@@ -242,9 +252,10 @@ export default function AdminCompanySettings() {
 
   const handleSave = async () => {
     if (!companyName.trim()) return toast.error("Company name is required");
-    if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(officeStartTime)) {
-      return toast.error("Office start time must be in HH:MM format");
-    }
+    const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+    if (!HHMM.test(officeStartTime)) return toast.error("Office start time must be in HH:MM format");
+    if (!HHMM.test(autoClockOutTime)) return toast.error("Auto clock-out time must be in HH:MM format");
+    if (!HHMM.test(autoMarkAbsentTime)) return toast.error("Auto-mark absent time must be in HH:MM format");
     if (graceMinutes < 0 || graceMinutes > 240) {
       return toast.error("Grace period must be between 0 and 240 minutes");
     }
@@ -255,10 +266,10 @@ export default function AdminCompanySettings() {
         timezone,
         fiscalYearStart,
         workingDays,
-        attendancePolicy: { officeStartTime, graceMinutes },
+        attendancePolicy: { officeStartTime, graceMinutes, autoClockOutTime, autoMarkAbsentTime },
         notificationEmails,
       } as Partial<CompanySettingsData>);
-      setOrigSig(sig({ companyName, timezone, fiscalYearStart, workingDays, officeStartTime, graceMinutes, notificationEmails }));
+      setOrigSig(sig({ companyName, timezone, fiscalYearStart, workingDays, officeStartTime, graceMinutes, autoClockOutTime, autoMarkAbsentTime, notificationEmails }));
       toast.success("Company settings saved");
       await refreshCompany();
     } catch {
@@ -383,7 +394,7 @@ export default function AdminCompanySettings() {
         <SettingCard
           icon={Clock}
           title="Attendance Policy"
-          subtitle="Office start time & grace period for late detection"
+          subtitle="Office hours, grace period, and automation schedule"
           tint="emerald"
         >
           <div className="grid grid-cols-2 gap-3">
@@ -411,15 +422,48 @@ export default function AdminCompanySettings() {
                 className={input}
               />
             </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+                Auto clock-out
+              </label>
+              <input
+                type="time"
+                value={autoClockOutTime}
+                onChange={(e) => setAutoClockOutTime(e.target.value)}
+                className={input}
+              />
+            </div>
+            <div>
+              <label className="block text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
+                Auto-mark absent
+              </label>
+              <input
+                type="time"
+                value={autoMarkAbsentTime}
+                onChange={(e) => setAutoMarkAbsentTime(e.target.value)}
+                className={input}
+              />
+            </div>
           </div>
-          <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
-            Clock-ins after{" "}
-            <span className="font-bold text-gray-900 dark:text-white tabular-nums">
-              {officeStartTime}
-              {graceMinutes > 0 ? ` + ${graceMinutes}m` : ""}
-            </span>{" "}
-            (in <span className="font-semibold">{timezone}</span>) are flagged as late.
-          </p>
+          <div className="mt-3 space-y-1 text-[11px] text-gray-500 dark:text-gray-400">
+            <p>
+              <span className="font-semibold text-gray-700 dark:text-gray-300">Late:</span> clock-ins after{" "}
+              <span className="font-bold text-gray-900 dark:text-white tabular-nums">
+                {officeStartTime}{graceMinutes > 0 ? ` + ${graceMinutes}m` : ""}
+              </span>.
+            </p>
+            <p>
+              <span className="font-semibold text-gray-700 dark:text-gray-300">Auto clock-out:</span>{" "}
+              <span className="font-bold text-gray-900 dark:text-white tabular-nums">{autoClockOutTime}</span>{" "}
+              (Mon–Sat) closes any open clock-ins.
+            </p>
+            <p>
+              <span className="font-semibold text-gray-700 dark:text-gray-300">Auto-mark absent:</span>{" "}
+              <span className="font-bold text-gray-900 dark:text-white tabular-nums">{autoMarkAbsentTime}</span>{" "}
+              (daily) marks the previous day for everyone who didn't clock in.
+            </p>
+            <p className="pt-1">All times in <span className="font-semibold">{timezone}</span>.</p>
+          </div>
         </SettingCard>
 
         {/* Working Days */}

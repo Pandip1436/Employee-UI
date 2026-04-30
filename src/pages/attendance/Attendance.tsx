@@ -3,7 +3,18 @@ import { LogIn, LogOut, Clock, Calendar, Timer, X, Activity, Users, AlertTriangl
 import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
 import { useAuth } from "../../context/AuthContext";
+import { useCompany } from "../../context/CompanyContext";
 import type { AttendanceRecord, Pagination, User, LiveStatusData, LiveEmployee } from "../../types";
+
+function formatHHMMTo12h(hhmm: string): string {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || "");
+  if (!m) return hhmm;
+  const h24 = Number(m[1]);
+  const min = m[2];
+  const period = h24 >= 12 ? "PM" : "AM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${min} ${period}`;
+}
 import toast from "react-hot-toast";
 import AttendanceCalendar from "../attendance-calendar/AttendanceCalendar";
 
@@ -28,6 +39,8 @@ const labelCls = "text-[10px] font-semibold uppercase tracking-[0.12em] text-gra
 
 export default function Attendance() {
   const { isAdmin, isManager } = useAuth();
+  const { attendancePolicy } = useCompany();
+  const autoClockOutLabel = formatHHMMTo12h(attendancePolicy.autoClockOutTime);
   const canViewAll = isAdmin || isManager;
   const [today, setToday] = useState<AttendanceRecord | null>(null);
   const [history, setHistory] = useState<AttendanceRecord[]>([]);
@@ -223,7 +236,7 @@ export default function Attendance() {
                 <Power className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-white">Auto clock-out at 7:00 PM</p>
+                <p className="text-xs font-semibold text-white">Auto clock-out at {autoClockOutLabel}</p>
                 <p className="text-[11px] text-indigo-200/70 leading-snug">
                   {autoClockOut
                     ? "Open shifts will be closed automatically"

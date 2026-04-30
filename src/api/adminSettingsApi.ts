@@ -11,7 +11,12 @@ export interface CompanySettingsData {
   designations: { name: string; level: number; grade: string }[];
   roles: { name: string; description?: string; permissions: string[] }[];
   leavePolicy: Record<string, { total: number; carryForward: boolean; maxCarry?: number }>;
-  attendancePolicy: { officeStartTime: string; graceMinutes: number };
+  attendancePolicy: {
+    officeStartTime: string;
+    graceMinutes: number;
+    autoClockOutTime: string;
+    autoMarkAbsentTime: string;
+  };
   notificationEmails: string[];
   emailTemplates: { key: string; subject: string; body: string }[];
 }
@@ -27,7 +32,7 @@ export interface AuditLogEntry {
 
 export const adminSettingsApi = {
   getPublicCompanyInfo: () =>
-    api.get<ApiResponse<Pick<CompanySettingsData, "companyName" | "logo" | "timezone" | "fiscalYearStart" | "workingDays">>>("/company-info"),
+    api.get<ApiResponse<Pick<CompanySettingsData, "companyName" | "logo" | "timezone" | "fiscalYearStart" | "workingDays" | "attendancePolicy">>>("/company-info"),
   getCompanySettings: () => api.get<ApiResponse<CompanySettingsData>>("/admin/settings/company"),
   updateCompanySettings: (data: Partial<CompanySettingsData>) => api.put<ApiResponse<CompanySettingsData>>("/admin/settings/company", data),
   getDepartments: () => api.get<ApiResponse<CompanySettingsData["departments"]>>("/admin/settings/departments"),

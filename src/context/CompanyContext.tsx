@@ -7,6 +7,12 @@ export interface CompanyInfo {
   timezone: string;
   fiscalYearStart: string;
   workingDays: string[];
+  attendancePolicy: {
+    officeStartTime: string;
+    graceMinutes: number;
+    autoClockOutTime: string;
+    autoMarkAbsentTime: string;
+  };
 }
 
 const DEFAULTS: CompanyInfo = {
@@ -15,6 +21,12 @@ const DEFAULTS: CompanyInfo = {
   timezone: "UTC",
   fiscalYearStart: "January",
   workingDays: ["Mon", "Tue", "Wed", "Thu", "Fri"],
+  attendancePolicy: {
+    officeStartTime: "09:00",
+    graceMinutes: 0,
+    autoClockOutTime: "19:00",
+    autoMarkAbsentTime: "01:00",
+  },
 };
 
 interface CompanyContextValue extends CompanyInfo {
@@ -50,6 +62,7 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
           timezone: d.timezone || DEFAULTS.timezone,
           fiscalYearStart: d.fiscalYearStart || DEFAULTS.fiscalYearStart,
           workingDays: d.workingDays?.length ? d.workingDays : DEFAULTS.workingDays,
+          attendancePolicy: { ...DEFAULTS.attendancePolicy, ...(d.attendancePolicy || {}) },
         };
         setInfo(merged);
         localStorage.setItem("companyInfo", JSON.stringify(merged));

@@ -5,6 +5,7 @@ import {
   Eye, Download, ExternalLink, Loader2, Sparkles, CheckCircle2, AlertCircle
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 import { employeeProfileApi } from "../../api/employeeProfileApi";
 import type { EmployeeProfile, WorkHistoryEntry, CertificationEntry } from "../../types";
 import toast from "react-hot-toast";
@@ -31,6 +32,7 @@ const readLabelCls = "text-xs text-gray-500 dark:text-gray-400";
 
 export default function Profile() {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
   const [activeTab, setActiveTab] = useState<TabKey>("personal");
   const [editing, setEditing] = useState(false);
@@ -104,6 +106,36 @@ export default function Profile() {
       const res = await employeeProfileApi.uploadCertificates(fd);
       setProfile(res.data.data!);
       toast.success("Certificates uploaded!");
+    } catch { /* interceptor */ }
+  };
+
+  const handleDeleteOfferLetter = async () => {
+    const ok = await confirm({
+      title: "Remove offer letter?",
+      description: "This will permanently delete the uploaded offer letter. This action cannot be undone.",
+      confirmLabel: "Remove",
+      cancelLabel: "Keep",
+    });
+    if (!ok) return;
+    try {
+      const res = await employeeProfileApi.deleteOfferLetter();
+      setProfile(res.data.data!);
+      toast.success("Offer letter removed");
+    } catch { /* interceptor */ }
+  };
+
+  const handleDeleteCertificate = async (index: number) => {
+    const ok = await confirm({
+      title: `Remove Certificate ${index + 1}?`,
+      description: "This will permanently delete this certificate. This action cannot be undone.",
+      confirmLabel: "Remove",
+      cancelLabel: "Keep",
+    });
+    if (!ok) return;
+    try {
+      const res = await employeeProfileApi.deleteCertificate(index);
+      setProfile(res.data.data!);
+      toast.success("Certificate removed");
     } catch { /* interceptor */ }
   };
 
@@ -784,13 +816,22 @@ export default function Profile() {
                     />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-700 dark:text-gray-300">Uploaded</p>
-                      <button
-                        type="button"
-                        onClick={() => setPreview({ url: profile.offerLetterUrl!, name: "Offer Letter" })}
-                        className="mt-0.5 inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
-                      >
-                        <Eye className="h-3.5 w-3.5" /> Preview
-                      </button>
+                      <div className="mt-0.5 flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setPreview({ url: profile.offerLetterUrl!, name: "Offer Letter" })}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
+                        >
+                          <Eye className="h-3.5 w-3.5" /> Preview
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleDeleteOfferLetter}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:underline"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" /> Remove
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ) : (
@@ -808,13 +849,23 @@ export default function Profile() {
                 {(profile?.certificateUrls?.length || 0) > 0 ? (
                   <div className="mt-2 grid grid-cols-3 gap-2 sm:grid-cols-4">
                     {profile!.certificateUrls!.map((url, i) => (
-                      <DocThumb
-                        key={i}
-                        url={url}
-                        name={`Certificate ${i + 1}`}
-                        size="lg"
-                        onOpen={() => setPreview({ url, name: `Certificate ${i + 1}` })}
-                      />
+                      <div key={i} className="group/cert relative">
+                        <DocThumb
+                          url={url}
+                          name={`Certificate ${i + 1}`}
+                          size="lg"
+                          onOpen={() => setPreview({ url, name: `Certificate ${i + 1}` })}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCertificate(i)}
+                          aria-label={`Remove Certificate ${i + 1}`}
+                          title="Remove certificate"
+                          className="absolute right-1.5 top-1.5 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-rose-600 text-white opacity-0 shadow-md ring-2 ring-white transition-opacity hover:bg-rose-700 group-hover/cert:opacity-100 dark:ring-gray-900"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     ))}
                   </div>
                 ) : (
