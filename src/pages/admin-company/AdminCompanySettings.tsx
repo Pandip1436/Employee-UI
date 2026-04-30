@@ -4,7 +4,6 @@ import {
   Loader2,
   Building2,
   Globe,
-  Calendar,
   Briefcase,
   Sparkles,
   AlertCircle,
@@ -35,11 +34,6 @@ const TIMEZONES = [
   "Asia/Dubai",
   "Australia/Sydney",
   "Pacific/Auckland",
-];
-
-const MONTHS = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
 ];
 
 const DAYS = [
@@ -309,7 +303,7 @@ export default function AdminCompanySettings() {
               Company Settings
             </h1>
             <p className="mt-2 max-w-xl text-sm text-indigo-100/80 sm:text-base">
-              Configure your organization's identity, timezone, fiscal calendar, and working week —
+              Configure your organization's identity, timezone, attendance policy, and working week —
               the foundations every other module relies on.
             </p>
           </div>
@@ -385,37 +379,6 @@ export default function AdminCompanySettings() {
           </p>
         </SettingCard>
 
-        {/* Fiscal Year Start */}
-        <SettingCard
-          icon={Calendar}
-          title="Fiscal Year Start"
-          subtitle="Month when your fiscal year begins"
-          tint="amber"
-        >
-          <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4">
-            {MONTHS.map((m) => {
-              const active = fiscalYearStart === m;
-              return (
-                <button
-                  key={m}
-                  type="button"
-                  onClick={() => setFiscalYearStart(m)}
-                  className={`rounded-lg px-2 py-2 text-xs font-semibold transition-all ${
-                    active
-                      ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-md shadow-amber-500/30"
-                      : "bg-gray-100 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-800 ring-1 ring-gray-200/50 dark:ring-gray-700/50"
-                  }`}
-                >
-                  {m.slice(0, 3)}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-3 text-[11px] text-gray-500 dark:text-gray-400">
-            Selected: <span className="font-bold text-gray-900 dark:text-white">{fiscalYearStart}</span>
-          </p>
-        </SettingCard>
-
         {/* Attendance Policy */}
         <SettingCard
           icon={Clock}
@@ -456,51 +419,6 @@ export default function AdminCompanySettings() {
               {graceMinutes > 0 ? ` + ${graceMinutes}m` : ""}
             </span>{" "}
             (in <span className="font-semibold">{timezone}</span>) are flagged as late.
-          </p>
-        </SettingCard>
-
-        {/* Notification Emails */}
-        <SettingCard
-          icon={Mail}
-          title="Notification Emails"
-          subtitle="Recipients for clock-in/out and late alerts"
-          tint="indigo"
-          className="md:col-span-2"
-        >
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-2.5 py-2 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
-            {notificationEmails.map((e) => (
-              <span
-                key={e}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/15 px-2 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/20"
-              >
-                {e}
-                <button
-                  type="button"
-                  onClick={() => setNotificationEmails((prev) => prev.filter((x) => x !== e))}
-                  className="rounded-md p-0.5 text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-500/30"
-                  aria-label={`Remove ${e}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-              </span>
-            ))}
-            <input
-              type="email"
-              value={emailDraft}
-              onChange={(e) => setEmailDraft(e.target.value)}
-              onKeyDown={handleEmailKey}
-              onPaste={handleEmailPaste}
-              onBlur={() => emailDraft.trim() && addEmail(emailDraft)}
-              placeholder={notificationEmails.length === 0 ? "admin@example.com, hr@example.com…" : "Add another…"}
-              className="flex-1 min-w-[180px] bg-transparent px-1 py-1 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none"
-            />
-          </div>
-          <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
-            Press <kbd className="rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-mono">Enter</kbd> or{" "}
-            <kbd className="rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-mono">,</kbd> to add.
-            {notificationEmails.length === 0 && (
-              <span className="ml-1 text-amber-600 dark:text-amber-400">Empty list will fall back to the <code>ADMIN_EMAILS</code> env value.</span>
-            )}
           </p>
         </SettingCard>
 
@@ -550,6 +468,51 @@ export default function AdminCompanySettings() {
               Reset to Mon–Fri
             </button>
           </div>
+        </SettingCard>
+
+        {/* Notification Emails */}
+        <SettingCard
+          icon={Mail}
+          title="Notification Emails"
+          subtitle="Recipients for clock-in/out and late alerts"
+          tint="indigo"
+          className="md:col-span-2"
+        >
+          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-2.5 py-2 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
+            {notificationEmails.map((e) => (
+              <span
+                key={e}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-500/15 px-2 py-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/20"
+              >
+                {e}
+                <button
+                  type="button"
+                  onClick={() => setNotificationEmails((prev) => prev.filter((x) => x !== e))}
+                  className="rounded-md p-0.5 text-indigo-500 hover:bg-indigo-100 dark:hover:bg-indigo-500/30"
+                  aria-label={`Remove ${e}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            <input
+              type="email"
+              value={emailDraft}
+              onChange={(e) => setEmailDraft(e.target.value)}
+              onKeyDown={handleEmailKey}
+              onPaste={handleEmailPaste}
+              onBlur={() => emailDraft.trim() && addEmail(emailDraft)}
+              placeholder={notificationEmails.length === 0 ? "admin@example.com, hr@example.com…" : "Add another…"}
+              className="flex-1 min-w-[180px] bg-transparent px-1 py-1 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none"
+            />
+          </div>
+          <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
+            Press <kbd className="rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-mono">Enter</kbd> or{" "}
+            <kbd className="rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-mono">,</kbd> to add.
+            {notificationEmails.length === 0 && (
+              <span className="ml-1 text-amber-600 dark:text-amber-400">Empty list will fall back to the <code>ADMIN_EMAILS</code> env value.</span>
+            )}
+          </p>
         </SettingCard>
       </div>
 
