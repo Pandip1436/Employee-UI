@@ -13,6 +13,7 @@ import {
 import { attendanceApi } from "../../api/attendanceApi";
 import { holidayApi } from "../../api/holidayApi";
 import { leaveApi } from "../../api/leaveApi";
+import { useCompany } from "../../context/CompanyContext";
 import type { AttendanceRecord, Holiday, LeaveRequest } from "../../types";
 
 /* ── Status style map ── */
@@ -121,6 +122,7 @@ const labelClasses =
 
 /* ── Component ── */
 export default function AttendanceCalendar() {
+  const { isWorkingDay } = useCompany();
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
@@ -212,10 +214,9 @@ export default function AttendanceCalendar() {
   function getCellInfo(dayNum: number) {
     const d = new Date(year, month, dayNum);
     const key = toDateKey(d);
-    const dow = d.getDay();
     const isFuture = d > today;
     const isToday = isSameDate(key, toDateKey(today));
-    const isWeekend = dow === 0 || dow === 6;
+    const isWeekend = !isWorkingDay(d);
     const holiday = holidayMap.get(key);
     const record = recordMap.get(key);
     const leave = leaveMap.get(key);

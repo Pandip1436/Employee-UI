@@ -40,7 +40,8 @@ const CompanyContext = createContext<CompanyContextValue>({
   isWorkingDay: () => true,
 });
 
-const DAY_MAP: Record<number, string> = { 0: "Sun", 1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat" };
+const DAY_SHORT: Record<number, string> = { 0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat" };
+const DAY_FULL: Record<number, string> = { 0: "sunday", 1: "monday", 2: "tuesday", 3: "wednesday", 4: "thursday", 5: "friday", 6: "saturday" };
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const [info, setInfo] = useState<CompanyInfo>(() => {
@@ -77,7 +78,12 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const isWorkingDay = (date: Date) => info.workingDays.includes(DAY_MAP[date.getDay()]);
+  const isWorkingDay = (date: Date) => {
+    const dow = date.getDay();
+    const list = (info.workingDays || []).map((d) => d.toLowerCase());
+    if (!list.length) return dow >= 1 && dow <= 5;
+    return list.includes(DAY_SHORT[dow]) || list.includes(DAY_FULL[dow]);
+  };
 
   return (
     <CompanyContext.Provider value={{ ...info, refresh, isWorkingDay }}>
