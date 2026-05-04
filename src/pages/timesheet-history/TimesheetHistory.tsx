@@ -13,6 +13,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { fmtHours } from "../../utils/format";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { WeeklyTimesheetData, Pagination } from "../../types";
 import { useConfirm } from "../../context/ConfirmContext";
@@ -240,7 +241,7 @@ export default function TimesheetHistory() {
                         <td className="px-5 py-3">
                           <span className="inline-flex items-center gap-1.5 text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">
                             <Clock className="h-3.5 w-3.5" />
-                            {ts.totalHours}h
+                            {fmtHours(ts.totalHours)}
                           </span>
                         </td>
                         <td className="px-5 py-3">
@@ -317,7 +318,7 @@ export default function TimesheetHistory() {
                       </div>
                     </div>
                     <span className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">
-                      {ts.totalHours}h
+                      {fmtHours(ts.totalHours)}
                     </span>
                   </div>
 

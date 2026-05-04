@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { Search, Users, UserCheck, UserX, Clock, AlertTriangle, CheckCircle2, X, Filter, Calendar } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import type { LiveStatusData, LiveEmployee } from "../../types";
+import { fmtHours } from "../../utils/format";
 
 function todayKey() {
   const d = new Date();
@@ -315,7 +316,7 @@ export default function TeamAttendance() {
                     </td>
                     <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(emp.clockIn)}</td>
                     <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(emp.clockOut)}</td>
-                    <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">{emp.totalHours ? `${emp.totalHours}h` : "—"}</td>
+                    <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">{emp.totalHours ? fmtHours(emp.totalHours) : "—"}</td>
                   </tr>
                 );
               })}
@@ -352,7 +353,7 @@ export default function TeamAttendance() {
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <MiniTile label="In" value={fmtClock(emp.clockIn)} />
                 <MiniTile label="Out" value={fmtClock(emp.clockOut)} />
-                <MiniTile label="Hours" value={emp.totalHours ? `${emp.totalHours}h` : "—"} accent />
+                <MiniTile label="Hours" value={emp.totalHours ? fmtHours(emp.totalHours) : "—"} accent />
               </div>
             </div>
           );

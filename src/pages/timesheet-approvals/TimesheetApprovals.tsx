@@ -9,6 +9,7 @@ import toast from "react-hot-toast";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import { projectApi } from "../../api/projectApi";
 import type { WeeklyTimesheetData, Pagination, User, Project } from "../../types";
+import { fmtHours } from "../../utils/format";
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -328,7 +329,7 @@ export default function TimesheetApprovals() {
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
                           <Clock className="h-3 w-3" />
-                          {ts.totalHours}h
+                          {fmtHours(ts.totalHours)}
                         </span>
                         <span className="text-xs text-gray-400 dark:text-gray-500">
                           {ts.entries.length} {ts.entries.length === 1 ? "row" : "rows"}
@@ -549,7 +550,7 @@ export default function TimesheetApprovals() {
                         })}
                         <td className="py-2.5 pl-2 text-right">
                           <span className="inline-flex items-center rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 px-2.5 py-0.5 text-sm font-bold text-white shadow-sm ring-1 ring-white/10">
-                            {previewSheet.totalHours}h
+                            {fmtHours(previewSheet.totalHours)}
                           </span>
                         </td>
                       </tr>

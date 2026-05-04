@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { WeeklyTimesheetData, TimesheetEntry, Project } from "../../types";
+import { fmtHours } from "../../utils/format";
 
 /* ─── Status badge config ─── */
 const statusConfig: Record<string, { dot: string; badge: string; label: string }> = {
@@ -145,7 +146,7 @@ export default function TimesheetDetail() {
               </span>
               <span className="inline-flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500" />
-                {timesheet.totalHours} total hours
+                {fmtHours(timesheet.totalHours)} total
               </span>
             </div>
           </div>
@@ -235,7 +236,7 @@ export default function TimesheetDetail() {
                           </td>
                         ))}
                         <td className="px-4 py-4 text-center text-sm font-bold text-gray-900 dark:text-white">
-                          {rowTotal}h
+                          {fmtHours(rowTotal)}
                         </td>
                       </tr>
                     );
@@ -288,7 +289,7 @@ export default function TimesheetDetail() {
 
                     <div className="mt-3 flex items-center justify-end gap-1.5 text-sm font-bold text-gray-900 dark:text-white">
                       <Clock className="h-3.5 w-3.5 text-gray-400" />
-                      {rowTotal}h total
+                      {fmtHours(rowTotal)} total
                     </div>
                   </div>
                 );

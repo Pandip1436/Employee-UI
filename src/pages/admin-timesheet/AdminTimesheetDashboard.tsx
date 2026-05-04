@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { EmployeeTimesheetStatus } from "../../types";
+import { fmtHours } from "../../utils/format";
 
 function getMonday(d: Date) {
   const day = d.getDay();
@@ -176,7 +177,7 @@ export default function AdminTimesheetDashboard() {
               <Clock className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-gray-900 dark:text-white">{counts.totalHours}h</p>
+          <p className="text-3xl font-bold text-gray-900 dark:text-white">{fmtHours(counts.totalHours)}</p>
           <p className="text-xs text-gray-400 mt-1">logged this week</p>
         </div>
 
@@ -321,7 +322,7 @@ export default function AdminTimesheetDashboard() {
                       </td>
                       <td className="px-4 py-3.5">
                         <span className={`font-bold text-sm ${emp.totalHours >= 40 ? "text-emerald-600 dark:text-emerald-400" : emp.totalHours > 0 ? "text-amber-600 dark:text-amber-400" : "text-gray-400"}`}>
-                          {emp.totalHours > 0 ? `${emp.totalHours}h` : "—"}
+                          {emp.totalHours > 0 ? fmtHours(emp.totalHours) : "—"}
                         </span>
                         <span className="text-xs text-gray-400 ml-1">/ 40h</span>
                       </td>

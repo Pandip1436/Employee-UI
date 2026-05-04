@@ -14,6 +14,7 @@ import {
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { WeeklyTimesheetData, TimesheetEntry, Project, AdminDailyRow } from "../../types";
 import { useAuth } from "../../context/AuthContext";
+import { fmtHours } from "../../utils/format";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -177,7 +178,7 @@ function PersonalDailyView() {
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Logged</p>
-              <p className="text-xl font-bold tracking-tight">{totalDayHours}h</p>
+              <p className="text-xl font-bold tracking-tight">{fmtHours(totalDayHours)}</p>
             </div>
             <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <CalendarDays className="h-4 w-4 text-indigo-200" />
@@ -221,7 +222,7 @@ function PersonalDailyView() {
                     <p className="flex-1 truncate text-sm font-semibold text-gray-900 dark:text-white">{projectName}</p>
                     <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
                       <Clock className="h-3 w-3" />
-                      {total}h
+                      {fmtHours(total)}
                     </span>
                   </div>
                   <table className="w-full">
@@ -242,7 +243,7 @@ function PersonalDailyView() {
                             </span>
                           </td>
                           <td className="px-5 py-3 text-right text-sm font-bold tracking-tight text-gray-900 dark:text-white">
-                            {entry.hours}
+                            {fmtHours(entry.hours)}
                           </td>
                         </tr>
                       ))}
@@ -263,7 +264,7 @@ function PersonalDailyView() {
                   </div>
                   <p className="flex-1 truncate text-sm font-semibold text-gray-900 dark:text-white">{projectName}</p>
                   <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                    {entries.reduce((s, e) => s + e.hours, 0)}h
+                    {fmtHours(entries.reduce((s, e) => s + e.hours, 0))}
                   </span>
                 </div>
                 <div className="space-y-2">
@@ -271,7 +272,7 @@ function PersonalDailyView() {
                     <div key={idx} className={`${cardCls} p-4`}>
                       <div className="mb-2 flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{entry.task}</p>
-                        <span className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">{entry.hours}h</span>
+                        <span className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">{fmtHours(entry.hours)}</span>
                       </div>
                       <span className="rounded-md border border-gray-200/70 bg-gray-50/80 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300">
                         {entry.activityType}
@@ -374,7 +375,7 @@ function AdminDailyView() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {[
           { label: "Employees with entries", value: totals.employees, icon: Users, gradient: "from-indigo-500 to-purple-600" },
-          { label: "Total hours logged", value: `${totals.totalHours}h`, icon: Clock, gradient: "from-emerald-500 to-teal-600" },
+          { label: "Total hours logged", value: fmtHours(totals.totalHours), icon: Clock, gradient: "from-emerald-500 to-teal-600" },
         ].map((s) => (
           <div key={s.label} className={`${cardCls} group relative overflow-hidden p-5`}>
             <div
@@ -448,7 +449,7 @@ function AdminDailyView() {
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
                       <Clock className="h-3 w-3" />
-                      {row.totalHours}h
+                      {fmtHours(row.totalHours)}
                     </span>
                   </div>
                 </button>
@@ -482,7 +483,7 @@ function AdminDailyView() {
                               </span>
                             </td>
                             <td className="px-5 py-2.5 text-right text-sm font-bold tracking-tight text-gray-900 dark:text-white">
-                              {entry.hours}
+                              {fmtHours(entry.hours)}
                             </td>
                           </tr>
                         ))}

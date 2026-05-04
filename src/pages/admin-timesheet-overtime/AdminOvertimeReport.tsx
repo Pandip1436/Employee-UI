@@ -5,6 +5,7 @@ import {
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { OvertimeEntry } from "../../types";
 import toast from "react-hot-toast";
+import { fmtHours } from "../../utils/format";
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -94,7 +95,7 @@ export default function AdminOvertimeReport() {
           </div>
           <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Total OT</p>
-            <p className="text-xl font-bold tracking-tight">{totalOvertime.toFixed(1)}h</p>
+            <p className="text-xl font-bold tracking-tight">{fmtHours(totalOvertime)}</p>
           </div>
         </div>
       </div>
@@ -131,8 +132,8 @@ export default function AdminOvertimeReport() {
           {[
             { label: "OT Instances", value: entries.length, icon: AlertTriangle, gradient: "from-rose-500 to-pink-600" },
             { label: "Employees", value: uniqueEmployees, icon: Users, gradient: "from-indigo-500 to-purple-600" },
-            { label: "Total OT Hours", value: totalOvertime.toFixed(1), icon: Clock, gradient: "from-amber-500 to-orange-600" },
-            { label: "Max OT (week)", value: `${maxOvertime.toFixed(1)}h`, icon: TrendingUp, gradient: "from-orange-500 to-rose-600" },
+            { label: "Total OT Hours", value: fmtHours(totalOvertime), icon: Clock, gradient: "from-amber-500 to-orange-600" },
+            { label: "Max OT (week)", value: fmtHours(maxOvertime), icon: TrendingUp, gradient: "from-orange-500 to-rose-600" },
           ].map((c) => (
             <div key={c.label} className={`${cardCls} group relative overflow-hidden p-4`}>
               <div
@@ -214,12 +215,12 @@ export default function AdminOvertimeReport() {
                           </div>
                         </td>
                         <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">
-                          {e.totalHours.toFixed(1)}h
+                          {fmtHours(e.totalHours)}
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20">
                             <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                            +{e.overtime.toFixed(1)}h
+                            +{fmtHours(e.overtime)}
                           </span>
                         </td>
                       </tr>
@@ -246,7 +247,7 @@ export default function AdminOvertimeReport() {
                     </div>
                     <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20">
                       <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                      +{e.overtime.toFixed(1)}h
+                      +{fmtHours(e.overtime)}
                     </span>
                   </div>
                   <div className="grid grid-cols-2 gap-2">
@@ -259,7 +260,7 @@ export default function AdminOvertimeReport() {
                     <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
                       <p className={labelCls}>Total Hours</p>
                       <p className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">
-                        {e.totalHours.toFixed(1)}h
+                        {fmtHours(e.totalHours)}
                       </p>
                     </div>
                   </div>

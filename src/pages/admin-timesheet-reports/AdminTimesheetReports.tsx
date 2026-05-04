@@ -6,6 +6,7 @@ import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import { userApi } from "../../api/userApi";
 import type { User, WeeklyTimesheetData } from "../../types";
 import toast from "react-hot-toast";
+import { fmtHours } from "../../utils/format";
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -137,7 +138,7 @@ export default function AdminTimesheetReports() {
           </div>
           <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Total Hours</p>
-            <p className="text-xl font-bold tracking-tight">{totalHours.toFixed(0)}h</p>
+            <p className="text-xl font-bold tracking-tight">{fmtHours(totalHours)}</p>
           </div>
         </div>
       </div>
@@ -166,9 +167,9 @@ export default function AdminTimesheetReports() {
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {[
             { label: "Employees", value: aggregated.length, icon: Users, gradient: "from-indigo-500 to-purple-600" },
-            { label: "Total Hours", value: totalHours.toFixed(1), icon: Clock, gradient: "from-emerald-500 to-teal-600" },
+            { label: "Total Hours", value: fmtHours(totalHours), icon: Clock, gradient: "from-emerald-500 to-teal-600" },
             { label: "Weeks Submitted", value: totalWeeks, icon: CalendarDays, gradient: "from-sky-500 to-blue-600" },
-            { label: "Avg Hours", value: aggregated.length ? (totalHours / aggregated.length).toFixed(1) : "0", icon: BarChart3, gradient: "from-amber-500 to-orange-600" },
+            { label: "Avg Hours", value: aggregated.length ? fmtHours(totalHours / aggregated.length) : "0h", icon: BarChart3, gradient: "from-amber-500 to-orange-600" },
           ].map((c) => (
             <div key={c.label} className={`${cardCls} group relative overflow-hidden p-4`}>
               <div
@@ -246,7 +247,7 @@ export default function AdminTimesheetReports() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
-                            {r.totalHours.toFixed(1)}h
+                            {fmtHours(r.totalHours)}
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -299,7 +300,7 @@ export default function AdminTimesheetReports() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
                       <p className={labelCls}>Total Hours</p>
-                      <p className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{r.totalHours.toFixed(1)}h</p>
+                      <p className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(r.totalHours)}</p>
                     </div>
                     <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
                       <p className={labelCls}>Weeks</p>

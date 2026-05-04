@@ -9,6 +9,7 @@ import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { WeeklyTimesheetData } from "../../types";
 import TimesheetDaily from "../timesheet-daily/TimesheetDaily";
 import TimesheetHistory from "../timesheet-history/TimesheetHistory";
+import { fmtHours } from "../../utils/format";
 
 const statusStyle: Record<string, { bg: string; dot: string; gradient: string }> = {
   draft: {
@@ -158,7 +159,7 @@ export default function TimesheetHome() {
             {[
               {
                 label: "This Week",
-                value: current ? `${current.totalHours}h` : "0h",
+                value: current ? fmtHours(current.totalHours) : "0h",
                 sub: current ? currentWeekLabel : "No entries yet",
                 icon: Clock,
                 gradient: "from-indigo-500 to-purple-600",
@@ -260,7 +261,7 @@ export default function TimesheetHome() {
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
-                        <span className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{r.totalHours}h</span>
+                        <span className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(r.totalHours)}</span>
                         <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold capitalize ${s.bg}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
                           {r.status}

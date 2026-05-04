@@ -1,10 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Clock, FolderKanban, CheckCircle, AlertCircle, CalendarDays, FileText, LogIn,
   ArrowRight, User, UserCheck, History, Home, PartyPopper, TrendingUp, BarChart3,
-  Heart,
+  Heart, LogOut, Loader2, CheckCircle2,
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
+import toast from "react-hot-toast";
+import { fmtHours } from "../../utils/format";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from "recharts";
@@ -27,15 +29,61 @@ export default function Dashboard() {
   const [weekly, setWeekly] = useState<WeeklySummary | null>(null);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
   const [attendanceWeek, setAttendanceWeek] = useState<AttendanceRecord[]>([]);
+  const [today, setToday] = useState<AttendanceRecord | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [clocking, setClocking] = useState(false);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const refreshKpis = () =>
+    dashboardApi.getEmployeeKpis().then((r) => setKpis(r.data.data ?? null)).catch(() => {});
 
   useEffect(() => {
-    dashboardApi.getEmployeeKpis().then((r) => setKpis(r.data.data ?? null)).catch(() => { /* interceptor */ });
+    refreshKpis();
     reportApi.getWeeklySummary().then((r) => setWeekly(r.data.data!)).catch(() => { /* interceptor */ });
     leaveApi.getBalance().then((r) => { if (r.data.data) setLeaveBalance(r.data.data); }).catch(() => { /* interceptor */ });
+    attendanceApi.getMyToday().then((r) => setToday(r.data.data ?? null)).catch(() => {});
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     attendanceApi.getMyHistory({ month, limit: 200 }).then((r) => setAttendanceWeek(r.data.data || [])).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (today?.clockIn && !today?.clockOut) {
+      const start = new Date(today.clockIn).getTime();
+      const tick = () => setElapsed(Math.floor((Date.now() - start) / 1000));
+      tick();
+      intervalRef.current = setInterval(tick, 1000);
+      return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+    }
+    setElapsed(0);
+  }, [today]);
+
+  const fmtElapsed = (s: number) => {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  };
+
+  const handleClockIn = async () => {
+    setClocking(true);
+    try {
+      const res = await attendanceApi.clockIn();
+      const data = res.data.data!;
+      setToday(data);
+      if (data.isLate) toast.error(`You're late by ${data.lateByMinutes} minutes!`, { duration: 5000 });
+      else toast.success("Clocked in on time!");
+      refreshKpis();
+    } catch { /* interceptor */ } finally { setClocking(false); }
+  };
+
+  const handleClockOut = async () => {
+    setClocking(true);
+    try {
+      const res = await attendanceApi.clockOut();
+      setToday(res.data.data!);
+      toast.success("Clocked out!");
+      refreshKpis();
+    } catch { /* interceptor */ } finally { setClocking(false); }
+  };
 
   // Build Mon–Fri bars from attendance clock-in hours for current work week
   const barData = (() => {
@@ -108,22 +156,41 @@ export default function Dashboard() {
             <p className="mt-1 text-sm text-indigo-200/70">Here's your work overview for today</p>
           </div>
           <div className="flex items-center gap-3">
-            {kpis?.todayStatus ? (
-              <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Today</p>
-                <p className="text-base font-bold capitalize">{kpis.todayStatus.status}</p>
-              </div>
-            ) : (
-              <Link
-                to="/attendance"
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+            {!today?.clockIn ? (
+              <button
+                type="button"
+                onClick={handleClockIn}
+                disabled={clocking}
+                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98] disabled:opacity-60"
               >
-                <LogIn className="h-4 w-4" /> Clock In
-              </Link>
+                {clocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                Clock In
+              </button>
+            ) : !today?.clockOut ? (
+              <>
+                <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Elapsed</p>
+                  <p className="font-mono text-base font-bold tracking-wider">{fmtElapsed(elapsed)}</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClockOut}
+                  disabled={clocking}
+                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/15 transition-all hover:shadow-xl hover:shadow-rose-500/40 active:scale-[0.98] disabled:opacity-60"
+                >
+                  {clocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+                  Clock Out
+                </button>
+              </>
+            ) : (
+              <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                <CheckCircle2 className="h-4 w-4" />
+                Day Complete
+              </div>
             )}
             <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">This Month</p>
-              <p className="text-base font-bold">{kpis?.totalHoursThisMonth || 0}h</p>
+              <p className="text-base font-bold">{fmtHours(kpis?.totalHoursThisMonth ?? 0)}</p>
             </div>
           </div>
         </div>
@@ -133,7 +200,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         {[
           { label: "Attendance", value: `${kpis?.attendancePercent || 0}%`, sub: `${kpis?.attendanceDays || 0} days this month`, icon: CheckCircle, gradient: "from-emerald-500 to-teal-600" },
-          { label: "Hours Logged", value: `${kpis?.totalHoursThisMonth || 0}h`, sub: "This month", icon: Clock, gradient: "from-indigo-500 to-purple-600" },
+          { label: "Hours Logged", value: fmtHours(kpis?.totalHoursThisMonth ?? 0), sub: "This month", icon: Clock, gradient: "from-indigo-500 to-purple-600" },
           { label: "Leaves Taken", value: `${kpis?.leaveDaysTaken || 0}`, sub: "This month", icon: CalendarDays, gradient: "from-amber-500 to-orange-600" },
           { label: "Pending TS", value: `${kpis?.pendingTimesheets || 0}`, sub: "Draft sheets", icon: AlertCircle, gradient: "from-rose-500 to-pink-600" },
         ].map((s) => (

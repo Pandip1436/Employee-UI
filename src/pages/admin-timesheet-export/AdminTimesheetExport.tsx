@@ -7,6 +7,7 @@ import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import { userApi } from "../../api/userApi";
 import type { User, WeeklyTimesheetData } from "../../types";
 import toast from "react-hot-toast";
+import { fmtHours } from "../../utils/format";
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -274,7 +275,7 @@ export default function AdminTimesheetExport() {
         {[
           { label: "Total Records", value: data.length, icon: BarChart3, gradient: "from-indigo-500 to-purple-600" },
           { label: "Employees", value: uniqueEmps, icon: Users, gradient: "from-sky-500 to-blue-600" },
-          { label: "Total Hours", value: totalHours.toFixed(1), icon: Clock, gradient: "from-emerald-500 to-teal-600" },
+          { label: "Total Hours", value: fmtHours(totalHours), icon: Clock, gradient: "from-emerald-500 to-teal-600" },
           { label: "Approved", value: approvedCount, icon: CheckCircle2, gradient: "from-amber-500 to-orange-600" },
         ].map((c) => (
           <div key={c.label} className={`${cardCls} group relative overflow-hidden p-4`}>
@@ -370,7 +371,7 @@ export default function AdminTimesheetExport() {
                         </td>
                         <td className="px-4 py-3">
                           <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
-                            {ts.totalHours.toFixed(1)}h
+                            {fmtHours(ts.totalHours)}
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -422,7 +423,7 @@ export default function AdminTimesheetExport() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
                       <p className={labelCls}>Hours</p>
-                      <p className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{ts.totalHours.toFixed(1)}h</p>
+                      <p className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(ts.totalHours)}</p>
                     </div>
                     <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
                       <p className={labelCls}>Department</p>

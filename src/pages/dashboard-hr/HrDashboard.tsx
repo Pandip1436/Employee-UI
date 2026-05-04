@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { dashboardApi, type HrStats, type PendingApprovalItem } from "../../api/dashboardApi";
 import { useCompany } from "../../context/CompanyContext";
+import { fmtHours } from "../../utils/format";
 
 type Anniversary = { _id: string; name: string; email: string; department?: string; years: number; eventDate: string };
 
@@ -393,7 +394,7 @@ export default function HrDashboard() {
                       <Initials name={t.employee.name} />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{t.employee.name}</p>
-                        <p className="truncate text-xs text-gray-500 dark:text-gray-400">Timesheet · {t.totalHours ?? 0}h</p>
+                        <p className="truncate text-xs text-gray-500 dark:text-gray-400">Timesheet · {fmtHours(t.totalHours ?? 0)}</p>
                       </div>
                     </div>
                     <span className="inline-flex shrink-0 items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">

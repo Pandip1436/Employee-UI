@@ -7,6 +7,7 @@ import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
 import type { User } from "../../types";
 import toast from "react-hot-toast";
+import { fmtHours } from "../../utils/format";
 
 type Period = "daily" | "weekly" | "monthly";
 
@@ -224,7 +225,7 @@ export default function AttendanceReports() {
             { label: "Employees", value: total, icon: Users, gradient: "from-indigo-500 to-purple-600" },
             { label: "Avg Present", value: avg((e) => e.presentDays), icon: CheckCircle2, gradient: "from-emerald-500 to-teal-600" },
             { label: "Avg Late", value: avg((e) => e.lateDays), icon: AlertTriangle, gradient: "from-amber-500 to-orange-600" },
-            { label: "Avg Hours", value: `${avg((e) => e.totalHours)}h`, icon: Clock, gradient: "from-sky-500 to-blue-600" },
+            { label: "Avg Hours", value: fmtHours(avg((e) => e.totalHours)), icon: Clock, gradient: "from-sky-500 to-blue-600" },
           ].map((c) => (
             <div key={c.label} className={`${cardCls} group relative overflow-hidden p-5`}>
               <div
@@ -308,7 +309,7 @@ export default function AttendanceReports() {
                           {e.absentDays}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-bold tracking-tight text-gray-900 dark:text-white">{e.totalHours.toFixed(1)}h</td>
+                      <td className="px-4 py-3 font-bold tracking-tight text-gray-900 dark:text-white">{fmtHours(e.totalHours)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -334,7 +335,7 @@ export default function AttendanceReports() {
                 </div>
                 <div className="mt-2 flex items-center justify-between rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 dark:border-gray-800/80 dark:bg-gray-800/40">
                   <span className={labelCls}>Total Hours</span>
-                  <span className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{e.totalHours.toFixed(1)}h</span>
+                  <span className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(e.totalHours)}</span>
                 </div>
               </div>
             ))}

@@ -17,6 +17,7 @@ function formatHHMMTo12h(hhmm: string): string {
 }
 import toast from "react-hot-toast";
 import AttendanceCalendar from "../attendance-calendar/AttendanceCalendar";
+import { fmtHours } from "../../utils/format";
 
 const statusStyle: Record<string, { bg: string; dot: string; label: string }> = {
   present: { bg: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20", dot: "bg-emerald-500", label: "Present" },
@@ -189,7 +190,7 @@ export default function Attendance() {
 
             {/* Live timer */}
             {today?.clockIn && !today?.clockOut && (
-              <div className="mt-4 inline-flex items-baseline gap-2 rounded-2xl bg-white/5 px-4 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
+              <div className="mt-4 flex w-fit items-baseline gap-2 rounded-2xl bg-white/5 px-4 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
                 <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Elapsed</span>
                 <span className="font-mono text-3xl font-bold tracking-wider sm:text-4xl">{fmtTime(elapsed)}</span>
               </div>
@@ -211,21 +212,21 @@ export default function Attendance() {
                 <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
                   <Timer className="h-3.5 w-3.5 text-indigo-200" />
                   <span className="text-indigo-200/80">Total</span>
-                  <span className="font-semibold">{today.totalHours}h</span>
+                  <span className="font-semibold">{fmtHours(today.totalHours)}</span>
                 </div>
               )}
             </div>
 
             {/* Late badge */}
             {today?.status === "late" && (
-              <div className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
+              <div className="mt-3 flex w-fit items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
                 <span className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />
                 Late — {today?.lateByMinutes ? `${today?.lateByMinutes} min` : "after office hours"}
               </div>
             )}
 
             {/* Auto clock-out toggle */}
-            <div className="mt-4 inline-flex max-w-md items-center gap-3 rounded-2xl bg-white/5 px-3.5 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
+            <div className="mt-4 flex w-full max-w-md items-center gap-3 rounded-2xl bg-white/5 px-3.5 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
               <div
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
                   autoClockOut
@@ -303,12 +304,12 @@ export default function Attendance() {
       {/* ── Quick Stats ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         {[
-          { icon: Timer, label: "Today's Hours", value: today?.totalHours ? `${today.totalHours}h` : today?.clockIn ? fmtTime(elapsed) : "—", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10", ring: "ring-indigo-500/10 dark:ring-indigo-400/20" },
+          { icon: Timer, label: "Today's Hours", value: today?.totalHours ? fmtHours(today.totalHours) : today?.clockIn ? fmtTime(elapsed) : "—", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10", ring: "ring-indigo-500/10 dark:ring-indigo-400/20" },
           { icon: Calendar, label: "Status", value: today?.status ? statusStyle[today.status]?.label || today.status : "Not Marked", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", ring: "ring-emerald-500/10 dark:ring-emerald-400/20" },
           { icon: Activity, label: "Clock In", value: fmtClock(today?.clockIn ?? null), color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50 dark:bg-sky-500/10", ring: "ring-sky-500/10 dark:ring-sky-400/20" },
           { icon: Clock, label: "Clock Out", value: fmtClock(today?.clockOut ?? null), color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10", ring: "ring-purple-500/10 dark:ring-purple-400/20" },
-          { icon: Timer, label: "Weekly Hours", value: `${weeklyHours}h`, color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", ring: "ring-amber-500/10 dark:ring-amber-400/20" },
-          { icon: Calendar, label: "Monthly Hours", value: `${monthlyHours}h`, color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", ring: "ring-rose-500/10 dark:ring-rose-400/20" },
+          { icon: Timer, label: "Weekly Hours", value: fmtHours(weeklyHours), color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", ring: "ring-amber-500/10 dark:ring-amber-400/20" },
+          { icon: Calendar, label: "Monthly Hours", value: fmtHours(monthlyHours), color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", ring: "ring-rose-500/10 dark:ring-rose-400/20" },
         ].map((s) => (
           <div key={s.label} className={`${cardCls} p-4`}>
             <div className="flex items-center gap-3">
@@ -409,7 +410,7 @@ export default function Attendance() {
                         </td>
                         <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{emp.clockIn ? fmtClock(emp.clockIn) : "—"}</td>
                         <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{emp.clockOut ? fmtClock(emp.clockOut) : "—"}</td>
-                        <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">{emp.totalHours ? `${emp.totalHours}h` : "—"}</td>
+                        <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">{emp.totalHours ? fmtHours(emp.totalHours) : "—"}</td>
                       </tr>
                     );
                   })}
@@ -441,7 +442,7 @@ export default function Attendance() {
                   <div className="mt-3 grid grid-cols-3 gap-2">
                     <MiniTile label="In" value={emp.clockIn ? fmtClock(emp.clockIn) : "—"} />
                     <MiniTile label="Out" value={emp.clockOut ? fmtClock(emp.clockOut) : "—"} />
-                    <MiniTile label="Hours" value={emp.totalHours ? `${emp.totalHours}h` : "—"} accent />
+                    <MiniTile label="Hours" value={emp.totalHours ? fmtHours(emp.totalHours) : "—"} accent />
                   </div>
                 </div>
               );
@@ -601,7 +602,7 @@ export default function Attendance() {
                         <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{new Date(r.date).toLocaleDateString()}</td>
                         <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(r.clockIn)}</td>
                         <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(r.clockOut)}</td>
-                        <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">{r.totalHours ? `${r.totalHours}h` : "—"}</td>
+                        <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">{r.totalHours ? fmtHours(r.totalHours) : "—"}</td>
                         <td className="px-4 py-3">
                           <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.bg}`}>
                             <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />{s.label}
@@ -642,7 +643,7 @@ export default function Attendance() {
                   <div className="grid grid-cols-3 gap-2">
                     <MiniTile label="In" value={fmtClock(r.clockIn)} />
                     <MiniTile label="Out" value={fmtClock(r.clockOut)} />
-                    <MiniTile label="Hours" value={r.totalHours ? `${r.totalHours}h` : "—"} accent />
+                    <MiniTile label="Hours" value={r.totalHours ? fmtHours(r.totalHours) : "—"} accent />
                   </div>
                 </div>
               );

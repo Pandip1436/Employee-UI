@@ -16,6 +16,7 @@ import {
 } from "recharts";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { ProjectTimeSummary } from "../../types";
+import { fmtHours } from "../../utils/format";
 
 /* ─── Helpers ─── */
 const toInputDate = (d: Date) => d.toISOString().split("T")[0];
@@ -202,7 +203,7 @@ export default function TimesheetProjectSummary() {
                     </td>
                     <td className="px-5 py-4 text-right">
                       <span className="text-sm font-bold text-gray-900 dark:text-white">
-                        {project.totalHours}h
+                        {fmtHours(project.totalHours)}
                       </span>
                     </td>
                   </tr>
@@ -223,7 +224,7 @@ export default function TimesheetProjectSummary() {
                     {project.projectName}
                   </p>
                   <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
-                    {project.totalHours}h
+                    {fmtHours(project.totalHours)}
                   </span>
                 </div>
                 <span className="rounded-md bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:text-gray-300">

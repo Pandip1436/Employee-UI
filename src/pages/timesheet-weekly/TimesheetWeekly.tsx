@@ -9,6 +9,7 @@ import { attendanceApi } from "../../api/attendanceApi";
 import { holidayApi } from "../../api/holidayApi";
 import type { WeeklyTimesheetData, Project, TimesheetEntry, Holiday } from "../../types";
 import toast from "react-hot-toast";
+import { fmtHours } from "../../utils/format";
 
 const MIN_WEEK_HOURS = 20;
 const MAX_DAY_HOURS = 24;
@@ -301,7 +302,7 @@ export default function TimesheetWeekly() {
             </div>
             <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">This Week</p>
-              <p className="text-xl font-bold tracking-tight">{weekTotal}h</p>
+              <p className="text-xl font-bold tracking-tight">{fmtHours(weekTotal)}</p>
             </div>
           </div>
         </div>
@@ -310,7 +311,7 @@ export default function TimesheetWeekly() {
           <div className="mb-1.5 flex items-center justify-between text-[11px] text-indigo-200/70">
             <span>Weekly progress</span>
             <span>
-              <span className="font-semibold text-white">{weekTotal}h</span> / 40h target
+              <span className="font-semibold text-white">{fmtHours(weekTotal)}</span> / 40h target
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10 ring-1 ring-white/10">
@@ -494,7 +495,7 @@ export default function TimesheetWeekly() {
                   })}
                   <td className="px-2 py-2 text-center">
                     <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
-                      {rowTotal(entry.hours)}h
+                      {fmtHours(rowTotal(entry.hours))}
                     </span>
                   </td>
                   {editable && (
@@ -531,7 +532,7 @@ export default function TimesheetWeekly() {
                 })}
                 <td className="px-2 py-3 text-center">
                   <span className="inline-flex items-center rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 px-2.5 py-1 text-sm font-bold tracking-tight text-white shadow-sm ring-1 ring-white/10">
-                    {weekTotal}h
+                    {fmtHours(weekTotal)}
                   </span>
                 </td>
                 {editable && <td />}
@@ -559,7 +560,7 @@ export default function TimesheetWeekly() {
               </span>
               <div className="flex shrink-0 items-center gap-2">
                 <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
-                  {rowTotal(entry.hours)}h
+                  {fmtHours(rowTotal(entry.hours))}
                 </span>
                 {editable && (
                   <button onClick={() => removeRow(i)} className="text-gray-400 hover:text-rose-500">
@@ -615,7 +616,7 @@ export default function TimesheetWeekly() {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-5 text-center text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
           <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
           <p className="relative text-[10px] font-semibold uppercase tracking-wider text-white/80">Week Total</p>
-          <p className="relative text-4xl font-bold tracking-tight">{weekTotal}h</p>
+          <p className="relative text-4xl font-bold tracking-tight">{fmtHours(weekTotal)}</p>
           <p className="relative mt-1 text-xs text-white/70">of 40h target</p>
         </div>
       </div>
@@ -625,7 +626,7 @@ export default function TimesheetWeekly() {
         <div className="flex items-center gap-2 rounded-lg border border-amber-200/70 bg-amber-50/80 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           <span>
-            You need at least <span className="font-semibold">{MIN_WEEK_HOURS}h</span> to submit (currently <span className="font-semibold">{weekTotal}h</span>).
+            You need at least <span className="font-semibold">{MIN_WEEK_HOURS}h</span> to submit (currently <span className="font-semibold">{fmtHours(weekTotal)}</span>).
           </span>
         </div>
       )}

@@ -24,6 +24,7 @@ import {
 import { leaveApi } from "../../api/leaveApi";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import { useAuth } from "../../context/AuthContext";
+import { fmtHours } from "../../utils/format";
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -374,7 +375,7 @@ export default function ManagerDashboard() {
                         ) : (
                           <>
                             Week of {fmtShort(item.weekStart)} &middot;{" "}
-                            {item.totalHours}h
+                            {fmtHours(item.totalHours)}
                           </>
                         )}
                       </td>
@@ -452,7 +453,7 @@ export default function ManagerDashboard() {
                     ) : (
                       <>
                         Week of {fmtShort(item.weekStart)} &middot;{" "}
-                        {item.totalHours}h
+                        {fmtHours(item.totalHours)}
                       </>
                     )}
                   </p>
