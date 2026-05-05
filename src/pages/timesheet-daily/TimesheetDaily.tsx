@@ -225,7 +225,12 @@ function PersonalDailyView() {
                       {fmtHours(total)}
                     </span>
                   </div>
-                  <table className="w-full">
+                  <table className="w-full table-fixed">
+                    <colgroup>
+                      <col className="w-[55%]" />
+                      <col className="w-[30%]" />
+                      <col className="w-[15%]" />
+                    </colgroup>
                     <thead>
                       <tr className="border-b border-gray-200/70 dark:border-gray-800/80">
                         <th className={`px-5 py-2.5 text-left ${labelCls}`}>Task</th>
@@ -236,9 +241,9 @@ function PersonalDailyView() {
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                       {entries.map((entry, idx) => (
                         <tr key={idx} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
-                          <td className="px-5 py-3 text-sm text-gray-700 dark:text-gray-300">{entry.task}</td>
+                          <td className="truncate px-5 py-3 text-sm text-gray-700 dark:text-gray-300">{entry.task}</td>
                           <td className="px-5 py-3">
-                            <span className="rounded-md border border-gray-200/70 bg-gray-50/80 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300">
+                            <span className="inline-block max-w-full truncate rounded-md border border-gray-200/70 bg-gray-50/80 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300">
                               {entry.activityType}
                             </span>
                           </td>
@@ -456,7 +461,13 @@ function AdminDailyView() {
 
                 {isOpen && (
                   <div className="border-t border-gray-200/70 bg-gray-50/40 dark:border-gray-800/80 dark:bg-gray-800/20">
-                    <table className="w-full">
+                    <table className="w-full table-fixed">
+                      <colgroup>
+                        <col className="w-[32%]" />
+                        <col className="w-[38%]" />
+                        <col className="w-[18%]" />
+                        <col className="w-[12%]" />
+                      </colgroup>
                       <thead>
                         <tr className="border-b border-gray-200/70 dark:border-gray-800/80">
                           <th className={`px-5 py-2.5 text-left ${labelCls}`}>Project</th>
@@ -470,15 +481,15 @@ function AdminDailyView() {
                           <tr key={idx} className="transition-colors hover:bg-white/80 dark:hover:bg-gray-800/40">
                             <td className="px-5 py-2.5">
                               <div className="flex items-center gap-2">
-                                <div className={`rounded-md bg-gradient-to-br ${paletteFor(entry.projectName)} p-1 shadow-sm ring-1 ring-white/10`}>
+                                <div className={`shrink-0 rounded-md bg-gradient-to-br ${paletteFor(entry.projectName)} p-1 shadow-sm ring-1 ring-white/10`}>
                                   <Briefcase className="h-3 w-3 text-white" />
                                 </div>
                                 <span className="truncate text-sm text-gray-700 dark:text-gray-300">{entry.projectName}</span>
                               </div>
                             </td>
-                            <td className="px-5 py-2.5 text-sm text-gray-700 dark:text-gray-300">{entry.task}</td>
+                            <td className="truncate px-5 py-2.5 text-sm text-gray-700 dark:text-gray-300">{entry.task}</td>
                             <td className="px-5 py-2.5">
-                              <span className="rounded-md border border-gray-200/70 bg-gray-50/80 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300">
+                              <span className="inline-block max-w-full truncate rounded-md border border-gray-200/70 bg-gray-50/80 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300">
                                 {entry.activityType}
                               </span>
                             </td>
