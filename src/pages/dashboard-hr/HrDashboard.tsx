@@ -366,7 +366,7 @@ export default function HrDashboard() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">{pendingCount} awaiting action</p>
                 </div>
               </div>
-              <Link to="/approvals" className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10">
+              <Link to="/timesheet/approvals" className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10">
                 View all <ArrowRight className="h-3 w-3" />
               </Link>
             </div>
