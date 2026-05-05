@@ -98,7 +98,7 @@ export default function Projects() {
 
   useEffect(() => {
     if (canEdit) {
-      userApi.getAll({ limit: 100 }).then((res) => setUsers(res.data.data)).catch(() => {});
+      userApi.getAll({ limit: 100, role: "employee,manager" }).then((res) => setUsers(res.data.data)).catch(() => {});
     }
   }, [canEdit]);
 

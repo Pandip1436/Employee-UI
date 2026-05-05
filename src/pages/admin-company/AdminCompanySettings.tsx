@@ -460,7 +460,7 @@ export default function AdminCompanySettings() {
             <p>
               <span className="font-semibold text-gray-700 dark:text-gray-300">Auto-mark absent:</span>{" "}
               <span className="font-bold text-gray-900 dark:text-white tabular-nums">{autoMarkAbsentTime}</span>{" "}
-              (daily) marks the previous day for everyone who didn't clock in.
+              (daily) marks the day for everyone who didn't clock in.
             </p>
             <p className="pt-1">All times in <span className="font-semibold">{timezone}</span>.</p>
           </div>
