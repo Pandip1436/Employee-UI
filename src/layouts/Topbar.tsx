@@ -139,12 +139,22 @@ export default function Topbar({ onMenuClick }: Props) {
               setSearchOpen(true);
               setTimeout(() => searchInputRef.current?.focus(), 50);
             }}
-            className="group flex w-72 items-center gap-2.5 rounded-xl border border-gray-200/70 bg-gray-50/60 px-3 py-2 text-[13px] text-gray-400 shadow-sm ring-1 ring-transparent transition-all hover:border-gray-300 hover:bg-white hover:text-gray-500 hover:ring-gray-200/60 dark:border-gray-800 dark:bg-gray-900/60 dark:text-gray-500 dark:hover:border-gray-700 dark:hover:bg-gray-900 dark:hover:ring-gray-800"
+            className="group relative flex h-10 w-80 items-center gap-2.5 overflow-hidden rounded-xl border border-gray-200/70 bg-white/70 pl-2 pr-2.5 text-[13px] text-gray-500 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-md transition-all hover:-translate-y-px hover:border-indigo-300/60 hover:bg-white hover:text-gray-700 hover:shadow-md hover:shadow-indigo-500/[0.08] hover:ring-indigo-500/15 active:translate-y-0 dark:border-gray-800/80 dark:bg-gray-900/60 dark:text-gray-400 dark:ring-white/[0.02] dark:hover:border-indigo-500/40 dark:hover:bg-gray-900 dark:hover:text-gray-200 dark:hover:shadow-indigo-500/[0.12]"
           >
-            <Search className="h-4 w-4 shrink-0 transition-colors group-hover:text-gray-500 dark:group-hover:text-gray-400" />
-            <span className="flex-1 text-left">Search pages, features...</span>
-            <kbd className="inline-flex items-center gap-0.5 rounded-md border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] font-semibold text-gray-400 shadow-sm dark:border-gray-700 dark:bg-gray-800 dark:text-gray-500">
-              <span className="text-[11px]">⌘</span>K
+            {/* Subtle aurora sweep on hover */}
+            <span
+              aria-hidden
+              className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-indigo-500/[0.06] to-transparent opacity-0 transition-all duration-700 group-hover:translate-x-full group-hover:opacity-100"
+            />
+            {/* Search icon in gradient pill */}
+            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 ring-1 ring-inset ring-indigo-500/15 transition-all group-hover:from-indigo-500/20 group-hover:to-purple-500/20 group-hover:ring-indigo-500/30 dark:from-indigo-400/10 dark:to-purple-400/10 dark:ring-indigo-400/15 dark:group-hover:from-indigo-400/20 dark:group-hover:to-purple-400/20 dark:group-hover:ring-indigo-400/30">
+              <Search className="h-3.5 w-3.5 text-indigo-500/90 transition-transform group-hover:scale-110 dark:text-indigo-400/90" />
+            </span>
+            <span className="relative flex-1 text-left font-medium tracking-tight">
+              Search<span className="hidden md:inline"> pages, features</span>...
+            </span>
+            <kbd className="relative inline-flex shrink-0 items-center gap-0.5 rounded-md border border-gray-200/80 bg-gradient-to-b from-white to-gray-50 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 shadow-sm transition-all group-hover:border-indigo-300/60 group-hover:from-indigo-50 group-hover:to-white group-hover:text-indigo-600 group-hover:shadow-indigo-500/10 dark:border-gray-700/80 dark:from-gray-800 dark:to-gray-900 dark:text-gray-400 dark:group-hover:border-indigo-500/40 dark:group-hover:from-indigo-500/15 dark:group-hover:to-gray-900 dark:group-hover:text-indigo-300">
+              <span className="text-[11px] font-bold leading-none">⌘</span>K
             </kbd>
           </button>
         </div>
@@ -161,7 +171,7 @@ export default function Topbar({ onMenuClick }: Props) {
               setTimeout(() => searchInputRef.current?.focus(), 50);
             }}
             aria-label="Search"
-            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 lg:hidden"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200 lg:hidden"
           >
             <Search className="h-5 w-5" />
           </button>
@@ -174,7 +184,7 @@ export default function Topbar({ onMenuClick }: Props) {
             onClick={toggle}
             title={dark ? "Switch to light mode" : "Switch to dark mode"}
             aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}
-            className="rounded-lg p-2 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:hover:text-gray-200"
           >
             {dark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
           </button>
@@ -188,7 +198,7 @@ export default function Topbar({ onMenuClick }: Props) {
               onClick={() => setDropdownOpen((o) => !o)}
               aria-haspopup="menu"
               aria-expanded={dropdownOpen}
-              className="flex items-center gap-2 rounded-xl px-1.5 py-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="flex h-10 items-center gap-2 rounded-xl px-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 sm:pr-2"
             >
               <div className="relative shrink-0">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-950">

@@ -24,7 +24,6 @@ const WORK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 export default function Dashboard() {
   const { user, isAdmin } = useAuth();
 
-  if (isAdmin) return <Navigate to="/dashboard/hr" replace />;
   const [kpis, setKpis] = useState<EmployeeKpis | null>(null);
   const [weekly, setWeekly] = useState<WeeklySummary | null>(null);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
@@ -38,6 +37,7 @@ export default function Dashboard() {
     dashboardApi.getEmployeeKpis().then((r) => setKpis(r.data.data ?? null)).catch(() => {});
 
   useEffect(() => {
+    if (isAdmin) return; // admins are redirected; skip employee fetches
     refreshKpis();
     reportApi.getWeeklySummary().then((r) => setWeekly(r.data.data!)).catch(() => { /* interceptor */ });
     leaveApi.getBalance().then((r) => { if (r.data.data) setLeaveBalance(r.data.data); }).catch(() => { /* interceptor */ });
@@ -45,7 +45,7 @@ export default function Dashboard() {
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     attendanceApi.getMyHistory({ month, limit: 200 }).then((r) => setAttendanceWeek(r.data.data || [])).catch(() => {});
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
     if (today?.clockIn && !today?.clockOut) {
@@ -124,6 +124,9 @@ export default function Dashboard() {
   const card =
     "rounded-2xl border border-gray-200/70 bg-white/80 p-5 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]";
   const sectionLabel = "text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500";
+
+  // Redirect after all hooks have run — keeps hook order consistent across renders
+  if (isAdmin) return <Navigate to="/dashboard/hr" replace />;
 
   return (
     <div className="space-y-6">
