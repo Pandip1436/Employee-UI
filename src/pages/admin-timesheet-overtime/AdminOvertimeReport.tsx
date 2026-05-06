@@ -93,7 +93,7 @@ export default function AdminOvertimeReport() {
               <p className="mt-1 text-sm text-indigo-200/70">Employees who logged more than 40 hours in a week</p>
             </div>
           </div>
-          <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
+          <div className="w-full rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm sm:w-auto">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Total OT</p>
             <p className="text-xl font-bold tracking-tight">{fmtHours(totalOvertime)}</p>
           </div>
@@ -101,28 +101,30 @@ export default function AdminOvertimeReport() {
       </div>
 
       {/* ── Date range ── */}
-      <div className={`${cardCls} flex flex-wrap items-end gap-3 p-4`}>
-        <div>
-          <label className={`${labelCls} mb-1.5 block`}>Start Date</label>
-          <input
-            type="date"
-            value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
-            className={inputCls}
-          />
+      <div className={`${cardCls} grid grid-cols-1 gap-3 p-4 sm:flex sm:flex-wrap sm:items-end`}>
+        <div className="grid grid-cols-2 gap-3 sm:contents">
+          <div className="w-full sm:w-auto">
+            <label className={`${labelCls} mb-1.5 block`}>Start Date</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+              className={inputCls}
+            />
+          </div>
+          <div className="w-full sm:w-auto">
+            <label className={`${labelCls} mb-1.5 block`}>End Date</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => setEndDate(e.target.value)}
+              className={inputCls}
+            />
+          </div>
         </div>
-        <div>
-          <label className={`${labelCls} mb-1.5 block`}>End Date</label>
-          <input
-            type="date"
-            value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
-            className={inputCls}
-          />
-        </div>
-        <div className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 text-xs text-gray-600 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300">
-          <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
-          Range: {entries.length} instances
+        <div className="flex w-full items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 text-xs text-gray-600 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300 sm:ml-auto sm:inline-flex sm:w-auto">
+          <CalendarDays className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+          <span className="truncate">Range: {entries.length} instances</span>
         </div>
       </div>
 

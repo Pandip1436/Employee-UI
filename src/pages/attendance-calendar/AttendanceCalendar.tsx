@@ -15,6 +15,7 @@ import { holidayApi } from "../../api/holidayApi";
 import { leaveApi } from "../../api/leaveApi";
 import { useCompany } from "../../context/CompanyContext";
 import type { AttendanceRecord, Holiday, LeaveRequest } from "../../types";
+import { fmtHours } from "../../utils/format";
 
 /* ── Status style map ── */
 const statusStyles: Record<
@@ -346,7 +347,7 @@ export default function AttendanceCalendar() {
               </div>
               <p className="text-base font-bold text-gray-900 dark:text-white">
                 {detailRecord.totalHours != null
-                  ? `${detailRecord.totalHours.toFixed(1)} hours`
+                  ? fmtHours(detailRecord.totalHours)
                   : "Not available"}
               </p>
             </div>

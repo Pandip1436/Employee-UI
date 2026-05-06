@@ -1,11 +1,19 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Users, UserCheck, UserX, Clock, AlertTriangle, CheckCircle2, X, Filter, Calendar } from "lucide-react";
+import { Search, Users, UserCheck, UserX, Clock, AlertTriangle, CheckCircle2, X, Filter, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import type { LiveStatusData, LiveEmployee } from "../../types";
 import { fmtHours } from "../../utils/format";
 
 function todayKey() {
   const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Shift a YYYY-MM-DD string by N days (local time). */
+function shiftIsoDate(iso: string, days: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + days);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
@@ -148,12 +156,12 @@ export default function TeamAttendance() {
                 : `Attendance for ${new Date(dateFilter + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`}
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex-1 rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm sm:flex-none">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Total</p>
               <p className="text-xl font-bold tracking-tight">{total}</p>
             </div>
-            <div className="rounded-xl bg-emerald-500/15 px-4 py-2.5 text-center ring-1 ring-emerald-400/30 backdrop-blur-sm">
+            <div className="flex-1 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-center ring-1 ring-emerald-400/30 backdrop-blur-sm sm:flex-none">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/90">Present</p>
               <p className="text-xl font-bold tracking-tight text-emerald-100">{presentCount}</p>
             </div>
@@ -163,7 +171,7 @@ export default function TeamAttendance() {
 
       {/* ── Summary Tiles ── */}
       {liveData?.summary && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {[
             { label: "Logged In", value: liveData.summary.clockedIn, icon: UserCheck, gradient: "from-emerald-500 to-teal-600" },
             { label: "Late Login", value: liveData.summary.late, icon: AlertTriangle, gradient: "from-amber-500 to-orange-600" },
@@ -220,26 +228,50 @@ export default function TeamAttendance() {
             </button>
           ))}
         </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="relative">
-            <Calendar className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
-            <input
-              type="date"
-              value={dateFilter}
-              max={todayKey()}
-              onChange={(e) => setDateFilter(e.target.value || todayKey())}
-              className={`${inputCls} pl-8`}
-            />
+        <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
+          {/* Date navigator: ◄  date  ► + Today shortcut */}
+          <div className="flex w-full gap-2 sm:w-auto">
+            <div className="flex flex-1 items-center gap-1 rounded-lg border border-gray-300 bg-white px-1 py-0.5 dark:border-gray-700 dark:bg-gray-800 sm:flex-none">
+              <button
+                type="button"
+                onClick={() => setDateFilter((d) => shiftIsoDate(d, -1))}
+                aria-label="Previous day"
+                className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 active:scale-95 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <div className="relative flex flex-1 items-center sm:flex-none">
+                <Calendar className="pointer-events-none absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="date"
+                  value={dateFilter}
+                  max={todayKey()}
+                  onChange={(e) => setDateFilter(e.target.value || todayKey())}
+                  className="w-full bg-transparent pl-7 pr-1 py-1.5 text-sm text-gray-900 outline-none focus:ring-0 dark:text-white"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setDateFilter((d) => shiftIsoDate(d, 1))}
+                disabled={dateFilter >= todayKey()}
+                aria-label="Next day"
+                className="rounded-md p-1.5 text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-gray-500 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-200"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
             {!isToday && (
               <button
                 onClick={() => setDateFilter(todayKey())}
-                className="ml-2 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
+                className="shrink-0 rounded-lg bg-indigo-600 px-3 py-2 text-xs font-semibold text-white transition-colors hover:bg-indigo-700"
               >
                 Today
               </button>
             )}
           </div>
-          <div className="relative min-w-[200px] flex-1">
+
+          {/* Search */}
+          <div className="relative w-full sm:min-w-[220px] sm:flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
             <input
               value={search}
@@ -257,12 +289,14 @@ export default function TeamAttendance() {
               </button>
             )}
           </div>
-          <div className="relative">
+
+          {/* Department filter */}
+          <div className="relative w-full sm:w-auto">
             <Filter className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
             <select
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
-              className={`${inputCls} pl-8`}
+              className={`${inputCls} w-full pl-8`}
             >
               <option value="">All Departments</option>
               {departments.map((d) => <option key={d} value={d}>{d}</option>)}

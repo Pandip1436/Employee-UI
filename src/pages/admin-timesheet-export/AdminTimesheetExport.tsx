@@ -195,11 +195,11 @@ export default function AdminTimesheetExport() {
               <p className="mt-1 text-sm text-indigo-200/70">Filter and export timesheet data for payroll or reporting</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
             <button
               onClick={handleCsv}
               disabled={!!exporting || !data.length}
-              className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {exporting === "csv" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -213,7 +213,7 @@ export default function AdminTimesheetExport() {
             <button
               onClick={handleExcel}
               disabled={!!exporting || !data.length}
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {exporting === "excel" ? (
                 <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
@@ -234,16 +234,19 @@ export default function AdminTimesheetExport() {
           <Filter className="h-3.5 w-3.5" />
           <span>Refine the dataset before exporting</span>
         </div>
-        <div className="flex flex-wrap items-end gap-3">
-          <div>
-            <label className={`${labelCls} mb-1.5 block`}>Start Date</label>
-            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputCls} />
+        <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end">
+          {/* Date pair — side-by-side on mobile, individual flex children on desktop */}
+          <div className="grid grid-cols-2 gap-3 sm:contents">
+            <div className="w-full sm:w-auto">
+              <label className={`${labelCls} mb-1.5 block`}>Start Date</label>
+              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className={inputCls} />
+            </div>
+            <div className="w-full sm:w-auto">
+              <label className={`${labelCls} mb-1.5 block`}>End Date</label>
+              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
+            </div>
           </div>
-          <div>
-            <label className={`${labelCls} mb-1.5 block`}>End Date</label>
-            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
-          </div>
-          <div className="min-w-[140px]">
+          <div className="w-full sm:w-auto sm:min-w-[140px]">
             <label className={`${labelCls} mb-1.5 block`}>Status</label>
             <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
               <option value="">All Statuses</option>
@@ -252,7 +255,7 @@ export default function AdminTimesheetExport() {
               <option value="rejected">Rejected</option>
             </select>
           </div>
-          <div className="min-w-[200px] flex-1">
+          <div className="w-full sm:min-w-[200px] sm:flex-1">
             <label className={`${labelCls} mb-1.5 block`}>Employee</label>
             <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className={inputCls}>
               <option value="">All Employees</option>
@@ -261,9 +264,9 @@ export default function AdminTimesheetExport() {
               ))}
             </select>
           </div>
-          <div className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 text-xs text-gray-600 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300">
-            <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
-            <span>
+          <div className="flex w-full items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 text-xs text-gray-600 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300 sm:ml-auto sm:inline-flex sm:w-auto">
+            <CalendarDays className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+            <span className="truncate">
               <span className="font-semibold text-gray-900 dark:text-white">{data.length}</span> record{data.length === 1 ? "" : "s"}
             </span>
           </div>

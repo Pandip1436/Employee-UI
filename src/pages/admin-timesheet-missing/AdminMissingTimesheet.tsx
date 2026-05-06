@@ -104,7 +104,7 @@ export default function AdminMissingTimesheet() {
               <p className="mt-1 text-sm text-indigo-200/70">Employees who haven't submitted their weekly timesheet</p>
             </div>
           </div>
-          <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
+          <div className="w-full rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm sm:w-auto">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Missing</p>
             <p className="text-xl font-bold tracking-tight">{missingCount}</p>
           </div>
@@ -112,8 +112,8 @@ export default function AdminMissingTimesheet() {
       </div>
 
       {/* ── Week picker ── */}
-      <div className={`${cardCls} flex flex-col items-start gap-3 p-4 sm:flex-row sm:items-end`}>
-        <div>
+      <div className={`${cardCls} flex flex-col items-stretch gap-3 p-4 sm:flex-row sm:items-end`}>
+        <div className="w-full sm:w-auto">
           <label className={`${labelCls} mb-1.5 block`}>Week Of</label>
           <input
             type="date"
@@ -122,9 +122,9 @@ export default function AdminMissingTimesheet() {
             className={inputCls}
           />
         </div>
-        <div className="inline-flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 text-sm text-gray-600 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300">
-          <Calendar className="h-3.5 w-3.5 text-gray-400" />
-          <span>Week of <span className="font-semibold text-gray-900 dark:text-white">{weekLabel}</span></span>
+        <div className="flex w-full items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 text-sm text-gray-600 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300 sm:inline-flex sm:w-auto">
+          <Calendar className="h-3.5 w-3.5 shrink-0 text-gray-400" />
+          <span className="truncate">Week of <span className="font-semibold text-gray-900 dark:text-white">{weekLabel}</span></span>
         </div>
       </div>
 
