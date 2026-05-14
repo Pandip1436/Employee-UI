@@ -67,6 +67,8 @@ export default function LeaveApply() {
       .apply({ type, startDate, endDate, reason: reason.trim() })
       .then(() => {
         toast.success("Leave application submitted successfully");
+        // Hard refresh on /leaves so the dashboard fetches the new entry from scratch
+        window.location.href = "/leaves";
       })
       .catch(() => toast.error("Failed to submit leave application"))
       .finally(() => setSubmitting(false));

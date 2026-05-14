@@ -278,6 +278,7 @@ export default function Dashboard() {
                 <Tooltip
                   cursor={{ fill: "rgba(99,102,241,0.06)" }}
                   contentStyle={{ backgroundColor: "#111827", border: "none", borderRadius: "12px", color: "#f3f4f6", boxShadow: "0 10px 40px rgba(0,0,0,0.2)" }}
+                  formatter={(value) => [fmtHours(Number(value)), "Hours"]}
                 />
                 <Bar dataKey="hours" fill="url(#barHours)" radius={[8, 8, 0, 0]} maxBarSize={44} />
               </BarChart>

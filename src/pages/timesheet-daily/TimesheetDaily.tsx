@@ -193,14 +193,34 @@ function PersonalDailyView() {
               <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Logged</p>
               <p className="text-xl font-bold tracking-tight">{fmtHours(totalDayHours)}</p>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <CalendarDays className="h-4 w-4 text-indigo-200" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="rounded-md border-0 bg-transparent px-1 py-0.5 text-sm font-semibold text-white outline-none [color-scheme:dark] focus:ring-0"
-              />
+            <div className="inline-flex items-center gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/15 backdrop-blur-sm">
+              <button
+                type="button"
+                onClick={() => setSelectedDate((d) => shiftIsoDate(d, -1))}
+                aria-label="Previous day"
+                className="rounded-lg p-1.5 text-indigo-100 transition-colors hover:bg-white/10 active:scale-95"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+              <div className="inline-flex items-center gap-1.5 px-1">
+                <CalendarDays className="h-4 w-4 text-indigo-200" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  max={todayIso()}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="rounded-md border-0 bg-transparent px-1 py-0.5 text-sm font-semibold text-white outline-none [color-scheme:dark] focus:ring-0"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedDate((d) => shiftIsoDate(d, 1))}
+                disabled={selectedDate >= todayIso()}
+                aria-label="Next day"
+                className="rounded-lg p-1.5 text-indigo-100 transition-colors hover:bg-white/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
             </div>
           </div>
         </div>
