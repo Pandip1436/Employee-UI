@@ -2,7 +2,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import {
   Pencil, Trash2, X, Search, Mail, Phone, Building, ArrowLeft, Calendar,
   Shield, Activity, Plus, Eye, EyeOff, Sparkles, Users, ChevronLeft, ChevronRight,
-  Briefcase, FileText, Award, User as UserIcon,
+  Briefcase, FileText, Award, User as UserIcon, UserCheck, UserX, Filter,
 } from "lucide-react";
 import { userApi } from "../../api/userApi";
 import { adminSettingsApi } from "../../api/adminSettingsApi";
@@ -132,6 +132,8 @@ export default function Employees() {
   const [pagination, setPagination] = useState<Pagination | null>(null);
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all");
+  const [deptFilter, setDeptFilter] = useState<string>("");
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<User | null>(null);
   const [departments, setDepartments] = useState<string[]>([]);
@@ -165,13 +167,23 @@ export default function Employees() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const fetchUsers = () => {
-    userApi.getAll({ page, limit: 10, role: "employee" }).then((res) => {
+    const params: Record<string, string | number> = { page, limit: 10, role: "employee" };
+    if (statusFilter !== "all") params.isActive = statusFilter === "active" ? "true" : "false";
+    if (deptFilter) params.department = deptFilter;
+    userApi.getAll(params).then((res) => {
       setUsers(res.data.data);
       setPagination(res.data.pagination);
     }).catch(() => {});
   };
 
-  useEffect(() => { fetchUsers(); }, [page]);
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    if (page !== 1) setPage(1);
+    else fetchUsers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [statusFilter, deptFilter]);
+
+  useEffect(() => { fetchUsers(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [page]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -620,8 +632,9 @@ export default function Employees() {
           <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
           <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
         </div>
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + KPI chips */}
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <Users className="h-10 w-10 text-indigo-200" />
             </div>
@@ -634,49 +647,125 @@ export default function Employees() {
                 Your <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Employees</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Manage your team members and their roles</p>
+
+              {/* Hero KPI chips */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <Users className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Total</span>
+                  <span className="font-mono font-semibold tabular-nums">{totalEmployees}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                  <UserCheck className="h-3.5 w-3.5 text-emerald-200" />
+                  <span className="text-emerald-200/90">Active</span>
+                  <span className="font-mono font-semibold tabular-nums text-emerald-50">{activeEmployees}</span>
+                </span>
+                {totalEmployees - activeEmployees > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs ring-1 ring-rose-400/30 backdrop-blur-sm">
+                    <UserX className="h-3.5 w-3.5 text-rose-200" />
+                    <span className="text-rose-200/90">Inactive</span>
+                    <span className="font-mono font-semibold tabular-nums text-rose-50">{totalEmployees - activeEmployees}</span>
+                  </span>
+                )}
+                {pagination && pagination.pages > 1 && (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <span className="text-indigo-200/80">Page</span>
+                    <span className="font-mono font-semibold tabular-nums">{pagination.page}<span className="text-indigo-200/60">/{pagination.pages}</span></span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Active</p>
-              <p className="text-xl font-bold tracking-tight">
-                {activeEmployees}<span className="text-sm font-normal text-indigo-200/60"> / {totalEmployees}</span>
-              </p>
-            </div>
-            {isAdmin && (
+
+          {/* RIGHT: action stack */}
+          {isAdmin && (
+            <div className="flex w-full shrink-0 flex-col gap-2.5 sm:flex-row lg:w-auto lg:flex-col">
               <button
                 onClick={openCreate}
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+                className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98]"
               >
                 <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
                   <Plus className="h-3.5 w-3.5 text-white" />
                 </span>
                 New Employee
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Search ── */}
-      <div className="relative">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Search by name or email..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className={`w-full rounded-xl border border-gray-200/70 bg-white/80 py-2.5 pl-9 pr-${search ? "8" : "4"} text-sm text-gray-900 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-800/80 dark:bg-gray-900/80 dark:text-white dark:placeholder:text-gray-500 dark:ring-white/[0.03]`}
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            aria-label="Clear search"
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
+      {/* ── Filter Bar ── */}
+      <div className={`${cardCls} p-3`}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          {/* Search */}
+          <div className="relative flex-1 lg:max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by name or email..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`w-full rounded-lg border border-gray-200/70 bg-white/80 py-2 pl-9 ${search ? "pr-8" : "pr-3"} text-sm text-gray-900 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-800/80 dark:bg-gray-900/80 dark:text-white dark:placeholder:text-gray-500 dark:ring-white/[0.03]`}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Status chips */}
+          <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-gray-50/60 p-1 dark:border-gray-800/80 dark:bg-gray-800/40">
+            {([
+              { key: "all" as const,      label: "All" },
+              { key: "active" as const,   label: "Active" },
+              { key: "inactive" as const, label: "Inactive" },
+            ]).map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setStatusFilter(f.key)}
+                className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                  statusFilter === f.key
+                    ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
+                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800/60"
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Department dropdown */}
+          {departments.length > 0 && (
+            <div className="relative lg:min-w-[180px]">
+              <Filter className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+              <select
+                value={deptFilter}
+                onChange={(e) => setDeptFilter(e.target.value)}
+                className="w-full appearance-none rounded-lg border border-gray-200/70 bg-white/80 py-2 pl-8 pr-8 text-sm font-medium text-gray-900 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-800/80 dark:bg-gray-900/80 dark:text-white dark:ring-white/[0.03]"
+              >
+                <option value="">All Departments</option>
+                {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <ChevronRight className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 rotate-90 text-gray-400" />
+            </div>
+          )}
+
+          {/* Clear filters */}
+          {(statusFilter !== "all" || deptFilter || search) && (
+            <button
+              onClick={() => { setStatusFilter("all"); setDeptFilter(""); setSearch(""); }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Desktop Table ── */}
@@ -738,7 +827,7 @@ export default function Employees() {
                           {u.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
-                      <td className="px-5 py-3 text-gray-600 dark:text-gray-400">{new Date(u.createdAt).toLocaleDateString()}</td>
+                      <td className="px-5 py-3 font-mono tabular-nums text-gray-600 dark:text-gray-400">{new Date(u.createdAt).toLocaleDateString()}</td>
                       <td className="px-5 py-3 text-right">
                         {isAdmin && (
                           <div className="flex justify-end gap-1">
@@ -860,7 +949,7 @@ export default function Employees() {
         </div>
       )}
 
-      {/* ── Edit / Create Modal ── */}
+      {/* ── Edit / Create Drawer (premium) ── */}
       {showModal && (() => {
         const fieldCls = (err?: string) =>
           `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors dark:bg-gray-800 dark:text-white ${
@@ -868,161 +957,332 @@ export default function Employees() {
               ? "border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 dark:border-rose-500"
               : "border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700"
           }`;
-        const LabelText = ({ children }: { children: React.ReactNode }) => (
-          <label className={`${labelCls} mb-1.5 block`}>{children}</label>
+        const LabelText = ({ icon: Icon, color = "text-indigo-500 dark:text-indigo-400", children }: { icon?: typeof Mail; color?: string; children: React.ReactNode }) => (
+          <label className={`${labelCls} mb-1.5 flex items-center gap-1.5`}>
+            {Icon && <Icon className={`h-3 w-3 ${color}`} />}
+            {children}
+          </label>
         );
         const ErrText = ({ msg }: { msg?: string }) =>
-          msg ? <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400">{msg}</p> : null;
+          msg ? <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-600 dark:text-rose-400"><span className="h-1 w-1 rounded-full bg-rose-500" />{msg}</p> : null;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4">
-            <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
-              <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
-                <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/20 blur-2xl" />
-                <div className="relative flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div
+              className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm"
+              onClick={resetForm}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="relative flex h-full w-full max-w-md animate-drawer-slide-right flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10 sm:max-w-xl sm:rounded-l-3xl"
+            >
+              {/* Left gradient stripe */}
+              <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-indigo-500 to-purple-600" />
+
+              {/* Header */}
+              <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 px-5 pt-6 pb-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:via-gray-900 dark:to-purple-500/10">
+                <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-indigo-400/25 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-purple-400/15 blur-3xl" />
+                <div className="relative flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3.5">
+                    <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-3 shadow-lg shadow-indigo-500/30 ring-1 ring-white/15">
                       {editing ? <Pencil className="h-5 w-5 text-white" /> : <Plus className="h-5 w-5 text-white" />}
                     </div>
                     <div>
-                      <h2 className="text-base font-bold text-gray-900 dark:text-white">
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                        <Sparkles className="h-3 w-3" />
+                        {editing ? "Update record" : "New entry"}
+                      </p>
+                      <h2 className="mt-0.5 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
                         {editing ? "Edit Employee" : "New Employee"}
                       </h2>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {editing ? "Update employee details" : "Create a new employee record"}
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        {editing ? "Update personal and work details" : "Create a new employee record"}
                       </p>
                     </div>
                   </div>
                   <button
                     onClick={resetForm}
                     aria-label="Close"
-                    className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                    className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
-              <form onSubmit={handleSubmit} noValidate className="max-h-[calc(90vh-5rem)] space-y-4 overflow-y-auto p-5">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <LabelText>Name</LabelText>
-                    <input value={formName} onChange={(e) => setFormName(e.target.value)} className={fieldCls(errors.name)} />
-                    <ErrText msg={errors.name} />
-                  </div>
-                  <div>
-                    <LabelText>Employee ID</LabelText>
-                    <input value={formEmpId} onChange={(e) => setFormEmpId(e.target.value)} placeholder="EMP-001" className={fieldCls(errors.empId)} />
-                    <ErrText msg={errors.empId} />
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <LabelText>Email</LabelText>
-                    <input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className={fieldCls(errors.email)} />
-                    <ErrText msg={errors.email} />
-                  </div>
-                  <div>
-                    <LabelText>Phone</LabelText>
-                    <input inputMode="numeric" maxLength={10} value={formPhone} onChange={(e) => setFormPhone(e.target.value.replace(/\D/g, ""))} placeholder="10 digits" className={fieldCls(errors.phone)} />
-                    <ErrText msg={errors.phone} />
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <LabelText>User ID</LabelText>
-                    <input value={formUserId} onChange={(e) => setFormUserId(e.target.value)} placeholder="login.id" className={fieldCls(errors.userId)} />
-                    <ErrText msg={errors.userId} />
-                  </div>
-                  <div>
-                    <LabelText>{editing ? "Reset Password" : "Password"}</LabelText>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={formPassword}
-                        onChange={(e) => setFormPassword(e.target.value)}
-                        placeholder={editing ? "Leave blank to keep" : "Strong password"}
-                        className={`${fieldCls(errors.password)} pr-10`}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((s) => !s)}
-                        aria-label={showPassword ? "Hide password" : "Show password"}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                      >
-                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                      </button>
-                    </div>
-                    <PasswordStrength pw={formPassword} />
-                    <ErrText msg={errors.password} />
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <LabelText>Aadhaar</LabelText>
-                    <input inputMode="numeric" maxLength={12} value={formAadhaar} onChange={(e) => setFormAadhaar(e.target.value.replace(/\D/g, ""))} placeholder="12 digits" className={fieldCls(errors.aadhaar)} />
-                    <ErrText msg={errors.aadhaar} />
-                  </div>
-                  <div>
-                    <LabelText>Date of Joining</LabelText>
-                    <input type="date" value={formDOJ} onChange={(e) => setFormDOJ(e.target.value)} max={new Date().toISOString().slice(0, 10)} className={fieldCls(errors.doj)} />
-                    <ErrText msg={errors.doj} />
-                  </div>
-                </div>
-                <div>
-                  <LabelText>Address</LabelText>
-                  <textarea rows={2} value={formAddress} onChange={(e) => setFormAddress(e.target.value)} placeholder="Full residential address" className={fieldCls(errors.address)} />
-                  <ErrText msg={errors.address} />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <LabelText>Role</LabelText>
-                    <div className="flex items-center gap-2 rounded-xl bg-gray-50 dark:bg-gray-800/40 px-3.5 py-2.5 ring-1 ring-gray-200 dark:ring-gray-700/80">
-                      <span className="h-2 w-2 rounded-full bg-gray-500" />
-                      <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Employee</p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">· Standard access</p>
-                    </div>
-                  </div>
-                  <div>
-                    <LabelText>Department</LabelText>
-                    <select value={formDept} onChange={(e) => setFormDept(e.target.value)} className={fieldCls()}>
-                      <option value="">— Select —</option>
-                      {(formDept && !departments.includes(formDept)) && (
-                        <option value={formDept}>{formDept}</option>
+              {/* Scrollable body */}
+              <form
+                onSubmit={handleSubmit}
+                noValidate
+                id="employee-form"
+                className="premium-scroll flex-1 space-y-5 overflow-y-auto p-5 sm:p-6"
+              >
+                {/* ── Live Preview ── */}
+                <div className="relative overflow-hidden rounded-2xl border border-gray-200/70 bg-gradient-to-br from-gray-50 to-white p-4 ring-1 ring-black/[0.02] dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900/40 dark:ring-white/[0.02]">
+                  <span aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-indigo-400/15 blur-2xl" />
+                  <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent" />
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                    <Sparkles className="h-3 w-3" />
+                    Live preview
+                  </p>
+                  <div className="flex items-start gap-3">
+                    <Avatar name={formName || "?"} size="lg" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                        {formName || <span className="text-gray-400 dark:text-gray-500">Employee name…</span>}
+                      </p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                        {formEmail || <span className="text-gray-400 dark:text-gray-500">name@company.com</span>}
+                      </p>
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                        {/* Role pill (always Employee for this form) */}
+                        <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-700/50 dark:text-gray-300 dark:ring-gray-500/20">
+                          <span className="h-1 w-1 rounded-full bg-gray-500" />
+                          Employee
+                        </span>
+                        {formEmpId && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
+                            <Shield className="h-2.5 w-2.5" />
+                            {formEmpId}
+                          </span>
+                        )}
+                        {formDept && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/25">
+                            <Building className="h-2.5 w-2.5" />
+                            {formDept}
+                          </span>
+                        )}
+                        {formDesignation && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-fuchsia-50 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-700 ring-1 ring-inset ring-fuchsia-500/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-300 dark:ring-fuchsia-400/25">
+                            <Award className="h-2.5 w-2.5" />
+                            {formDesignation}
+                          </span>
+                        )}
+                        {editing && (
+                          <span
+                            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                              formActive
+                                ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/25"
+                                : "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/25"
+                            }`}
+                          >
+                            <span className={`h-1 w-1 rounded-full ${formActive ? "bg-emerald-500" : "bg-rose-500"}`} />
+                            {formActive ? "Active" : "Inactive"}
+                          </span>
+                        )}
+                      </div>
+                      {/* Footer line: phone + joining */}
+                      {(formPhone || formDOJ) && (
+                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-gray-200/70 pt-2 text-[10px] text-gray-500 dark:border-gray-800/80 dark:text-gray-400">
+                          {formPhone && (
+                            <span className="inline-flex items-center gap-1">
+                              <Phone className="h-2.5 w-2.5" />
+                              <span className="font-mono tabular-nums">{formPhone}</span>
+                            </span>
+                          )}
+                          {formDOJ && (
+                            <span className="inline-flex items-center gap-1">
+                              <Calendar className="h-2.5 w-2.5" />
+                              Joins{" "}
+                              <span className="font-mono tabular-nums text-gray-700 dark:text-gray-300">
+                                {new Date(formDOJ).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                              </span>
+                            </span>
+                          )}
+                        </div>
                       )}
-                      {departments.map((d) => (
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Identity */}
+                <div>
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-600/70 dark:text-indigo-400/70">
+                    <UserIcon className="h-3 w-3" />
+                    Identity
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <LabelText icon={UserIcon}>Name</LabelText>
+                      <input value={formName} onChange={(e) => setFormName(e.target.value)} className={fieldCls(errors.name)} placeholder="Full name" />
+                      <ErrText msg={errors.name} />
+                    </div>
+                    <div>
+                      <LabelText icon={Shield} color="text-sky-500 dark:text-sky-400">Employee ID</LabelText>
+                      <input value={formEmpId} onChange={(e) => setFormEmpId(e.target.value)} placeholder="EMP-001" className={fieldCls(errors.empId)} />
+                      <ErrText msg={errors.empId} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Contact */}
+                <div>
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-600/70 dark:text-emerald-400/70">
+                    <Mail className="h-3 w-3" />
+                    Contact
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <LabelText icon={Mail} color="text-emerald-500 dark:text-emerald-400">Email</LabelText>
+                      <input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className={fieldCls(errors.email)} placeholder="name@company.com" />
+                      <ErrText msg={errors.email} />
+                    </div>
+                    <div>
+                      <LabelText icon={Phone} color="text-amber-500 dark:text-amber-400">Phone</LabelText>
+                      <input inputMode="numeric" maxLength={10} value={formPhone} onChange={(e) => setFormPhone(e.target.value.replace(/\D/g, ""))} placeholder="10 digits" className={fieldCls(errors.phone)} />
+                      <ErrText msg={errors.phone} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <LabelText icon={Building} color="text-rose-500 dark:text-rose-400">Address</LabelText>
+                    <textarea rows={2} value={formAddress} onChange={(e) => setFormAddress(e.target.value)} placeholder="Full residential address" className={`${fieldCls(errors.address)} resize-y`} />
+                    <ErrText msg={errors.address} />
+                  </div>
+                </div>
+
+                {/* Section: Credentials */}
+                <div>
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-purple-600/70 dark:text-purple-400/70">
+                    <Shield className="h-3 w-3" />
+                    Credentials
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <LabelText icon={UserIcon} color="text-purple-500 dark:text-purple-400">User ID</LabelText>
+                      <input value={formUserId} onChange={(e) => setFormUserId(e.target.value)} placeholder="login.id" className={fieldCls(errors.userId)} />
+                      <ErrText msg={errors.userId} />
+                    </div>
+                    <div>
+                      <LabelText icon={Shield} color="text-rose-500 dark:text-rose-400">{editing ? "Reset Password" : "Password"}</LabelText>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? "text" : "password"}
+                          value={formPassword}
+                          onChange={(e) => setFormPassword(e.target.value)}
+                          placeholder={editing ? "Leave blank to keep" : "Strong password"}
+                          className={`${fieldCls(errors.password)} pr-10`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword((s) => !s)}
+                          aria-label={showPassword ? "Hide password" : "Show password"}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                        >
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                      <PasswordStrength pw={formPassword} />
+                      <ErrText msg={errors.password} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Identity & Joining */}
+                <div>
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-600/70 dark:text-sky-400/70">
+                    <Shield className="h-3 w-3" />
+                    Identification & Joining
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <LabelText icon={Shield} color="text-sky-500 dark:text-sky-400">Aadhaar</LabelText>
+                      <input inputMode="numeric" maxLength={12} value={formAadhaar} onChange={(e) => setFormAadhaar(e.target.value.replace(/\D/g, ""))} placeholder="12 digits" className={`${fieldCls(errors.aadhaar)} font-mono tabular-nums`} />
+                      <ErrText msg={errors.aadhaar} />
+                    </div>
+                    <div>
+                      <LabelText icon={Calendar} color="text-amber-500 dark:text-amber-400">Date of Joining</LabelText>
+                      <input type="date" value={formDOJ} onChange={(e) => setFormDOJ(e.target.value)} max={new Date().toISOString().slice(0, 10)} className={fieldCls(errors.doj)} />
+                      <ErrText msg={errors.doj} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Section: Work */}
+                <div>
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-600/70 dark:text-indigo-400/70">
+                    <Briefcase className="h-3 w-3" />
+                    Work
+                  </p>
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div>
+                      <LabelText icon={Shield} color="text-purple-500 dark:text-purple-400">Role</LabelText>
+                      <div className="flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gradient-to-r from-gray-50 to-white px-3.5 py-2.5 dark:border-gray-700/80 dark:from-gray-800/60 dark:to-gray-900">
+                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-gray-500 to-gray-600">
+                          <UserIcon className="h-3 w-3 text-white" />
+                        </span>
+                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Employee</p>
+                        <p className="text-[11px] text-gray-500 dark:text-gray-400">· Standard access</p>
+                      </div>
+                    </div>
+                    <div>
+                      <LabelText icon={Building} color="text-emerald-500 dark:text-emerald-400">Department</LabelText>
+                      <select value={formDept} onChange={(e) => setFormDept(e.target.value)} className={fieldCls()}>
+                        <option value="">— Select —</option>
+                        {(formDept && !departments.includes(formDept)) && (
+                          <option value={formDept}>{formDept}</option>
+                        )}
+                        {departments.map((d) => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <LabelText icon={Award} color="text-fuchsia-500 dark:text-fuchsia-400">Designation</LabelText>
+                    <select value={formDesignation} onChange={(e) => setFormDesignation(e.target.value)} className={fieldCls()}>
+                      <option value="">— Select —</option>
+                      {(formDesignation && !designations.includes(formDesignation)) && (
+                        <option value={formDesignation}>{formDesignation}</option>
+                      )}
+                      {designations.map((d) => (
                         <option key={d} value={d}>{d}</option>
                       ))}
                     </select>
                   </div>
                 </div>
-                <div>
-                  <LabelText>Designation</LabelText>
-                  <select value={formDesignation} onChange={(e) => setFormDesignation(e.target.value)} className={fieldCls()}>
-                    <option value="">— Select —</option>
-                    {(formDesignation && !designations.includes(formDesignation)) && (
-                      <option value={formDesignation}>{formDesignation}</option>
-                    )}
-                    {designations.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-                </div>
+
+                {/* Account active toggle (edit only) */}
                 {editing && (
-                  <label className="flex items-center gap-2.5 rounded-lg border border-gray-200/70 bg-gray-50/60 px-3 py-2 text-sm text-gray-900 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300">
+                  <label className="flex items-center gap-3 rounded-xl border border-gray-200/70 bg-gradient-to-r from-gray-50/60 to-white p-3 text-sm text-gray-900 dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900 dark:text-gray-300">
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                      formActive
+                        ? "bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+                        : "bg-gray-200 text-gray-500 ring-1 ring-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:ring-gray-600"
+                    }`}>
+                      <Activity className="h-3.5 w-3.5" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-xs font-semibold text-gray-900 dark:text-white">Account active</p>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        {formActive ? "Can sign in to the portal" : "Sign-in disabled — read-only"}
+                      </p>
+                    </div>
                     <input
                       type="checkbox"
                       checked={formActive}
                       onChange={(e) => setFormActive(e.target.checked)}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600"
+                      className="sr-only"
                     />
-                    <span className="font-semibold">Account active</span>
-                    <span className="ml-auto text-xs text-gray-500 dark:text-gray-400">
-                      {formActive ? "Can sign in" : "Sign-in disabled"}
+                    <span
+                      aria-hidden
+                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                        formActive ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
+                          formActive ? "translate-x-5" : "translate-x-0.5"
+                        }`}
+                      />
                     </span>
                   </label>
                 )}
+              </form>
 
-                <div className="flex gap-3 border-t border-gray-200/70 pt-4 dark:border-gray-800/80">
+              {/* Sticky footer */}
+              <div className="shrink-0 border-t border-gray-200/70 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 sm:px-6">
+                <div className="flex gap-3">
                   <button
                     type="button"
                     onClick={resetForm}
@@ -1032,13 +1292,24 @@ export default function Employees() {
                   </button>
                   <button
                     type="submit"
+                    form="employee-form"
                     disabled={saving}
-                    className="flex-1 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl disabled:opacity-60"
+                    className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10 transition-all hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl hover:shadow-indigo-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
                   >
-                    {saving ? "Saving..." : editing ? "Update Employee" : "Create Employee"}
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                    />
+                    <span className="relative inline-flex items-center justify-center gap-2">
+                      {saving
+                        ? (<><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving…</>)
+                        : editing
+                          ? (<><Pencil className="h-4 w-4" />Update Employee</>)
+                          : (<><Plus className="h-4 w-4" />Create Employee</>)}
+                    </span>
                   </button>
                 </div>
-              </form>
+              </div>
             </div>
           </div>
         );

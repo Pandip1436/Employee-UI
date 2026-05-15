@@ -92,21 +92,53 @@ export default function Sidebar({ open, onClose }: Props) {
 
       <aside
         className={clsx(
-          "fixed top-0 left-0 z-50 flex h-screen w-64 flex-col border-r border-gray-200/80 bg-gradient-to-b from-white to-gray-50/60 shadow-[1px_0_0_0_rgba(0,0,0,0.02)] dark:border-gray-800/80 dark:from-gray-950 dark:to-gray-900 dark:shadow-[1px_0_0_0_rgba(255,255,255,0.03)] transition-transform lg:static lg:translate-x-0",
+          "fixed top-0 left-0 z-50 flex h-screen w-64 flex-col overflow-hidden border-r border-white/5 bg-[#0a0a0f] shadow-[0_0_60px_-12px_rgba(0,0,0,0.6),0_0_40px_-12px_rgba(99,102,241,0.25)] transition-transform lg:static lg:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
+        {/* ── Premium obsidian background layers ── */}
+        <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+          {/* Deep obsidian gradient */}
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0d0d14] via-[#08080d] to-[#050508]" />
+          {/* Radial vignette + highlight */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background:
+                "radial-gradient(ellipse at 50% 0%, rgba(99,102,241,0.10) 0%, transparent 55%), radial-gradient(ellipse at 100% 100%, rgba(168,85,247,0.06) 0%, transparent 60%)",
+            }}
+          />
+          {/* Aurora — indigo top */}
+          <div className="absolute -top-32 -left-16 h-80 w-80 rounded-full bg-indigo-600/15 blur-3xl" />
+          {/* Aurora — fuchsia mid */}
+          <div className="absolute top-1/2 -right-24 h-72 w-72 rounded-full bg-fuchsia-600/10 blur-3xl" />
+          {/* Aurora — deep blue bottom */}
+          <div className="absolute -bottom-24 -left-20 h-80 w-80 rounded-full bg-blue-700/12 blur-3xl" />
+          {/* Noise grain */}
+          <div
+            className="absolute inset-0 opacity-[0.05] mix-blend-overlay"
+            style={{
+              backgroundImage:
+                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)' opacity='0.7'/></svg>\")",
+            }}
+          />
+          {/* Top sheen */}
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/25 to-transparent" />
+          {/* Right gradient edge */}
+          <div className="absolute inset-y-0 right-0 w-px bg-gradient-to-b from-transparent via-indigo-500/40 to-transparent" />
+        </div>
+
         {/* ── Brand ── */}
-        <div className="flex h-16 items-center justify-between border-b border-gray-200/70 dark:border-gray-800/80 px-4">
+        <div className="relative flex h-16 items-center justify-between border-b border-white/[0.06] px-4">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-1.5 shadow-sm ring-1 ring-black/5 dark:ring-white/10">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-1.5 shadow-[0_0_20px_-4px_rgba(99,102,241,0.6)] ring-1 ring-white/10">
               <img src="/logo.png" alt="Logo" className="h-full w-full object-contain" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-[13px] font-semibold leading-tight text-gray-900 dark:text-white">
+              <p className="truncate text-[13px] font-semibold leading-tight text-white">
                 {companyName}
               </p>
-              <p className="truncate text-[10px] font-medium uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              <p className="truncate text-[10px] font-medium uppercase tracking-wider text-gray-500">
                 Workspace
               </p>
             </div>
@@ -114,17 +146,17 @@ export default function Sidebar({ open, onClose }: Props) {
           <button
             onClick={onClose}
             aria-label="Close sidebar"
-            className="lg:hidden rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-200 transition-colors"
+            className="lg:hidden rounded-md p-1 text-gray-400 hover:bg-white/5 hover:text-white transition-colors"
           >
             <X className="h-5 w-5" />
           </button>
         </div>
 
         {/* ── Navigation ── */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden px-3 py-5">
+        <nav className="relative flex-1 overflow-y-auto overflow-x-hidden px-3 py-5">
           {sections.map((section) => (
             <div key={section} className="mb-5 last:mb-0">
-              <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.1em] text-gray-400 dark:text-gray-500">
+              <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500">
                 {section}
               </p>
               <div className="space-y-0.5">
@@ -139,8 +171,8 @@ export default function Sidebar({ open, onClose }: Props) {
                         clsx(
                           "group relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-all duration-150",
                           isActive
-                            ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 shadow-sm ring-1 ring-indigo-500/10 dark:from-indigo-400/15 dark:via-indigo-400/8 dark:to-transparent dark:text-indigo-300 dark:ring-indigo-400/20"
-                            : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white"
+                            ? "bg-gradient-to-r from-indigo-500/20 via-indigo-500/10 to-transparent text-white shadow-[0_0_20px_-8px_rgba(99,102,241,0.6)] ring-1 ring-indigo-400/20"
+                            : "text-gray-400 hover:bg-white/[0.04] hover:text-white"
                         )
                       }
                     >
@@ -150,7 +182,7 @@ export default function Sidebar({ open, onClose }: Props) {
                           <span
                             aria-hidden
                             className={clsx(
-                              "absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-gradient-to-b from-indigo-500 to-purple-500 transition-opacity",
+                              "absolute left-0 top-1/2 -translate-y-1/2 h-5 w-0.5 rounded-full bg-gradient-to-b from-indigo-400 to-purple-500 shadow-[0_0_8px_rgba(129,140,248,0.6)] transition-opacity",
                               isActive ? "opacity-100" : "opacity-0"
                             )}
                           />
@@ -158,8 +190,8 @@ export default function Sidebar({ open, onClose }: Props) {
                             className={clsx(
                               "h-4 w-4 shrink-0 transition-colors",
                               isActive
-                                ? "text-indigo-600 dark:text-indigo-400"
-                                : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300"
+                                ? "text-indigo-300"
+                                : "text-gray-500 group-hover:text-gray-200"
                             )}
                           />
                           <span className="truncate">{link.label}</span>
@@ -173,22 +205,22 @@ export default function Sidebar({ open, onClose }: Props) {
         </nav>
 
         {/* ── User ── */}
-        <div className="border-t border-gray-200/70 dark:border-gray-800/80 p-3">
-          <div className="flex items-center gap-3 rounded-xl border border-gray-200/60 bg-white/60 p-2.5 shadow-sm backdrop-blur-sm transition-colors hover:bg-white dark:border-gray-800/60 dark:bg-gray-900/40 dark:hover:bg-gray-900/70">
+        <div className="relative border-t border-white/[0.06] p-3">
+          <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5 shadow-[0_4px_20px_-8px_rgba(99,102,241,0.4)] backdrop-blur-md transition-colors hover:bg-white/[0.06] hover:border-white/10">
             <div className="relative shrink-0">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-semibold text-white shadow-inner ring-2 ring-white dark:ring-gray-900">
+              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-semibold text-white shadow-[0_0_15px_-2px_rgba(99,102,241,0.6)] ring-2 ring-black/40">
                 {user?.name?.charAt(0).toUpperCase()}
               </div>
               <span
                 aria-hidden
-                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-900"
+                className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)] ring-2 ring-[#0a0a0f]"
               />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="truncate text-[13px] font-semibold text-gray-900 dark:text-white">
+              <p className="truncate text-[13px] font-semibold text-white">
                 {user?.name}
               </p>
-              <p className="truncate text-[11px] font-medium capitalize text-gray-500 dark:text-gray-400">
+              <p className="truncate text-[11px] font-medium capitalize text-gray-400">
                 {user?.role}
               </p>
             </div>

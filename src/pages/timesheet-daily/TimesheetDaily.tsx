@@ -11,6 +11,11 @@ import {
   Mail,
   Sparkles,
   Briefcase,
+  Search,
+  X,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { WeeklyTimesheetData, TimesheetEntry, Project, AdminDailyRow } from "../../types";
@@ -169,13 +174,14 @@ function PersonalDailyView() {
             maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
           }}
         />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + KPI chips */}
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-white ring-1 ring-white/15 backdrop-blur-sm">
               <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">
                 {dateObj.toLocaleDateString(undefined, { month: "short" })}
               </p>
-              <p className="text-lg font-bold leading-none">{dateObj.getDate()}</p>
+              <p className="font-mono text-lg font-bold tabular-nums leading-none">{dateObj.getDate()}</p>
             </div>
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
@@ -186,42 +192,86 @@ function PersonalDailyView() {
                 Daily <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Timesheet</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">{formatDateDisplay(selectedDate)}</p>
+
+              {/* KPI chips */}
+              {dailyEntries.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <Clock className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Logged</span>
+                    <span className="font-mono font-semibold tabular-nums">{fmtHours(totalDayHours)}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <FileText className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Entries</span>
+                    <span className="font-mono font-semibold tabular-nums">{dailyEntries.length}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <Folder className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Projects</span>
+                    <span className="font-mono font-semibold tabular-nums">{groupedByProject.size}</span>
+                  </span>
+                </div>
+              )}
+
+              {/* Progress toward 8h target */}
+              {dailyEntries.length > 0 && (() => {
+                const target = 8;
+                const pct = Math.min(100, (totalDayHours / target) * 100);
+                const tone =
+                  totalDayHours >= target ? "from-emerald-400 to-teal-400"
+                  : totalDayHours >= target * 0.75 ? "from-sky-400 to-blue-400"
+                  : totalDayHours >= target * 0.5 ? "from-amber-400 to-orange-400"
+                  : "from-rose-400 to-pink-400";
+                return (
+                  <div className="mt-3 max-w-md">
+                    <div className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider">
+                      <span className="text-indigo-200/70">Day progress</span>
+                      <span className="font-mono tabular-nums text-indigo-100">
+                        {fmtHours(totalDayHours)} <span className="text-indigo-200/50">/ {target}h</span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${tone} transition-[width] duration-700`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Logged</p>
-              <p className="text-xl font-bold tracking-tight">{fmtHours(totalDayHours)}</p>
+
+          {/* RIGHT: date navigator */}
+          <div className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/15 backdrop-blur-sm">
+            <button
+              type="button"
+              onClick={() => setSelectedDate((d) => shiftIsoDate(d, -1))}
+              aria-label="Previous day"
+              className="rounded-lg p-1.5 text-indigo-100 transition-colors hover:bg-white/10 active:scale-95"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="inline-flex items-center gap-1.5 px-1">
+              <CalendarDays className="h-4 w-4 text-indigo-200" />
+              <input
+                type="date"
+                value={selectedDate}
+                max={todayIso()}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                className="rounded-md border-0 bg-transparent px-1 py-0.5 text-sm font-semibold text-white outline-none [color-scheme:dark] focus:ring-0"
+              />
             </div>
-            <div className="inline-flex items-center gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/15 backdrop-blur-sm">
-              <button
-                type="button"
-                onClick={() => setSelectedDate((d) => shiftIsoDate(d, -1))}
-                aria-label="Previous day"
-                className="rounded-lg p-1.5 text-indigo-100 transition-colors hover:bg-white/10 active:scale-95"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <div className="inline-flex items-center gap-1.5 px-1">
-                <CalendarDays className="h-4 w-4 text-indigo-200" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  max={todayIso()}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="rounded-md border-0 bg-transparent px-1 py-0.5 text-sm font-semibold text-white outline-none [color-scheme:dark] focus:ring-0"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelectedDate((d) => shiftIsoDate(d, 1))}
-                disabled={selectedDate >= todayIso()}
-                aria-label="Next day"
-                className="rounded-lg p-1.5 text-indigo-100 transition-colors hover:bg-white/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedDate((d) => shiftIsoDate(d, 1))}
+              disabled={selectedDate >= todayIso()}
+              aria-label="Next day"
+              className="rounded-lg p-1.5 text-indigo-100 transition-colors hover:bg-white/10 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
         </div>
       </div>
@@ -255,7 +305,7 @@ function PersonalDailyView() {
                     <p className="flex-1 truncate text-sm font-semibold text-gray-900 dark:text-white">{projectName}</p>
                     <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
                       <Clock className="h-3 w-3" />
-                      {fmtHours(total)}
+                      <span className="font-mono tabular-nums">{fmtHours(total)}</span>
                     </span>
                   </div>
                   <table className="w-full table-fixed">
@@ -280,7 +330,7 @@ function PersonalDailyView() {
                               {entry.activityType}
                             </span>
                           </td>
-                          <td className="px-5 py-3 text-right text-sm font-bold tracking-tight text-gray-900 dark:text-white">
+                          <td className="px-5 py-3 text-right font-mono text-sm font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
                             {fmtHours(entry.hours)}
                           </td>
                         </tr>
@@ -301,7 +351,7 @@ function PersonalDailyView() {
                     <Folder className="h-3 w-3 text-white" />
                   </div>
                   <p className="flex-1 truncate text-sm font-semibold text-gray-900 dark:text-white">{projectName}</p>
-                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                  <span className="font-mono text-xs font-bold tabular-nums text-indigo-600 dark:text-indigo-400">
                     {fmtHours(entries.reduce((s, e) => s + e.hours, 0))}
                   </span>
                 </div>
@@ -310,7 +360,7 @@ function PersonalDailyView() {
                     <div key={idx} className={`${cardCls} p-4`}>
                       <div className="mb-2 flex items-center justify-between">
                         <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{entry.task}</p>
-                        <span className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">{fmtHours(entry.hours)}</span>
+                        <span className="font-mono text-sm font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{fmtHours(entry.hours)}</span>
                       </div>
                       <span className="rounded-md border border-gray-200/70 bg-gray-50/80 px-2 py-0.5 text-xs font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300">
                         {entry.activityType}
@@ -328,11 +378,18 @@ function PersonalDailyView() {
 }
 
 /* ─── Admin View ─── */
+type SortKey = "name" | "hours" | "status";
+type SortDir = "asc" | "desc";
+
 function AdminDailyView() {
   const [selectedDate, setSelectedDate] = useState(toInputDate(new Date()));
   const [rows, setRows] = useState<AdminDailyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("hours");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   useEffect(() => {
     setLoading(true);
@@ -357,6 +414,43 @@ function AdminDailyView() {
     return { employees: rows.length, totalHours };
   }, [rows]);
 
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    for (const r of rows) if (r.user.department) set.add(r.user.department);
+    return [...set].sort();
+  }, [rows]);
+
+  const filteredSortedRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const arr = rows.filter((r) => {
+      if (q && !r.user.name.toLowerCase().includes(q) && !r.user.email.toLowerCase().includes(q)) return false;
+      if (deptFilter && r.user.department !== deptFilter) return false;
+      return true;
+    });
+    const dir = sortDir === "asc" ? 1 : -1;
+    arr.sort((a, b) => {
+      switch (sortKey) {
+        case "name":   return dir * a.user.name.localeCompare(b.user.name);
+        case "hours":  return dir * (a.totalHours - b.totalHours);
+        case "status": return dir * String(a.status).localeCompare(String(b.status));
+        default: return 0;
+      }
+    });
+    return arr;
+  }, [rows, search, deptFilter, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir(key === "name" ? "asc" : "desc"); }
+  };
+
+  const SortIcon = ({ k }: { k: SortKey }) => {
+    if (sortKey !== k) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="h-3 w-3 text-indigo-500 dark:text-indigo-400" />
+      : <ArrowDown className="h-3 w-3 text-indigo-500 dark:text-indigo-400" />;
+  };
+
   const dateObj = new Date(selectedDate);
 
   return (
@@ -378,13 +472,14 @@ function AdminDailyView() {
             maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
           }}
         />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + KPI chips */}
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-white ring-1 ring-white/15 backdrop-blur-sm">
               <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">
                 {dateObj.toLocaleDateString(undefined, { month: "short" })}
               </p>
-              <p className="text-lg font-bold leading-none">{dateObj.getDate()}</p>
+              <p className="font-mono text-lg font-bold tabular-nums leading-none">{dateObj.getDate()}</p>
             </div>
             <div className="min-w-0">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
@@ -395,9 +490,34 @@ function AdminDailyView() {
                 Daily <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Activity</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Every employee's logged hours for {formatDateDisplay(selectedDate)}</p>
+
+              {/* KPI chips */}
+              {rows.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <Users className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Employees</span>
+                    <span className="font-mono font-semibold tabular-nums">{totals.employees}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                    <Clock className="h-3.5 w-3.5 text-emerald-200" />
+                    <span className="text-emerald-200/90">Total hours</span>
+                    <span className="font-mono font-semibold tabular-nums text-emerald-50">{fmtHours(totals.totalHours)}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
+                    <Sparkles className="h-3.5 w-3.5 text-sky-200" />
+                    <span className="text-sky-200/90">Avg per emp</span>
+                    <span className="font-mono font-semibold tabular-nums text-sky-50">
+                      {fmtHours(totals.employees > 0 ? totals.totalHours / totals.employees : 0)}
+                    </span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
-          <div className="inline-flex items-center gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/15 backdrop-blur-sm">
+
+          {/* RIGHT: date navigator */}
+          <div className="inline-flex shrink-0 items-center gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/15 backdrop-blur-sm">
             <button
               type="button"
               onClick={() => setSelectedDate((d) => shiftIsoDate(d, -1))}
@@ -432,7 +552,7 @@ function AdminDailyView() {
       {/* ── Summary KPIs ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {[
-          { label: "Employees with entries", value: totals.employees, icon: Users, gradient: "from-indigo-500 to-purple-600" },
+          { label: "Employees with entries", value: String(totals.employees), icon: Users, gradient: "from-indigo-500 to-purple-600" },
           { label: "Total hours logged", value: fmtHours(totals.totalHours), icon: Clock, gradient: "from-emerald-500 to-teal-600" },
         ].map((s) => (
           <div key={s.label} className={`${cardCls} group relative overflow-hidden p-5`}>
@@ -443,7 +563,7 @@ function AdminDailyView() {
             <div className="flex items-start justify-between">
               <div className="min-w-0">
                 <p className={labelCls}>{s.label}</p>
-                <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+                <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
               </div>
               <div className={`rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
                 <s.icon className="h-5 w-5 text-white" />
@@ -453,23 +573,106 @@ function AdminDailyView() {
         ))}
       </div>
 
+      {/* ── Filter / Sort bar ── */}
+      {!loading && rows.length > 0 && (
+        <div className={`${cardCls} p-3`}>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+            {/* Search */}
+            <div className="relative flex-1 lg:max-w-md">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className={`w-full rounded-lg border border-gray-200/70 bg-white/80 py-2 pl-9 ${search ? "pr-8" : "pr-3"} text-sm text-gray-900 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-800/80 dark:bg-gray-900/80 dark:text-white dark:placeholder:text-gray-500 dark:ring-white/[0.03]`}
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  aria-label="Clear search"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Department dropdown */}
+            {departments.length > 0 && (
+              <div className="relative lg:min-w-[180px]">
+                <Briefcase className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+                <select
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                  className="w-full appearance-none rounded-lg border border-gray-200/70 bg-white/80 py-2 pl-8 pr-8 text-sm font-medium text-gray-900 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-800/80 dark:bg-gray-900/80 dark:text-white dark:ring-white/[0.03]"
+                >
+                  <option value="">All Departments</option>
+                  {departments.map((d) => <option key={d} value={d}>{d}</option>)}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-gray-400" />
+              </div>
+            )}
+
+            {/* Sort chips */}
+            <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-gray-50/60 p-1 dark:border-gray-800/80 dark:bg-gray-800/40">
+              <span className="ml-1 inline-flex items-center text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                Sort
+              </span>
+              {([
+                { key: "name" as SortKey,   label: "Name" },
+                { key: "hours" as SortKey,  label: "Hours" },
+                { key: "status" as SortKey, label: "Status" },
+              ]).map((f) => (
+                <button
+                  key={f.key}
+                  onClick={() => handleSort(f.key)}
+                  className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                    sortKey === f.key
+                      ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
+                      : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800/60"
+                  }`}
+                >
+                  {f.label}
+                  <SortIcon k={f.key} />
+                </button>
+              ))}
+            </div>
+
+            {(search || deptFilter || sortKey !== "hours" || sortDir !== "desc") && (
+              <button
+                onClick={() => { setSearch(""); setDeptFilter(""); setSortKey("hours"); setSortDir("desc"); }}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                <X className="h-3.5 w-3.5" />
+                Reset
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Content ── */}
       {loading ? (
         <div className={`${cardCls} flex flex-col items-center gap-3 py-16 text-center`}>
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600 dark:border-gray-700 dark:border-t-indigo-400" />
           <p className="text-sm text-gray-500 dark:text-gray-400">Loading activity...</p>
         </div>
-      ) : rows.length === 0 ? (
+      ) : filteredSortedRows.length === 0 ? (
         <div className={`${cardCls} flex flex-col items-center gap-2 py-16 text-center`}>
           <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
             <FileText className="h-5 w-5 text-gray-400" />
           </div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No employees logged hours on this date</p>
-          <p className="text-xs text-gray-400 dark:text-gray-500">Pick a different date using the selector above</p>
+          <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            {rows.length === 0 ? "No employees logged hours on this date" : `No matches for "${search}"`}
+          </p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">
+            {rows.length === 0 ? "Pick a different date using the selector above" : "Try clearing search or pick a different date"}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
-          {rows.map((row) => {
+          {filteredSortedRows.map((row) => {
             const isOpen = expanded.has(row.user._id);
             return (
               <div key={row.user._id} className={`${cardCls} overflow-hidden p-0`}>
@@ -507,7 +710,7 @@ function AdminDailyView() {
                     </span>
                     <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
                       <Clock className="h-3 w-3" />
-                      {fmtHours(row.totalHours)}
+                      <span className="font-mono tabular-nums">{fmtHours(row.totalHours)}</span>
                     </span>
                   </div>
                 </button>
@@ -546,7 +749,7 @@ function AdminDailyView() {
                                 {entry.activityType}
                               </span>
                             </td>
-                            <td className="px-5 py-2.5 text-right text-sm font-bold tracking-tight text-gray-900 dark:text-white">
+                            <td className="px-5 py-2.5 text-right font-mono text-sm font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
                               {fmtHours(entry.hours)}
                             </td>
                           </tr>

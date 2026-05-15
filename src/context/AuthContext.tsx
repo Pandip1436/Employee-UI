@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react";
 import { authApi } from "../api/authApi";
-import type { User } from "../types";
+import type { User, UserStatus } from "../types";
 
 // Helper: read from whichever storage has the data
 function getStored(key: string): string | null {
@@ -25,6 +25,7 @@ interface AuthContextType {
   loading: boolean;
   login: (userId: string, password: string, stayLoggedIn?: boolean) => Promise<void>;
   logout: () => void;
+  updateStatus: (status: UserStatus) => Promise<void>;
   isAdmin: boolean;
   isManager: boolean;
 }
@@ -79,9 +80,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     clearAll();
   };
 
+  const updateStatus = async (status: UserStatus) => {
+    const res = await authApi.updateStatus(status);
+    const updated = res.data.data;
+    if (updated) {
+      setUser(updated);
+      getStorage().setItem("user", JSON.stringify(updated));
+    }
+  };
+
   return (
     <AuthContext.Provider value={{
-      user, token, loading, login, logout,
+      user, token, loading, login, logout, updateStatus,
       isAdmin: user?.role === "admin",
       isManager: user?.role === "manager",
     }}>

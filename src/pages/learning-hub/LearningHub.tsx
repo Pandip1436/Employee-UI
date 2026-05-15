@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   BookOpen, Search, Plus, Clock, User, Users, CheckCircle2,
   GraduationCap, X, ExternalLink, Filter, ChevronDown, ChevronRight,
-  Sparkles, Award, Inbox,
+  Sparkles, Award, Inbox, Loader2, Send,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { learningApi, type CourseData, type LearnerData } from "../../api/learningApi";
@@ -89,6 +89,8 @@ export default function LearningHub() {
   const [learnersLoading, setLearnersLoading] = useState(false);
   const [learnerSearch, setLearnerSearch] = useState("");
   const [expandedLearner, setExpandedLearner] = useState<string | null>(null);
+  const [enrollingId, setEnrollingId] = useState<string | null>(null);
+  const [completingId, setCompletingId] = useState<string | null>(null);
 
   const fetchCourses = useCallback(() => {
     setLoading(true);
@@ -115,19 +117,21 @@ export default function LearningHub() {
   }, [tab, canViewLearners]);
 
   const handleEnroll = async (id: string) => {
+    setEnrollingId(id);
     try {
       await learningApi.enrollCourse(id);
       toast.success("Enrolled successfully!");
       fetchCourses();
-    } catch { toast.error("Enrollment failed"); }
+    } catch { toast.error("Enrollment failed"); } finally { setEnrollingId(null); }
   };
 
   const handleComplete = async (id: string) => {
+    setCompletingId(id);
     try {
       await learningApi.completeCourse(id);
       toast.success("Course marked as complete!");
       fetchCourses();
-    } catch { toast.error("Failed to mark complete"); }
+    } catch { toast.error("Failed to mark complete"); } finally { setCompletingId(null); }
   };
 
   const handleCreate = async (e: React.FormEvent) => {
@@ -191,18 +195,21 @@ export default function LearningHub() {
               <>
                 <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
                   <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Completed</p>
-                  <p className="text-xl font-bold tracking-tight">
-                    {completedCount}<span className="text-sm font-normal text-indigo-200/60"> / {enrolledCount || totalCourses}</span>
+                  <p className="font-mono text-xl font-bold tabular-nums tracking-tight">
+                    {completedCount}<span className="font-mono text-sm font-normal tabular-nums text-indigo-200/60"> / {enrolledCount || totalCourses}</span>
                   </p>
                 </div>
                 <button
                   onClick={() => setShowModal(true)}
-                  className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+                  className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
                 >
-                  <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
-                    <Plus className="h-3.5 w-3.5 text-white" />
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-indigo-200/40 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                  <span className="relative inline-flex items-center gap-2">
+                    <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
+                      <Plus className="h-3.5 w-3.5 text-white" />
+                    </span>
+                    Create Course
                   </span>
-                  Create Course
                 </button>
               </>
             )}
@@ -370,7 +377,7 @@ export default function LearningHub() {
                         )}
                         <span className="inline-flex items-center gap-1">
                           <Users className="h-3 w-3 text-gray-400" />
-                          {course.enrolledUsers.length} enrolled
+                          <span className="font-mono tabular-nums">{course.enrolledUsers.length}</span> enrolled
                         </span>
                       </div>
 
@@ -378,17 +385,31 @@ export default function LearningHub() {
                         {!enrolled && !completed && (
                           <button
                             onClick={() => handleEnroll(course._id)}
-                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl active:scale-[0.98]"
+                            disabled={enrollingId === course._id}
+                            className="group/btn relative inline-flex flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl hover:shadow-indigo-500/40 active:scale-[0.98] disabled:opacity-60"
                           >
-                            <BookOpen className="h-3.5 w-3.5" /> Enroll Now
+                            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%]" />
+                            <span className="relative inline-flex items-center gap-1.5">
+                              {enrollingId === course._id
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <BookOpen className="h-3.5 w-3.5" />}
+                              {enrollingId === course._id ? "Enrolling…" : "Enroll Now"}
+                            </span>
                           </button>
                         )}
                         {enrolled && !completed && (
                           <button
                             onClick={() => handleComplete(course._id)}
-                            className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl active:scale-[0.98]"
+                            disabled={completingId === course._id}
+                            className="group/btn relative inline-flex flex-1 items-center justify-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-3 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98] disabled:opacity-60"
                           >
-                            <CheckCircle2 className="h-3.5 w-3.5" /> Mark Complete
+                            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%]" />
+                            <span className="relative inline-flex items-center gap-1.5">
+                              {completingId === course._id
+                                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                : <CheckCircle2 className="h-3.5 w-3.5" />}
+                              {completingId === course._id ? "Saving…" : "Mark Complete"}
+                            </span>
                           </button>
                         )}
                         {completed && (
@@ -488,15 +509,15 @@ export default function LearningHub() {
                         </div>
                         <div className="hidden shrink-0 items-center gap-3 sm:flex">
                           <div className="text-center">
-                            <p className="text-base font-bold text-indigo-600 dark:text-indigo-400">{l.inProgressCount}</p>
+                            <p className="font-mono text-base font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{l.inProgressCount}</p>
                             <p className={labelCls}>In Progress</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-base font-bold text-emerald-600 dark:text-emerald-400">{l.completedCount}</p>
+                            <p className="font-mono text-base font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{l.completedCount}</p>
                             <p className={labelCls}>Completed</p>
                           </div>
                           <div className="text-center">
-                            <p className="text-base font-bold text-gray-600 dark:text-gray-300">{l.enrolledCount}</p>
+                            <p className="font-mono text-base font-bold tabular-nums text-gray-600 dark:text-gray-300">{l.enrolledCount}</p>
                             <p className={labelCls}>Total</p>
                           </div>
                         </div>
@@ -512,15 +533,15 @@ export default function LearningHub() {
                       {/* Mobile stats tiles */}
                       <div className="grid grid-cols-3 gap-2 px-4 pb-3 sm:hidden">
                         <div className="rounded-lg border border-indigo-200/60 bg-indigo-50/60 py-1.5 text-center dark:border-indigo-500/20 dark:bg-indigo-500/10">
-                          <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400">{l.inProgressCount}</p>
+                          <p className="font-mono text-sm font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{l.inProgressCount}</p>
                           <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">In Progress</p>
                         </div>
                         <div className="rounded-lg border border-emerald-200/60 bg-emerald-50/60 py-1.5 text-center dark:border-emerald-500/20 dark:bg-emerald-500/10">
-                          <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400">{l.completedCount}</p>
+                          <p className="font-mono text-sm font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{l.completedCount}</p>
                           <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Completed</p>
                         </div>
                         <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 py-1.5 text-center dark:border-gray-700/70 dark:bg-gray-800/60">
-                          <p className="text-sm font-bold text-gray-700 dark:text-gray-300">{l.enrolledCount}</p>
+                          <p className="font-mono text-sm font-bold tabular-nums text-gray-700 dark:text-gray-300">{l.enrolledCount}</p>
                           <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total</p>
                         </div>
                       </div>
@@ -530,7 +551,7 @@ export default function LearningHub() {
                           {l.inProgress.length > 0 && (
                             <div>
                               <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
-                                <BookOpen className="h-3 w-3" /> In Progress ({l.inProgress.length})
+                                <BookOpen className="h-3 w-3" /> In Progress (<span className="font-mono tabular-nums">{l.inProgress.length}</span>)
                               </p>
                               <div className="grid gap-2 sm:grid-cols-2">
                                 {l.inProgress.map((c) => {
@@ -561,7 +582,7 @@ export default function LearningHub() {
                           {l.completed.length > 0 && (
                             <div>
                               <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
-                                <CheckCircle2 className="h-3 w-3" /> Completed ({l.completed.length})
+                                <CheckCircle2 className="h-3 w-3" /> Completed (<span className="font-mono tabular-nums">{l.completed.length}</span>)
                               </p>
                               <div className="grid gap-2 sm:grid-cols-2">
                                 {l.completed.map((c) => {
@@ -603,87 +624,175 @@ export default function LearningHub() {
         </div>
       )}
 
-      {/* ── Create Course Modal ── */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4">
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
-            <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
-              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/20 blur-2xl" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
-                    <GraduationCap className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white">Create Course</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Share knowledge with the team</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setShowModal(false)}
-                  aria-label="Close"
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
+      {/* ── Create Course Drawer ── */}
+      {showModal && (() => {
+        const previewCfg = categoryConfig[form.category] || categoryConfig.Other;
+        return (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div
+              className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm animate-backdrop-fade"
+              onClick={() => !submitting && setShowModal(false)}
+            />
+            <form
+              onSubmit={handleCreate}
+              className="relative flex h-full w-full max-w-xl flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl animate-drawer-slide-right dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10"
+            >
+              {/* Status stripe */}
+              <div aria-hidden className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${previewCfg.gradient}`} />
 
-            <form onSubmit={handleCreate} className="max-h-[calc(90vh-5rem)] space-y-4 overflow-y-auto p-5">
-              <div>
-                <label className={`${labelCls} mb-1.5 block`}>Title *</label>
-                <input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Intro to TypeScript" />
-              </div>
-              <div>
-                <label className={`${labelCls} mb-1.5 block`}>Description</label>
-                <textarea rows={3} className={`${inputCls} resize-none`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="What will learners get out of this?" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`${labelCls} mb-1.5 block`}>Category</label>
-                  <select className={inputCls} value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                    {CATEGORIES.filter((c) => c !== "All").map((c) => <option key={c}>{c}</option>)}
-                  </select>
+              {/* Header */}
+              <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
+                <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-indigo-400/25 blur-2xl" />
+                <div aria-hidden className="pointer-events-none absolute -bottom-8 left-1/3 h-24 w-24 rounded-full bg-purple-400/20 blur-2xl" />
+                <div className="relative flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
+                      <GraduationCap className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">Learning content</p>
+                      <h2 className="text-base font-bold text-gray-900 dark:text-white">Create Course</h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Share knowledge with the team</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    disabled={submitting}
+                    aria-label="Close"
+                    className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
                 </div>
+              </div>
+
+              {/* Body */}
+              <div className="premium-scroll flex-1 space-y-5 overflow-y-auto p-5">
+                {/* Live preview */}
+                <div>
+                  <p className={`${labelCls} mb-1.5`}>Live Preview</p>
+                  <div className={`${cardCls} relative overflow-hidden p-4`}>
+                    <span aria-hidden className={`absolute left-0 top-0 h-full w-1 bg-gradient-to-b ${previewCfg.gradient}`} />
+                    <div className="flex items-start gap-3">
+                      <div className={`shrink-0 rounded-xl bg-gradient-to-br ${previewCfg.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
+                        <BookOpen className="h-4 w-4 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${previewCfg.badge}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${previewCfg.dot}`} />
+                          {form.category}
+                        </span>
+                        <h3 className="mt-1.5 truncate text-sm font-bold text-gray-900 dark:text-white">
+                          {form.title || <span className="text-gray-400">Course title…</span>}
+                        </h3>
+                        {form.description && (
+                          <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-gray-600 dark:text-gray-400">{form.description}</p>
+                        )}
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-gray-500 dark:text-gray-400">
+                          {form.duration && (
+                            <span className="inline-flex items-center gap-1"><Clock className="h-3 w-3 text-gray-400" />{form.duration}</span>
+                          )}
+                          {form.instructor && (
+                            <span className="inline-flex items-center gap-1"><User className="h-3 w-3 text-gray-400" />{form.instructor}</span>
+                          )}
+                          {form.skill && (
+                            <span className="inline-flex items-center gap-1 rounded-md border border-gray-200/70 bg-gray-50/80 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300">
+                              {form.skill}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className={`${labelCls} mb-1.5 block`}>Title *</label>
+                  <input className={inputCls} value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} placeholder="e.g. Intro to TypeScript" />
+                </div>
+                <div>
+                  <label className={`${labelCls} mb-1.5 block`}>Description</label>
+                  <textarea rows={3} className={`${inputCls} resize-none`} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="What will learners get out of this?" />
+                </div>
+
+                {/* Category as gradient cards */}
+                <div>
+                  <label className={`${labelCls} mb-2 block`}>Category</label>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    {CATEGORIES.filter((c) => c !== "All").map((c) => {
+                      const cfg = categoryConfig[c] || categoryConfig.Other;
+                      const active = form.category === c;
+                      return (
+                        <button
+                          type="button"
+                          key={c}
+                          onClick={() => setForm({ ...form, category: c })}
+                          className={`group relative flex items-center gap-2 overflow-hidden rounded-xl border p-2.5 text-left transition-all ${
+                            active
+                              ? "border-indigo-300 bg-gradient-to-br from-indigo-50 to-white shadow-sm ring-1 ring-indigo-500/20 dark:border-indigo-500/40 dark:from-indigo-500/10 dark:to-gray-900 dark:ring-indigo-400/25"
+                              : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm dark:border-gray-800 dark:bg-gray-900 dark:hover:border-gray-700"
+                          }`}
+                        >
+                          <div className={`rounded-lg bg-gradient-to-br ${cfg.gradient} p-1.5 shadow-sm ring-1 ring-white/10`}>
+                            <BookOpen className="h-3 w-3 text-white" />
+                          </div>
+                          <span className={`text-[12px] font-semibold ${active ? "text-indigo-700 dark:text-indigo-300" : "text-gray-700 dark:text-gray-300"}`}>
+                            {c}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div>
                   <label className={`${labelCls} mb-1.5 block`}>Skill</label>
                   <input className={inputCls} value={form.skill} onChange={(e) => setForm({ ...form, skill: e.target.value })} placeholder="e.g. TypeScript" />
                 </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className={`${labelCls} mb-1.5 block`}>Duration</label>
-                  <input className={inputCls} placeholder="e.g. 4 hours" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className={`${labelCls} mb-1.5 block`}>Duration</label>
+                    <input className={inputCls} placeholder="e.g. 4 hours" value={form.duration} onChange={(e) => setForm({ ...form, duration: e.target.value })} />
+                  </div>
+                  <div>
+                    <label className={`${labelCls} mb-1.5 block`}>Instructor</label>
+                    <input className={inputCls} value={form.instructor} onChange={(e) => setForm({ ...form, instructor: e.target.value })} placeholder="Name" />
+                  </div>
                 </div>
                 <div>
-                  <label className={`${labelCls} mb-1.5 block`}>Instructor</label>
-                  <input className={inputCls} value={form.instructor} onChange={(e) => setForm({ ...form, instructor: e.target.value })} placeholder="Name" />
+                  <label className={`${labelCls} mb-1.5 block`}>Link</label>
+                  <input className={inputCls} placeholder="https://..." value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} />
                 </div>
               </div>
-              <div>
-                <label className={`${labelCls} mb-1.5 block`}>Link</label>
-                <input className={inputCls} placeholder="https://..." value={form.link} onChange={(e) => setForm({ ...form, link: e.target.value })} />
-              </div>
-              <div className="flex justify-end gap-3 border-t border-gray-200/70 pt-4 dark:border-gray-800/80">
+
+              {/* Sticky footer */}
+              <div className="sticky bottom-0 flex gap-3 border-t border-gray-200/70 bg-white/95 p-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95">
                 <button
                   type="button"
                   onClick={() => setShowModal(false)}
-                  className="rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  disabled={submitting}
+                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl disabled:opacity-60"
+                  className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl hover:shadow-indigo-500/40 disabled:opacity-60"
                 >
-                  {submitting ? "Creating..." : "Create Course"}
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                  <span className="relative inline-flex items-center justify-center gap-2">
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                    {submitting ? "Creating…" : "Create Course"}
+                  </span>
                 </button>
               </div>
             </form>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

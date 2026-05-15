@@ -21,6 +21,14 @@ import type { WeeklySummary, LeaveBalance } from "../../types";
 
 const WORK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12)  return "Good morning";
+  if (h >= 12 && h < 18) return "Good afternoon";
+  if (h >= 18 && h < 23) return "Good evening";
+  return "Working late";
+}
+
 export default function Dashboard() {
   const { user, isAdmin } = useAuth();
 
@@ -147,54 +155,107 @@ export default function Dashboard() {
             maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
           }}
         />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity */}
+          <div className="min-w-0 flex-1 lg:max-w-[560px]">
             <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
             </p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-              Welcome back, <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">{user?.name?.split(" ")[0]}</span>
+              {getGreeting()},{" "}
+              <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">
+                {user?.name ?? "there"}
+              </span>
             </h1>
-            <p className="mt-1 text-sm text-indigo-200/70">Here's your work overview for today</p>
+            <p className="mt-1 text-sm text-indigo-200/70">
+              Here's a snapshot of your day — log time, check leave, and stay on top of things.
+            </p>
+
+            {/* Today snapshot chips */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                <LogIn className="h-3.5 w-3.5 text-indigo-200" />
+                <span className="text-indigo-200/80">In</span>
+                <span className="font-mono font-semibold tabular-nums">
+                  {today?.clockIn
+                    ? new Date(today.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : "—"}
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                <LogOut className="h-3.5 w-3.5 text-indigo-200" />
+                <span className="text-indigo-200/80">Out</span>
+                <span className="font-mono font-semibold tabular-nums">
+                  {today?.clockOut
+                    ? new Date(today.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : "—"}
+                </span>
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                <BarChart3 className="h-3.5 w-3.5 text-indigo-200" />
+                <span className="text-indigo-200/80">Month</span>
+                <span className="font-mono font-semibold tabular-nums">
+                  {fmtHours(kpis?.totalHoursThisMonth ?? 0)}
+                </span>
+              </div>
+            </div>
+
+            {today?.status === "late" && (
+              <div className="mt-3 flex w-fit items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
+                Late by {today.lateByMinutes ?? 0} min today
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-3">
+
+          {/* RIGHT: action stack */}
+          <div className="flex w-full shrink-0 flex-col gap-3 lg:w-[280px]">
+            {/* Live elapsed when clocked in */}
+            {today?.clockIn && !today?.clockOut && (
+              <div className="flex items-baseline justify-between gap-3 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10 backdrop-blur-sm">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  Elapsed
+                </span>
+                <span className="font-mono text-2xl font-bold tabular-nums tracking-wider sm:text-3xl">
+                  {fmtElapsed(elapsed)}
+                </span>
+              </div>
+            )}
+
+            {/* Clock action button */}
             {!today?.clockIn ? (
               <button
                 type="button"
                 onClick={handleClockIn}
                 disabled={clocking}
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98] disabled:opacity-60"
+                className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98] disabled:opacity-60"
               >
-                {clocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogIn className="h-4 w-4" />}
+                <span className="rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 p-1.5">
+                  {clocking ? <Loader2 className="h-4 w-4 animate-spin text-white" /> : <LogIn className="h-4 w-4 text-white" />}
+                </span>
                 Clock In
               </button>
             ) : !today?.clockOut ? (
-              <>
-                <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Elapsed</p>
-                  <p className="font-mono text-base font-bold tracking-wider">{fmtElapsed(elapsed)}</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={handleClockOut}
-                  disabled={clocking}
-                  className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/15 transition-all hover:shadow-xl hover:shadow-rose-500/40 active:scale-[0.98] disabled:opacity-60"
-                >
+              <button
+                type="button"
+                onClick={handleClockOut}
+                disabled={clocking}
+                className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/15 transition-all hover:shadow-xl hover:shadow-rose-500/40 active:scale-[0.98] disabled:opacity-60"
+              >
+                <span className="rounded-lg bg-white/15 p-1.5">
                   {clocking ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
-                  Clock Out
-                </button>
-              </>
+                </span>
+                Clock Out
+              </button>
             ) : (
-              <div className="inline-flex items-center gap-2 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-400/30 backdrop-blur-sm">
-                <CheckCircle2 className="h-4 w-4" />
+              <div className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-emerald-500/15 px-6 py-3.5 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                <span className="rounded-lg bg-emerald-500/25 p-1.5">
+                  <CheckCircle2 className="h-4 w-4" />
+                </span>
                 Day Complete
               </div>
             )}
-            <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">This Month</p>
-              <p className="text-base font-bold">{fmtHours(kpis?.totalHoursThisMonth ?? 0)}</p>
-            </div>
           </div>
         </div>
       </div>
@@ -215,7 +276,7 @@ export default function Dashboard() {
             <div className="flex items-start justify-between">
               <div className="min-w-0">
                 <p className={sectionLabel}>{s.label}</p>
-                <p className="mt-2.5 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+                <p className="mt-2.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
               </div>
               <div className={`rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
                 <s.icon className="h-5 w-5 text-white" />
@@ -224,6 +285,85 @@ export default function Dashboard() {
             <p className="mt-3 truncate text-xs text-gray-500 dark:text-gray-400">{s.sub}</p>
           </div>
         ))}
+      </div>
+
+      {/* ── This Week strip (Mon–Fri attendance pattern) ── */}
+      <div className={`${card} relative overflow-hidden`}>
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-400/15 blur-3xl" />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-indigo-50 p-2 ring-1 ring-indigo-500/10 dark:bg-indigo-500/10 dark:ring-indigo-400/20">
+              <CalendarDays className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">This Week</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Mon–Fri attendance pattern</p>
+            </div>
+          </div>
+          <Link
+            to="/attendance"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
+          >
+            Details <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+        {(() => {
+          // Map "Mon".."Fri" → status from this week's attendance records.
+          const now = new Date();
+          const weekStart = new Date(now);
+          const dow = now.getDay();
+          const diffToMon = dow === 0 ? -6 : 1 - dow;
+          weekStart.setDate(now.getDate() + diffToMon);
+          weekStart.setHours(0, 0, 0, 0);
+          const ymdUTC = (dt: Date) =>
+            `${dt.getUTCFullYear()}-${String(dt.getUTCMonth() + 1).padStart(2, "0")}-${String(dt.getUTCDate()).padStart(2, "0")}`;
+          const todayKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+          return (
+            <div className="mt-4 grid grid-cols-5 gap-2">
+              {WORK_DAYS.map((label, i) => {
+                const d = new Date(weekStart);
+                d.setDate(weekStart.getDate() + i);
+                const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+                const rec = attendanceWeek.find((r) => ymdUTC(new Date(r.date)) === key);
+                const isTodayCell = key === todayKey;
+                const isFuture = d > now && !isTodayCell;
+                let chip = "bg-gray-100 text-gray-400 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-500 dark:ring-gray-700";
+                let label2 = "—";
+                if (rec?.status === "present")  { chip = "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/25"; label2 = "Present"; }
+                else if (rec?.status === "late") { chip = "bg-amber-50 text-amber-700 ring-1 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25"; label2 = "Late"; }
+                else if (rec?.status === "half-day") { chip = "bg-orange-50 text-orange-700 ring-1 ring-orange-500/20 dark:bg-orange-500/10 dark:text-orange-300 dark:ring-orange-400/25"; label2 = "Half"; }
+                else if (rec?.status === "absent")   { chip = "bg-rose-50 text-rose-700 ring-1 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/25"; label2 = "Absent"; }
+                else if (rec?.status === "on-leave") { chip = "bg-sky-50 text-sky-700 ring-1 ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25"; label2 = "Leave"; }
+                else if (isFuture)               { label2 = "—"; }
+                else if (isTodayCell)            { label2 = "Today"; chip = "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500/30 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/30"; }
+                else                             { label2 = "Missing"; }
+                return (
+                  <div
+                    key={i}
+                    className={`flex flex-col items-center gap-1.5 rounded-xl px-2 py-2.5 transition-all ${
+                      isTodayCell
+                        ? "bg-indigo-50/60 ring-1 ring-indigo-500/20 dark:bg-indigo-500/10 dark:ring-indigo-400/30"
+                        : ""
+                    }`}
+                  >
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</span>
+                    <span className="font-mono text-sm font-bold tabular-nums text-gray-900 dark:text-white">{d.getDate()}</span>
+                    <span className={`inline-flex w-full justify-center rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${chip}`}>
+                      {label2}
+                    </span>
+                    {rec?.totalHours ? (
+                      <span className="font-mono text-[10px] font-semibold tabular-nums text-indigo-600 dark:text-indigo-400">
+                        {fmtHours(rec.totalHours)}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-gray-300 dark:text-gray-600">·</span>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
       </div>
 
       {/* ── Quick Actions ── */}

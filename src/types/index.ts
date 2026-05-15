@@ -1,4 +1,5 @@
 export type UserRole = "admin" | "manager" | "employee";
+export type UserStatus = "online" | "away" | "dnd";
 export type TimesheetStatus = "draft" | "submitted" | "approved" | "rejected";
 export type ProjectStatus = "active" | "completed" | "on-hold";
 
@@ -10,6 +11,7 @@ export interface User {
   role: UserRole;
   department?: string;
   isActive: boolean;
+  userStatus?: UserStatus;
   lastLoginAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -133,6 +135,7 @@ export interface LiveEmployee {
   email: string;
   department?: string;
   role: string;
+  userStatus?: UserStatus;
   liveStatus: LiveStatus;
   clockIn: string | null;
   clockOut: string | null;

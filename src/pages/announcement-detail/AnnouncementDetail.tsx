@@ -9,6 +9,9 @@ import {
   Hash,
   Sparkles,
   Paperclip,
+  Link2,
+  Check,
+  BookOpen,
 } from "lucide-react";
 import { announcementApi, type AnnouncementData } from "../../api/announcementApi";
 import { useAuth } from "../../context/AuthContext";
@@ -91,6 +94,11 @@ function timeAgo(iso: string) {
   return formatDate(iso);
 }
 
+function readTime(content: string) {
+  const words = (content || "").trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
+}
+
 export default function AnnouncementDetail() {
   const { id } = useParams<{ id: string }>();
   const { user } = useAuth();
@@ -98,6 +106,30 @@ export default function AnnouncementDetail() {
   const [loading, setLoading] = useState(true);
   const [commentText, setCommentText] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const h = document.documentElement;
+      const max = h.scrollHeight - h.clientHeight;
+      setProgress(max > 0 ? Math.min(100, Math.max(0, (h.scrollTop / max) * 100)) : 0);
+    };
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, [announcement]);
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      toast.success("Link copied");
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Could not copy link");
+    }
+  };
 
   const fetchAnnouncement = () => {
     if (!id) return;
@@ -194,15 +226,37 @@ export default function AnnouncementDetail() {
     return announcement.reactions[key]?.includes(user._id) || false;
   };
 
+  const mins = readTime(announcement.content);
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      {/* ━━━ Back ━━━ */}
-      <Link
-        to="/announcements"
-        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 -ml-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+      {/* ━━━ Reading progress bar ━━━ */}
+      <div
+        aria-hidden
+        className="fixed left-0 right-0 top-0 z-40 h-1 bg-transparent"
       >
-        <ArrowLeft className="h-4 w-4" /> Back to Announcements
-      </Link>
+        <div
+          className="h-full bg-gradient-to-r from-indigo-500 via-purple-500 to-fuchsia-500 shadow-[0_0_8px_rgba(99,102,241,0.6)] transition-[width] duration-150"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      {/* ━━━ Back ━━━ */}
+      <div className="flex items-center justify-between">
+        <Link
+          to="/announcements"
+          className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 -ml-2 text-sm font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to Announcements
+        </Link>
+        <button
+          onClick={handleCopyLink}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 shadow-sm hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Link2 className="h-3.5 w-3.5" />}
+          {copied ? "Copied" : "Copy link"}
+        </button>
+      </div>
 
       {/* ━━━ Article Card ━━━ */}
       <article className="relative overflow-hidden rounded-3xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 shadow-xl shadow-gray-200/50 dark:shadow-black/30 backdrop-blur-sm">
@@ -269,6 +323,11 @@ export default function AnnouncementDetail() {
             <span className="text-gray-300 dark:text-gray-700">·</span>
             <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-800/60 px-2.5 py-0.5 text-[11px] font-semibold text-gray-600 dark:text-gray-400">
               {timeAgo(announcement.createdAt)}
+            </span>
+            <span className="text-gray-300 dark:text-gray-700">·</span>
+            <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/20">
+              <BookOpen className="h-3 w-3" />
+              {mins} min read
             </span>
           </div>
 

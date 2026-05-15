@@ -1,7 +1,8 @@
 import { useState, useEffect, type FormEvent } from "react";
 import {
   Plus, Pencil, Trash2, X, Users, FolderKanban, ChevronLeft, ChevronRight,
-  CalendarDays, UserCircle, Sparkles, Briefcase,
+  CalendarDays, UserCircle, Sparkles, Briefcase, Search, Loader2,
+  FileText, Building, Tag,
 } from "lucide-react";
 import { projectApi } from "../../api/projectApi";
 import { userApi } from "../../api/userApi";
@@ -67,6 +68,8 @@ export default function Projects() {
   const [users, setUsers] = useState<User[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | "active" | "on-hold" | "completed">("all");
 
   const [name, setName] = useState("");
   const [client, setClient] = useState("");
@@ -147,6 +150,18 @@ export default function Projects() {
 
   const totalProjects = pagination?.total ?? projects.length;
   const activeProjects = projects.filter((p) => p.status === "active").length;
+  const onHoldProjects = projects.filter((p) => p.status === "on-hold").length;
+  const completedProjects = projects.filter((p) => p.status === "completed").length;
+
+  // Client-side filter applied to the current page of projects
+  const filteredProjects = projects.filter((p) => {
+    if (statusFilter !== "all" && p.status !== statusFilter) return false;
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      if (!p.name.toLowerCase().includes(q) && !p.client.toLowerCase().includes(q)) return false;
+    }
+    return true;
+  });
 
   return (
     <div className="space-y-6">
@@ -157,8 +172,9 @@ export default function Projects() {
           <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
           <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
         </div>
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + KPI chips */}
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <FolderKanban className="h-10 w-10 text-indigo-200" />
             </div>
@@ -171,44 +187,138 @@ export default function Projects() {
                 Your <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Projects</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Manage and track all your team projects</p>
+
+              {/* Hero KPI chips */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <FolderKanban className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Total</span>
+                  <span className="font-mono font-semibold tabular-nums">{totalProjects}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                  <span className="text-emerald-200/90">Active</span>
+                  <span className="font-mono font-semibold tabular-nums text-emerald-50">{activeProjects}</span>
+                </span>
+                {onHoldProjects > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
+                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                    <span className="text-amber-200/90">On hold</span>
+                    <span className="font-mono font-semibold tabular-nums text-amber-50">{onHoldProjects}</span>
+                  </span>
+                )}
+                {completedProjects > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
+                    <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+                    <span className="text-sky-200/90">Completed</span>
+                    <span className="font-mono font-semibold tabular-nums text-sky-50">{completedProjects}</span>
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Active</p>
-              <p className="text-xl font-bold tracking-tight">
-                {activeProjects}<span className="text-sm font-normal text-indigo-200/60"> / {totalProjects}</span>
-              </p>
-            </div>
-            {canEdit && (
+
+          {/* RIGHT: action stack */}
+          {canEdit && (
+            <div className="flex w-full shrink-0 flex-col gap-2.5 sm:flex-row lg:w-auto lg:flex-col">
               <button
                 onClick={() => { resetForm(); setShowModal(true); }}
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+                className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98]"
               >
                 <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
                   <Plus className="h-3.5 w-3.5 text-white" />
                 </span>
                 New Project
               </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Filter Bar ── */}
+      <div className={`${cardCls} p-3`}>
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+          {/* Search */}
+          <div className="relative flex-1 lg:max-w-md">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by project or client..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={`w-full rounded-lg border border-gray-200/70 bg-white/80 py-2 pl-9 ${search ? "pr-8" : "pr-3"} text-sm text-gray-900 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-800/80 dark:bg-gray-900/80 dark:text-white dark:placeholder:text-gray-500 dark:ring-white/[0.03]`}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
             )}
           </div>
+
+          {/* Status chips */}
+          <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-gray-50/60 p-1 dark:border-gray-800/80 dark:bg-gray-800/40">
+            {([
+              { key: "all" as const,       label: "All",       count: totalProjects, dot: "bg-gray-400" },
+              { key: "active" as const,    label: "Active",    count: activeProjects, dot: "bg-emerald-500" },
+              { key: "on-hold" as const,   label: "On Hold",   count: onHoldProjects, dot: "bg-amber-500" },
+              { key: "completed" as const, label: "Completed", count: completedProjects, dot: "bg-sky-500" },
+            ]).map((f) => (
+              <button
+                key={f.key}
+                onClick={() => setStatusFilter(f.key)}
+                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                  statusFilter === f.key
+                    ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
+                    : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800/60"
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${f.dot}`} />
+                {f.label}
+                <span className={`inline-flex min-w-[20px] items-center justify-center rounded-md px-1.5 py-0 text-[10px] font-bold ${
+                  statusFilter === f.key
+                    ? "bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-300"
+                    : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                }`}>
+                  {f.count}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {(statusFilter !== "all" || search) && (
+            <button
+              onClick={() => { setStatusFilter("all"); setSearch(""); }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-600 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
       {/* ── Project Grid ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {projects.length === 0 ? (
+        {filteredProjects.length === 0 ? (
           <div className={`${cardCls} col-span-full flex flex-col items-center gap-2 py-20 text-center`}>
             <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
               <FolderKanban className="h-5 w-5 text-gray-400" />
             </div>
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No projects yet</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+              {projects.length === 0 ? "No projects yet" : "No projects match your filters"}
+            </p>
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              {canEdit ? "Create your first project to get started" : "Projects will appear here once created"}
+              {projects.length === 0
+                ? (canEdit ? "Create your first project to get started" : "Projects will appear here once created")
+                : "Try clearing search or status filter"}
             </p>
           </div>
         ) : (
-          projects.map((p) => {
+          filteredProjects.map((p) => {
             const cfg = statusConfig[p.status] || statusConfig.active;
             const members = p.assignedUsers || [];
             return (
@@ -325,10 +435,11 @@ export default function Projects() {
       {/* ── Detail Modal ── */}
       {(detailProject || detailLoading) && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4"
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
           onClick={(e) => { if (e.target === e.currentTarget) setDetailProject(null); }}
         >
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
+          <div className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm" />
+          <div className="relative w-full max-w-lg animate-modal-enter overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
             {/* Header */}
             <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
               <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/20 blur-2xl" />
@@ -457,137 +568,283 @@ export default function Projects() {
         </div>
       )}
 
-      {/* ── Create/Edit Modal ── */}
-      {showModal && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4"
-          onClick={(e) => { if (e.target === e.currentTarget) resetForm(); }}
-        >
-          <div className="w-full max-w-lg overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
-            <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
-              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/20 blur-2xl" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
-                    {editing ? <Pencil className="h-5 w-5 text-white" /> : <Plus className="h-5 w-5 text-white" />}
+      {/* ── Create/Edit Drawer (premium) ── */}
+      {showModal && (() => {
+        const previewCfg = statusConfig[status] || statusConfig.active;
+        const selectedMembers = users.filter((u) => assignedUsers.includes(u._id));
+        return (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div
+              className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm"
+              onClick={resetForm}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="relative flex h-full w-full max-w-md animate-drawer-slide-right flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10 sm:max-w-xl sm:rounded-l-3xl"
+            >
+              {/* Left stripe — color follows the chosen status */}
+              <span aria-hidden className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${previewCfg.gradient}`} />
+
+              {/* Header */}
+              <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 px-5 pt-6 pb-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:via-gray-900 dark:to-purple-500/10">
+                <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-indigo-400/25 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-purple-400/15 blur-3xl" />
+                <div className="relative flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3.5">
+                    <div className={`rounded-2xl bg-gradient-to-br ${previewCfg.gradient} p-3 shadow-lg shadow-black/[0.08] ring-1 ring-white/15`}>
+                      {editing ? <Pencil className="h-5 w-5 text-white" /> : <Plus className="h-5 w-5 text-white" />}
+                    </div>
+                    <div>
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                        <Sparkles className="h-3 w-3" />
+                        {editing ? "Update project" : "New project"}
+                      </p>
+                      <h2 className="mt-0.5 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
+                        {editing ? "Edit Project" : "New Project"}
+                      </h2>
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        {editing ? "Update name, status, members" : "Define scope and assign your team"}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white">
-                      {editing ? "Edit Project" : "New Project"}
-                    </h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      {editing ? "Update project details" : "Create a new project"}
-                    </p>
+                  <button
+                    onClick={resetForm}
+                    aria-label="Close"
+                    className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable body */}
+              <form
+                onSubmit={handleSubmit}
+                id="project-form"
+                className="premium-scroll flex-1 space-y-5 overflow-y-auto p-5 sm:p-6"
+              >
+                {/* Live preview card */}
+                <div className="relative overflow-hidden rounded-2xl border border-gray-200/70 bg-gradient-to-br from-gray-50 to-white p-4 ring-1 ring-black/[0.02] dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900/40 dark:ring-white/[0.02]">
+                  <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent" />
+                  <span aria-hidden className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${previewCfg.gradient} opacity-15 blur-2xl`} />
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                    <Sparkles className="h-3 w-3" />
+                    Live preview
+                  </p>
+                  <div className="flex items-start gap-3">
+                    <div className={`rounded-xl bg-gradient-to-br ${previewCfg.gradient} p-2.5 shadow-md ring-1 ring-white/10`}>
+                      <Briefcase className="h-4 w-4 text-white" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                          {name || <span className="text-gray-400 dark:text-gray-500">Project name…</span>}
+                        </p>
+                        <span className={clsx("inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold", previewCfg.badge)}>
+                          <span className={clsx("h-1 w-1 rounded-full", previewCfg.dot)} />
+                          {previewCfg.label}
+                        </span>
+                      </div>
+                      <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">
+                        {client || <span className="text-gray-400 dark:text-gray-500">Client name…</span>}
+                      </p>
+                      {description && (
+                        <p className="mt-2 line-clamp-2 text-[11px] leading-relaxed text-gray-600 dark:text-gray-400">
+                          {description}
+                        </p>
+                      )}
+                      {selectedMembers.length > 0 && (
+                        <div className="mt-2 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-800/80">
+                          <div className="flex -space-x-1.5">
+                            {selectedMembers.slice(0, 4).map((u) => (
+                              <div
+                                key={u._id}
+                                title={u.name}
+                                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(u.name || "?")} text-[8px] font-semibold text-white ring-2 ring-white dark:ring-gray-900`}
+                              >
+                                {(u.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                              </div>
+                            ))}
+                            {selectedMembers.length > 4 && (
+                              <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-200 text-[8px] font-semibold text-gray-600 ring-2 ring-white dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-900">
+                                +{selectedMembers.length - 4}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-[10px] text-gray-500 dark:text-gray-400">
+                            {selectedMembers.length} {selectedMembers.length === 1 ? "member" : "members"}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={resetForm}
-                  aria-label="Close"
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                >
-                  <X className="h-5 w-5" />
-                </button>
+
+                {/* Section: Basics */}
+                <div>
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-600/70 dark:text-indigo-400/70">
+                    <FolderKanban className="h-3 w-3" />
+                    Basics
+                  </p>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className={`${labelCls} mb-1.5 flex items-center gap-1.5`}>
+                        <FolderKanban className="h-3 w-3 text-indigo-500 dark:text-indigo-400" />
+                        Name
+                      </label>
+                      <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name" className={inputClass} />
+                    </div>
+                    <div>
+                      <label className={`${labelCls} mb-1.5 flex items-center gap-1.5`}>
+                        <Building className="h-3 w-3 text-emerald-500 dark:text-emerald-400" />
+                        Client
+                      </label>
+                      <input required value={client} onChange={(e) => setClient(e.target.value)} placeholder="Client name" className={inputClass} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <label className={`${labelCls} mb-1.5 flex items-center gap-1.5`}>
+                      <FileText className="h-3 w-3 text-rose-500 dark:text-rose-400" />
+                      Description
+                    </label>
+                    <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief project description..." className={clsx(inputClass, "resize-y")} />
+                  </div>
+                </div>
+
+                {/* Section: Status */}
+                <div>
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-amber-600/70 dark:text-amber-400/70">
+                    <Tag className="h-3 w-3" />
+                    Status
+                  </p>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(["active", "on-hold", "completed"] as const).map((s) => {
+                      const cfg = statusConfig[s];
+                      const active = status === s;
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => setStatus(s)}
+                          className={`group relative overflow-hidden rounded-xl border p-3 text-center transition-all ${
+                            active
+                              ? "border-transparent shadow-md ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
+                              : "border-gray-200/80 bg-white text-gray-600 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700/80 dark:bg-gray-900 dark:text-gray-400 dark:hover:border-gray-600 dark:hover:bg-gray-800/60"
+                          }`}
+                          style={
+                            active
+                              ? {
+                                  background:
+                                    s === "active"
+                                      ? "linear-gradient(135deg, rgba(16,185,129,0.10), rgba(20,184,166,0.05))"
+                                      : s === "on-hold"
+                                        ? "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(249,115,22,0.05))"
+                                        : "linear-gradient(135deg, rgba(14,165,233,0.10), rgba(37,99,235,0.05))",
+                                  boxShadow:
+                                    "0 0 0 2px " +
+                                    (s === "active"
+                                      ? "rgba(16,185,129,0.55)"
+                                      : s === "on-hold"
+                                        ? "rgba(245,158,11,0.55)"
+                                        : "rgba(14,165,233,0.55)"),
+                                }
+                              : undefined
+                          }
+                        >
+                          <div className={`mx-auto mb-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br ${cfg.gradient} text-white shadow-sm ring-1 ring-white/10`}>
+                            <Briefcase className="h-3.5 w-3.5" />
+                          </div>
+                          <p className="text-[12px] font-semibold text-gray-900 dark:text-white">{cfg.label}</p>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Section: Team */}
+                <div>
+                  <p className="mb-3 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.14em] text-purple-600/70 dark:text-purple-400/70">
+                    <span className="flex items-center gap-1.5">
+                      <Users className="h-3 w-3" />
+                      Team members
+                    </span>
+                    <span className="rounded-md bg-purple-100 px-1.5 py-0.5 text-[9px] font-bold text-purple-700 dark:bg-purple-500/15 dark:text-purple-300">
+                      {assignedUsers.length} selected
+                    </span>
+                  </p>
+                  <div className="max-h-52 space-y-0.5 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/60 p-1.5 dark:border-gray-700 dark:bg-gray-800/40">
+                    {users.length === 0 && (
+                      <p className="px-2 py-6 text-center text-xs text-gray-400 dark:text-gray-500">No users available</p>
+                    )}
+                    {users.map((u) => {
+                      const checked = assignedUsers.includes(u._id);
+                      return (
+                        <label
+                          key={u._id}
+                          className={`flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 transition-colors ${
+                            checked
+                              ? "bg-indigo-50 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:ring-indigo-400/25"
+                              : "hover:bg-white dark:hover:bg-gray-800"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() => toggleUser(u._id)}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
+                          />
+                          <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(u.name || "?")} text-[10px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
+                            {(u.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium text-gray-700 dark:text-gray-300">{u.name}</p>
+                            <p className="truncate text-[10px] text-gray-500 dark:text-gray-400">{u.email}</p>
+                          </div>
+                          <span className="rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-gray-500 dark:bg-gray-700 dark:text-gray-400">
+                            {u.role}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              </form>
+
+              {/* Sticky footer */}
+              <div className="shrink-0 border-t border-gray-200/70 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 sm:px-6">
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={resetForm}
+                    className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    form="project-form"
+                    disabled={saving || !name || !client}
+                    className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10 transition-all hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl hover:shadow-indigo-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                  >
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                    />
+                    <span className="relative inline-flex items-center justify-center gap-2">
+                      {saving
+                        ? <><Loader2 className="h-4 w-4 animate-spin" />Saving…</>
+                        : editing
+                          ? <><Pencil className="h-4 w-4" />Update Project</>
+                          : <><Plus className="h-4 w-4" />Create Project</>}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4 p-5">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={`${labelCls} mb-1.5 block`}>Name</label>
-                  <input required value={name} onChange={(e) => setName(e.target.value)} placeholder="Project name" className={inputClass} />
-                </div>
-                <div>
-                  <label className={`${labelCls} mb-1.5 block`}>Client</label>
-                  <input required value={client} onChange={(e) => setClient(e.target.value)} placeholder="Client name" className={inputClass} />
-                </div>
-              </div>
-
-              <div>
-                <label className={`${labelCls} mb-1.5 block`}>Description</label>
-                <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Brief project description..." className={clsx(inputClass, "resize-none")} />
-              </div>
-
-              <div>
-                <label className={`${labelCls} mb-2 block`}>Status</label>
-                <div className="grid grid-cols-3 gap-2">
-                  {(["active", "on-hold", "completed"] as const).map((s) => {
-                    const cfg = statusConfig[s];
-                    const active = status === s;
-                    return (
-                      <button
-                        key={s}
-                        type="button"
-                        onClick={() => setStatus(s)}
-                        className={`flex items-center justify-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold transition-all ${
-                          active
-                            ? "border-indigo-300 bg-gradient-to-br from-indigo-50 to-white shadow-sm ring-1 ring-indigo-500/20 text-indigo-700 dark:border-indigo-500/40 dark:from-indigo-500/10 dark:to-gray-900 dark:text-indigo-300 dark:ring-indigo-400/25"
-                            : "border-gray-200 bg-white text-gray-600 hover:border-gray-300 dark:border-gray-800 dark:bg-gray-900 dark:text-gray-300 dark:hover:border-gray-700"
-                        }`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                        {cfg.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div>
-                <label className={`${labelCls} mb-1.5 block`}>
-                  Assign Members <span className="text-gray-400">({assignedUsers.length} selected)</span>
-                </label>
-                <div className="max-h-44 space-y-0.5 overflow-y-auto rounded-xl border border-gray-200 bg-gray-50/60 p-1.5 dark:border-gray-700 dark:bg-gray-800/40">
-                  {users.length === 0 && (
-                    <p className="px-2 py-4 text-center text-xs text-gray-400 dark:text-gray-500">No users available</p>
-                  )}
-                  {users.map((u) => {
-                    const checked = assignedUsers.includes(u._id);
-                    return (
-                      <label
-                        key={u._id}
-                        className={`flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-1.5 transition-colors ${
-                          checked ? "bg-indigo-50 dark:bg-indigo-500/10" : "hover:bg-white dark:hover:bg-gray-800"
-                        }`}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={() => toggleUser(u._id)}
-                          className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
-                        />
-                        <div className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(u.name || "?")} text-[9px] font-semibold text-white shadow-sm`}>
-                          {(u.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                        </div>
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{u.name}</span>
-                        <span className="ml-auto rounded bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-gray-500 dark:bg-gray-700 dark:text-gray-400">
-                          {u.role}
-                        </span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="flex gap-3 border-t border-gray-200/70 pt-4 dark:border-gray-800/80">
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="flex-1 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl disabled:opacity-60"
-                >
-                  {saving ? "Saving..." : editing ? "Update Project" : "Create Project"}
-                </button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

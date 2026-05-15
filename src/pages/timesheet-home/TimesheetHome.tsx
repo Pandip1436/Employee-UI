@@ -88,12 +88,13 @@ export default function TimesheetHome() {
             maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
           }}
         />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + KPI chips + progress */}
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <Timer className="h-10 w-10 text-indigo-200" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
                 <Sparkles className="h-3.5 w-3.5" />
                 {currentWeekLabel}
@@ -102,19 +103,78 @@ export default function TimesheetHome() {
                 Time <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Tracking</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Track and manage your working hours across projects</p>
+
+              {/* KPI chips */}
+              {current && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <Clock className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Logged</span>
+                    <span className="font-mono font-semibold tabular-nums">{fmtHours(current.totalHours)}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <ClipboardList className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Entries</span>
+                    <span className="font-mono font-semibold tabular-nums">{current.entries.length}</span>
+                  </span>
+                  {current.status && (() => {
+                    const s = statusStyle[current.status];
+                    const heroBg =
+                      current.status === "approved"  ? "bg-emerald-500/15 ring-emerald-400/30 text-emerald-50"
+                      : current.status === "submitted" ? "bg-sky-500/15 ring-sky-400/30 text-sky-50"
+                      : current.status === "rejected"  ? "bg-rose-500/15 ring-rose-400/30 text-rose-50"
+                      : "bg-white/10 ring-white/15";
+                    return (
+                      <span className={`inline-flex items-center gap-2 rounded-lg ${heroBg} px-3 py-1.5 text-xs ring-1 backdrop-blur-sm`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                        <span className="opacity-90 capitalize">{current.status}</span>
+                      </span>
+                    );
+                  })()}
+                </div>
+              )}
+
+              {/* 40h progress bar */}
+              {current && (() => {
+                const target = 40;
+                const pct = Math.min(100, (current.totalHours / target) * 100);
+                const tone =
+                  current.totalHours >= target ? "from-emerald-400 to-teal-400"
+                  : current.totalHours >= target * 0.75 ? "from-sky-400 to-blue-400"
+                  : current.totalHours >= target * 0.5 ? "from-amber-400 to-orange-400"
+                  : "from-rose-400 to-pink-400";
+                return (
+                  <div className="mt-3 max-w-md">
+                    <div className="mb-1 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider">
+                      <span className="text-indigo-200/70">Week progress</span>
+                      <span className="font-mono tabular-nums text-indigo-100">
+                        {fmtHours(current.totalHours)} <span className="text-indigo-200/50">/ {target}h</span>
+                      </span>
+                    </div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${tone} transition-[width] duration-700`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+
+          {/* RIGHT: action stack */}
+          <div className="flex w-full shrink-0 flex-col gap-2.5 sm:flex-row lg:w-auto lg:flex-col">
             <Link
               to="/timesheet/log"
-              className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 active:scale-[0.98]"
             >
               <Plus className="h-4 w-4" />
               Quick Log
             </Link>
             <Link
               to="/timesheet/weekly"
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98]"
             >
               <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
                 <CalendarDays className="h-3.5 w-3.5 text-white" />
@@ -194,7 +254,7 @@ export default function TimesheetHome() {
                 <div className="flex items-start justify-between">
                   <div className="min-w-0">
                     <p className={labelCls}>{s.label}</p>
-                    <p className="mt-2 text-2xl font-bold capitalize tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+                    <p className="mt-2 font-mono text-2xl font-bold capitalize tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
                   </div>
                   <div className={`rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
                     <s.icon className="h-4 w-4 text-white" />
@@ -204,6 +264,77 @@ export default function TimesheetHome() {
               </div>
             ))}
           </div>
+
+          {/* ── This Week — day strip ── */}
+          {current && (() => {
+            const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+            const dayTotals = [0, 0, 0, 0, 0, 0, 0];
+            for (const e of current.entries) {
+              for (let i = 0; i < 7; i++) dayTotals[i] += e.hours?.[i] || 0;
+            }
+            const maxDay = Math.max(...dayTotals, 1);
+            const today = new Date();
+            const dayOfWeek = today.getDay();
+            const todayIdx = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Mon=0..Sun=6
+            return (
+              <div className={`${cardCls} relative overflow-hidden p-5`}>
+                <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-400/15 blur-3xl" />
+                <div className="relative flex items-center gap-3">
+                  <div className="rounded-lg bg-indigo-50 p-2 ring-1 ring-indigo-500/10 dark:bg-indigo-500/10 dark:ring-indigo-400/20">
+                    <CalendarDays className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-900 dark:text-white">This Week</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Hours logged per day</p>
+                  </div>
+                </div>
+                <div className="relative mt-4 grid grid-cols-7 gap-1.5">
+                  {DAY_LABELS.map((label, i) => {
+                    const hours = dayTotals[i];
+                    const heightPct = hours > 0 ? Math.max(8, (hours / maxDay) * 100) : 0;
+                    const isToday = i === todayIdx;
+                    const isWeekend = i >= 5;
+                    return (
+                      <div
+                        key={i}
+                        className={`flex flex-col items-center gap-1.5 rounded-xl px-1 py-2 transition-colors ${
+                          isToday
+                            ? "bg-indigo-50/60 ring-1 ring-indigo-500/20 dark:bg-indigo-500/10 dark:ring-indigo-400/30"
+                            : ""
+                        }`}
+                      >
+                        <span className={`text-[10px] font-bold uppercase tracking-wider ${
+                          isWeekend ? "text-rose-400 dark:text-rose-400/80" : "text-gray-500 dark:text-gray-400"
+                        }`}>{label}</span>
+                        {/* Bar */}
+                        <div className="flex h-14 w-full items-end justify-center">
+                          {hours > 0 ? (
+                            <div
+                              className={`w-3 rounded-t-md bg-gradient-to-t ${
+                                isToday ? "from-indigo-500 to-purple-600"
+                                : hours >= 8 ? "from-emerald-500 to-teal-500"
+                                : "from-indigo-400 to-purple-500"
+                              } shadow-sm`}
+                              style={{ height: `${heightPct}%` }}
+                            />
+                          ) : (
+                            <div className="h-1 w-3 rounded-full bg-gray-200 dark:bg-gray-700" />
+                          )}
+                        </div>
+                        <span className={`font-mono text-[10px] font-bold tabular-nums ${
+                          hours > 0
+                            ? "text-gray-900 dark:text-white"
+                            : "text-gray-300 dark:text-gray-600"
+                        }`}>
+                          {hours > 0 ? fmtHours(hours) : "—"}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── Recent Timesheets ── */}
           <div className={`${cardCls} p-5`}>
@@ -249,19 +380,19 @@ export default function TimesheetHome() {
                           <p className="text-[9px] font-bold uppercase tracking-wider text-white/90">
                             {start.toLocaleDateString(undefined, { month: "short" })}
                           </p>
-                          <p className="text-sm font-bold leading-none">{start.getDate()}</p>
+                          <p className="font-mono text-sm font-bold tabular-nums leading-none">{start.getDate()}</p>
                         </div>
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
                             {fmtWeek(r.weekStart)} — {fmtWeek(weekEndFrom(r.weekStart))}
                           </p>
                           <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                            {r.entries.length} {r.entries.length === 1 ? "entry" : "entries"}
+                            <span className="font-mono tabular-nums">{r.entries.length}</span> {r.entries.length === 1 ? "entry" : "entries"}
                           </p>
                         </div>
                       </div>
                       <div className="flex shrink-0 items-center gap-3">
-                        <span className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(r.totalHours)}</span>
+                        <span className="font-mono text-sm font-bold tabular-nums tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(r.totalHours)}</span>
                         <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold capitalize ${s.bg}`}>
                           <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
                           {r.status}

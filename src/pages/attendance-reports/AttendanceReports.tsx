@@ -1,7 +1,7 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   FileSpreadsheet, FileDown, Users, Clock, AlertTriangle, CheckCircle2,
-  BarChart3, Loader2, CalendarDays,
+  BarChart3, Loader2, CalendarDays, Search, X, ArrowUpDown, ArrowUp, ArrowDown,
 } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
@@ -57,6 +57,9 @@ const currentMonthStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
+type SortKey = "name" | "department" | "present" | "late" | "halfDay" | "absent" | "hours" | "attendance";
+type SortDir = "asc" | "desc";
+
 export default function AttendanceReports() {
   const [period, setPeriod] = useState<Period>("monthly");
   const [date, setDate] = useState(() => currentMonthStr());
@@ -65,6 +68,9 @@ export default function AttendanceReports() {
   const [report, setReport] = useState<any>(null);
   const [exporting, setExporting] = useState<"excel" | "pdf" | null>(null);
   const [loading, setLoading] = useState(false);
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("attendance");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   useEffect(() => {
     userApi.getAll({ limit: 500 })
@@ -109,6 +115,47 @@ export default function AttendanceReports() {
   const total = emps.length;
   const avg = (fn: (e: any) => number) => total > 0 ? Math.round(emps.reduce((s: number, e: any) => s + fn(e), 0) / total) : 0;
 
+  // Attendance % per employee = (present + late + halfDay) / total tracked days × 100
+  const pctFor = (e: any): number => {
+    const tracked = (e.presentDays || 0) + (e.lateDays || 0) + (e.halfDays || 0) + (e.absentDays || 0);
+    if (tracked === 0) return 0;
+    return Math.round(((e.presentDays || 0) + (e.lateDays || 0) + (e.halfDays || 0)) / tracked * 100);
+  };
+
+  const filteredSortedEmps = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = q
+      ? emps.filter((e: any) => (e.name || "").toLowerCase().includes(q) || (e.email || "").toLowerCase().includes(q))
+      : [...emps];
+    const dir = sortDir === "asc" ? 1 : -1;
+    filtered.sort((a: any, b: any) => {
+      switch (sortKey) {
+        case "name":        return dir * ((a.name || "").localeCompare(b.name || ""));
+        case "department":  return dir * ((a.department || "").localeCompare(b.department || ""));
+        case "present":     return dir * ((a.presentDays || 0) - (b.presentDays || 0));
+        case "late":        return dir * ((a.lateDays || 0) - (b.lateDays || 0));
+        case "halfDay":     return dir * ((a.halfDays || 0) - (b.halfDays || 0));
+        case "absent":      return dir * ((a.absentDays || 0) - (b.absentDays || 0));
+        case "hours":       return dir * ((a.totalHours || 0) - (b.totalHours || 0));
+        case "attendance":  return dir * (pctFor(a) - pctFor(b));
+        default: return 0;
+      }
+    });
+    return filtered;
+  }, [emps, search, sortKey, sortDir]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    else { setSortKey(key); setSortDir(key === "name" || key === "department" ? "asc" : "desc"); }
+  };
+
+  const SortIcon = ({ k }: { k: SortKey }) => {
+    if (sortKey !== k) return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="ml-1 inline h-3 w-3 text-indigo-500 dark:text-indigo-400" />
+      : <ArrowDown className="ml-1 inline h-3 w-3 text-indigo-500 dark:text-indigo-400" />;
+  };
+
   return (
     <div className="space-y-6">
       {/* ── Hero ── */}
@@ -128,22 +175,51 @@ export default function AttendanceReports() {
             maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
           }}
         />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + KPI chips */}
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
             <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
               <BarChart3 className="h-3.5 w-3.5" />
-              Reports · {period}
+              Reports · <span className="capitalize">{period}</span>
             </p>
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
               Attendance <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Reports</span>
             </h1>
             <p className="mt-1 text-sm text-indigo-200/70">Generate and export daily, weekly, or monthly attendance</p>
+
+            {/* Hero KPI chips */}
+            {emps.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <Users className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Employees</span>
+                  <span className="font-mono font-semibold tabular-nums">{total}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-200" />
+                  <span className="text-emerald-200/90">Avg Present</span>
+                  <span className="font-mono font-semibold tabular-nums text-emerald-50">{avg((e) => e.presentDays)}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-200" />
+                  <span className="text-amber-200/90">Avg Late</span>
+                  <span className="font-mono font-semibold tabular-nums text-amber-50">{avg((e) => e.lateDays)}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
+                  <Clock className="h-3.5 w-3.5 text-sky-200" />
+                  <span className="text-sky-200/90">Avg Hours</span>
+                  <span className="font-mono font-semibold tabular-nums text-sky-50">{fmtHours(avg((e) => e.totalHours))}</span>
+                </span>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2">
+
+          {/* RIGHT: export actions */}
+          <div className="flex w-full shrink-0 flex-col gap-2.5 sm:flex-row lg:w-auto lg:flex-col">
             <button
               onClick={handleExcel}
               disabled={!!exporting || emps.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {exporting === "excel" ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -157,7 +233,7 @@ export default function AttendanceReports() {
             <button
               onClick={handlePdf}
               disabled={!!exporting || emps.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 disabled:cursor-not-allowed disabled:opacity-40"
             >
               {exporting === "pdf" ? (
                 <Loader2 className="h-4 w-4 animate-spin text-rose-600" />
@@ -209,6 +285,29 @@ export default function AttendanceReports() {
             {employees.map((u) => <option key={u._id} value={u._id}>{u.name}</option>)}
           </select>
         </div>
+        {/* Search */}
+        <div className="min-w-[180px] flex-1">
+          <label className={`mb-1.5 block ${labelCls}`}>Search</label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Filter by name or email..."
+              className={`w-full ${inputCls} pl-9 ${search ? "pr-8" : ""}`}
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              >
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
+        </div>
         {report?.label && (
           <div className="ml-auto inline-flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 text-xs text-gray-600 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300">
             <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
@@ -235,7 +334,7 @@ export default function AttendanceReports() {
               <div className="flex items-start justify-between">
                 <div className="min-w-0">
                   <p className={labelCls}>{c.label}</p>
-                  <p className="mt-2.5 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+                  <p className="mt-2.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
                 </div>
                 <div className={`rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
                   <c.icon className="h-5 w-5 text-white" />
@@ -268,50 +367,94 @@ export default function AttendanceReports() {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-gray-200/70 bg-gray-50/60 dark:border-gray-800/80 dark:bg-gray-800/40">
                   <tr>
-                    {["Employee", "Present", "Late", "Half Day", "Absent", "Total Hours"].map((h) => (
-                      <th key={h} className={`px-4 py-3 ${labelCls}`}>{h}</th>
+                    {([
+                      { key: "name" as SortKey,       label: "Employee" },
+                      { key: "attendance" as SortKey, label: "Attendance" },
+                      { key: "present" as SortKey,    label: "Present" },
+                      { key: "late" as SortKey,       label: "Late" },
+                      { key: "halfDay" as SortKey,    label: "Half" },
+                      { key: "absent" as SortKey,     label: "Absent" },
+                      { key: "hours" as SortKey,      label: "Total Hours" },
+                    ]).map((h) => (
+                      <th
+                        key={h.label}
+                        onClick={() => handleSort(h.key)}
+                        className={`cursor-pointer select-none px-4 py-3 ${labelCls} transition-colors hover:text-gray-700 dark:hover:text-gray-200`}
+                      >
+                        {h.label}
+                        <SortIcon k={h.key} />
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {emps.map((e: any) => (
-                    <tr key={e.email} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={e.name} />
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-gray-900 dark:text-white">{e.name}</p>
-                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{e.department || "—"}</p>
-                          </div>
-                        </div>
+                  {filteredSortedEmps.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
+                        No matches for "{search}"
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20">
-                          <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                          {e.presentDays}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20">
-                          <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
-                          {e.lateDays}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700 ring-1 ring-inset ring-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-400/20">
-                          <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
-                          {e.halfDays}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20">
-                          <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
-                          {e.absentDays}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 font-bold tracking-tight text-gray-900 dark:text-white">{fmtHours(e.totalHours)}</td>
                     </tr>
-                  ))}
+                  ) : filteredSortedEmps.map((e: any) => {
+                    const pct = pctFor(e);
+                    const pctTone = pct >= 90
+                      ? { bar: "from-emerald-500 to-teal-600", text: "text-emerald-600 dark:text-emerald-400" }
+                      : pct >= 75
+                        ? { bar: "from-sky-500 to-blue-600",       text: "text-sky-600 dark:text-sky-400" }
+                        : pct >= 50
+                          ? { bar: "from-amber-500 to-orange-600", text: "text-amber-600 dark:text-amber-400" }
+                          : { bar: "from-rose-500 to-pink-600",     text: "text-rose-600 dark:text-rose-400" };
+                    return (
+                      <tr key={e.email} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <Avatar name={e.name} />
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-gray-900 dark:text-white">{e.name}</p>
+                              <p className="truncate text-xs text-gray-500 dark:text-gray-400">{e.department || "—"}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex w-32 items-center gap-2">
+                            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                              <div
+                                className={`h-full rounded-full bg-gradient-to-r ${pctTone.bar} transition-[width] duration-700`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                            <span className={`font-mono text-xs font-bold tabular-nums ${pctTone.text}`}>
+                              {pct}%
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20">
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                            <span className="font-mono tabular-nums">{e.presentDays}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20">
+                            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                            <span className="font-mono tabular-nums">{e.lateDays}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-orange-50 px-2 py-0.5 text-[11px] font-semibold text-orange-700 ring-1 ring-inset ring-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-400/20">
+                            <span className="h-1.5 w-1.5 rounded-full bg-orange-500" />
+                            <span className="font-mono tabular-nums">{e.halfDays}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20">
+                            <span className="h-1.5 w-1.5 rounded-full bg-rose-500" />
+                            <span className="font-mono tabular-nums">{e.absentDays}</span>
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 font-mono font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{fmtHours(e.totalHours)}</td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -319,26 +462,46 @@ export default function AttendanceReports() {
 
           {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
-            {emps.map((e: any) => (
-              <div key={e.email} className={`${cardCls} p-4`}>
-                <div className="mb-3 flex items-center gap-3">
-                  <Avatar name={e.name} />
-                  <div className="min-w-0">
-                    <p className="truncate font-semibold text-gray-900 dark:text-white">{e.name}</p>
-                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">{e.department || "No department"}</p>
+            {filteredSortedEmps.length === 0 ? (
+              <div className={`${cardCls} py-12 text-center text-sm text-gray-400 dark:text-gray-500`}>
+                No matches for "{search}"
+              </div>
+            ) : filteredSortedEmps.map((e: any) => {
+              const pct = pctFor(e);
+              const pctTone = pct >= 90 ? "from-emerald-500 to-teal-600"
+                : pct >= 75 ? "from-sky-500 to-blue-600"
+                : pct >= 50 ? "from-amber-500 to-orange-600"
+                : "from-rose-500 to-pink-600";
+              return (
+                <div key={e.email} className={`${cardCls} p-4`}>
+                  <div className="mb-3 flex items-center gap-3">
+                    <Avatar name={e.name} />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-gray-900 dark:text-white">{e.name}</p>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{e.department || "No department"}</p>
+                    </div>
+                    <span className="font-mono text-sm font-bold tabular-nums text-gray-900 dark:text-white">
+                      {pct}%
+                    </span>
+                  </div>
+                  <div className="mb-3 h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${pctTone} transition-[width] duration-700`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <MiniTile label="Present" value={e.presentDays} color="text-emerald-600 dark:text-emerald-400" />
+                    <MiniTile label="Late" value={e.lateDays} color="text-amber-600 dark:text-amber-400" />
+                    <MiniTile label="Absent" value={e.absentDays} color="text-rose-600 dark:text-rose-400" />
+                  </div>
+                  <div className="mt-2 flex items-center justify-between rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 dark:border-gray-800/80 dark:bg-gray-800/40">
+                    <span className={labelCls}>Total Hours</span>
+                    <span className="font-mono text-sm font-bold tabular-nums tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(e.totalHours)}</span>
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <MiniTile label="Present" value={e.presentDays} color="text-emerald-600 dark:text-emerald-400" />
-                  <MiniTile label="Late" value={e.lateDays} color="text-amber-600 dark:text-amber-400" />
-                  <MiniTile label="Absent" value={e.absentDays} color="text-rose-600 dark:text-rose-400" />
-                </div>
-                <div className="mt-2 flex items-center justify-between rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 dark:border-gray-800/80 dark:bg-gray-800/40">
-                  <span className={labelCls}>Total Hours</span>
-                  <span className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(e.totalHours)}</span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </>
       )}

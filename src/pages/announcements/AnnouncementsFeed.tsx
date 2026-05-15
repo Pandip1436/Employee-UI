@@ -11,11 +11,19 @@ import {
   TrendingUp,
   Bell,
   Hash,
+  Clock,
+  Flame,
+  X as XIcon,
+  ExternalLink,
+  Send,
+  Paperclip,
+  Loader2,
 } from "lucide-react";
 import { announcementApi, type AnnouncementData } from "../../api/announcementApi";
 import { useAuth } from "../../context/AuthContext";
 import type { Pagination } from "../../types";
 import toast from "react-hot-toast";
+import Drawer from "../../components/Drawer";
 
 const CATEGORIES = ["All", "HR", "Team", "Important"] as const;
 
@@ -65,6 +73,15 @@ function formatDate(iso: string) {
     day: "numeric",
     year: "numeric",
   });
+}
+
+function isNew(iso: string) {
+  return Date.now() - new Date(iso).getTime() < 86400e3;
+}
+
+function readTime(content: string) {
+  const words = (content || "").trim().split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 200));
 }
 
 function initials(name?: string) {
@@ -120,6 +137,11 @@ export default function AnnouncementsFeed() {
   const [category, setCategory] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
+  const [drawerId, setDrawerId] = useState<string | null>(null);
+
+  const handleSyncFromDrawer = (next: AnnouncementData) => {
+    setAnnouncements((prev) => prev.map((a) => (a._id === next._id ? next : a)));
+  };
 
   const fetchAnnouncements = () => {
     setLoading(true);
@@ -184,6 +206,155 @@ export default function AnnouncementsFeed() {
     return { total, pinned, thisWeek, categoriesPresent };
   }, [announcements, pagination]);
 
+  const pinnedItems = useMemo(() => announcements.filter((a) => a.isPinned), [announcements]);
+  const regularItems = useMemo(() => announcements.filter((a) => !a.isPinned), [announcements]);
+
+  const renderCard = (a: AnnouncementData) => {
+    const catKey = a.category || "General";
+    const cfg = CAT_CFG[catKey] || CAT_CFG.General;
+    const totalReactions = REACTIONS.reduce(
+      (s, r) => s + getReactionCount(a, r.type),
+      0
+    );
+    const fresh = isNew(a.createdAt);
+    const mins = readTime(a.content);
+    return (
+      <div
+        key={a._id}
+        className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-5 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-gray-200/60 dark:hover:shadow-black/40 hover:border-indigo-300/60 dark:hover:border-indigo-600/40"
+      >
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${cfg.accent} blur-2xl opacity-50 group-hover:opacity-80 transition-opacity`}
+        />
+
+        {a.isPinned && (
+          <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg shadow-amber-500/30">
+            <Pin className="h-3 w-3 fill-white" /> Pinned
+          </div>
+        )}
+
+        <div className="relative">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+              {catKey}
+            </span>
+            {fresh && (
+              <span className="relative inline-flex items-center gap-1 rounded-full bg-gradient-to-br from-rose-500 to-pink-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow shadow-rose-500/30">
+                <span aria-hidden className="absolute inset-0 rounded-full bg-rose-500 opacity-60 animate-ping" />
+                <Flame className="relative h-2.5 w-2.5" />
+                <span className="relative">New</span>
+              </span>
+            )}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setDrawerId(a._id)}
+            className="mt-3 block w-full text-left text-lg font-bold leading-snug tracking-tight text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2"
+          >
+            {a.title}
+          </button>
+
+          <p className="mt-1.5 line-clamp-2 text-[13px] leading-relaxed text-gray-500 dark:text-gray-400">
+            {a.content}
+          </p>
+
+          <div className="mt-3 flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-[11px] font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow">
+              {initials(a.author?.name)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                {a.author?.name || "Unknown"}
+              </p>
+              <p className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+                {formatDate(a.createdAt)}
+                <span className="text-gray-300 dark:text-gray-700">·</span>
+                <Clock className="h-3 w-3" />
+                {mins} min read
+              </p>
+            </div>
+          </div>
+
+          {a.tags?.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {a.tags.slice(0, 3).map((tag) => (
+                <span
+                  key={tag}
+                  className="rounded-md bg-gray-100 dark:bg-gray-800/70 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400"
+                >
+                  #{tag}
+                </span>
+              ))}
+              {a.tags.length > 3 && (
+                <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                  +{a.tags.length - 3} more
+                </span>
+              )}
+            </div>
+          )}
+
+          <div className="my-4 border-t border-gray-200/70 dark:border-gray-800/60" />
+
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1">
+              {REACTIONS.map((r) => {
+                const count = getReactionCount(a, r.type);
+                const active = isReacted(a, r.type);
+                return (
+                  <button
+                    key={r.type}
+                    onClick={() => handleReact(a._id, r.type)}
+                    title={r.label}
+                    className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-all ${
+                      active
+                        ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/30 scale-105"
+                        : "bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105"
+                    }`}
+                  >
+                    <span className="leading-none">{r.emoji}</span>
+                    {count > 0 && <span className="tabular-nums">{count}</span>}
+                  </button>
+                );
+              })}
+            </div>
+            <button
+              type="button"
+              onClick={() => setDrawerId(a._id)}
+              className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              <span className="tabular-nums">{a.comments?.length || 0}</span>
+            </button>
+          </div>
+
+          {totalReactions > 0 && (
+            <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+              <span className="inline-flex -space-x-1">
+                {REACTIONS.filter((r) => getReactionCount(a, r.type) > 0).map((r) => (
+                  <span
+                    key={r.type}
+                    className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-white dark:bg-gray-900 text-[10px] ring-1 ring-gray-200 dark:ring-gray-800"
+                  >
+                    {r.emoji}
+                  </span>
+                ))}
+              </span>
+              <span>
+                <span className="font-semibold text-gray-700 dark:text-gray-300 tabular-nums">{totalReactions}</span>{" "}
+                reaction{totalReactions !== 1 ? "s" : ""}
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       {/* ━━━ Hero ━━━ */}
@@ -221,8 +392,17 @@ export default function AnnouncementsFeed() {
               placeholder="Search announcements..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 pl-10 text-sm text-white placeholder-indigo-200/60 backdrop-blur-sm outline-none transition-all focus:border-white/30 focus:bg-white/15 focus:ring-2 focus:ring-white/10"
+              className="w-full rounded-xl border border-white/15 bg-white/10 px-4 py-2.5 pl-10 pr-10 text-sm text-white placeholder-indigo-200/60 backdrop-blur-sm outline-none transition-all focus:border-white/30 focus:bg-white/15 focus:ring-2 focus:ring-white/10"
             />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-indigo-200/70 transition-colors hover:bg-white/10 hover:text-white"
+              >
+                <XIcon className="h-3.5 w-3.5" />
+              </button>
+            )}
           </div>
         </div>
       </div>
@@ -276,127 +456,45 @@ export default function AnnouncementsFeed() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {announcements.map((a) => {
-            const catKey = a.category || "General";
-            const cfg = CAT_CFG[catKey] || CAT_CFG.General;
-            const totalReactions = REACTIONS.reduce(
-              (s, r) => s + getReactionCount(a, r.type),
-              0
-            );
-            return (
-              <div
-                key={a._id}
-                className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-5 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-gray-200/60 dark:hover:shadow-black/40 hover:border-indigo-300/60 dark:hover:border-indigo-600/40"
-              >
-                {/* Category accent orb */}
-                <div
-                  aria-hidden
-                  className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${cfg.accent} blur-2xl opacity-50 group-hover:opacity-80 transition-opacity`}
-                />
-
-                {/* Pinned ribbon */}
-                {a.isPinned && (
-                  <div className="absolute right-3 top-3 z-10 inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-lg shadow-amber-500/30">
-                    <Pin className="h-3 w-3 fill-white" /> Pinned
-                  </div>
-                )}
-
-                <div className="relative">
-                  {/* Category pill */}
-                  <span
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}
-                  >
-                    <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                    {catKey}
-                  </span>
-
-                  {/* Title */}
-                  <Link
-                    to={`/announcements/${a._id}`}
-                    className="mt-3 block text-lg font-bold leading-snug tracking-tight text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-2"
-                  >
-                    {a.title}
-                  </Link>
-
-                  {/* Author + Date */}
-                  <div className="mt-3 flex items-center gap-2.5">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-[11px] font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow">
-                      {initials(a.author?.name)}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                        {a.author?.name || "Unknown"}
-                      </p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {formatDate(a.createdAt)}
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Tags */}
-                  {a.tags?.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {a.tags.slice(0, 3).map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-md bg-gray-100 dark:bg-gray-800/70 px-2 py-0.5 text-[11px] font-medium text-gray-500 dark:text-gray-400"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                      {a.tags.length > 3 && (
-                        <span className="text-[11px] text-gray-400 dark:text-gray-500">
-                          +{a.tags.length - 3} more
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Divider */}
-                  <div className="my-4 border-t border-gray-200/70 dark:border-gray-800/60" />
-
-                  {/* Actions */}
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      {REACTIONS.map((r) => {
-                        const count = getReactionCount(a, r.type);
-                        const active = isReacted(a, r.type);
-                        return (
-                          <button
-                            key={r.type}
-                            onClick={() => handleReact(a._id, r.type)}
-                            title={r.label}
-                            className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold transition-all ${
-                              active
-                                ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/30 scale-105"
-                                : "bg-gray-50 dark:bg-gray-800/60 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:scale-105"
-                            }`}
-                          >
-                            <span className="leading-none">{r.emoji}</span>
-                            {count > 0 && <span className="tabular-nums">{count}</span>}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    <Link
-                      to={`/announcements/${a._id}`}
-                      className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/60 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                    >
-                      <MessageCircle className="h-3.5 w-3.5" />
-                      <span className="tabular-nums">{a.comments?.length || 0}</span>
-                    </Link>
-                  </div>
-
-                  {totalReactions > 0 && (
-                    <div className="mt-2 text-[11px] text-gray-400 dark:text-gray-500">
-                      {totalReactions} reaction{totalReactions !== 1 ? "s" : ""}
-                    </div>
-                  )}
+        <div className="space-y-6">
+          {pinnedItems.length > 0 && (
+            <section>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 shadow-md shadow-amber-500/30">
+                  <Pin className="h-3.5 w-3.5 fill-white text-white" />
                 </div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                  Pinned
+                </h2>
+                <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/20">
+                  {pinnedItems.length}
+                </span>
+                <div className="ml-2 h-px flex-1 bg-gradient-to-r from-amber-300/60 to-transparent dark:from-amber-500/30" />
               </div>
-            );
-          })}
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {pinnedItems.map(renderCard)}
+              </div>
+            </section>
+          )}
+
+          {regularItems.length > 0 && (
+            <section>
+              {pinnedItems.length > 0 && (
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md shadow-indigo-500/30">
+                    <Megaphone className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">
+                    Latest
+                  </h2>
+                  <div className="ml-2 h-px flex-1 bg-gradient-to-r from-indigo-300/60 to-transparent dark:from-indigo-500/30" />
+                </div>
+              )}
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {regularItems.map(renderCard)}
+              </div>
+            </section>
+          )}
         </div>
       )}
 
@@ -423,6 +521,286 @@ export default function AnnouncementsFeed() {
         </div>
       )}
 
+      {/* ━━━ Quick-view Drawer ━━━ */}
+      <Drawer
+        open={!!drawerId}
+        onClose={() => setDrawerId(null)}
+        side="right"
+        size="xl"
+        icon={<Megaphone className="h-5 w-5 text-indigo-200" />}
+        subtitle="Announcement"
+        title="Quick view"
+      >
+        {drawerId && (
+          <AnnouncementQuickView
+            id={drawerId}
+            userId={user?._id}
+            onSync={handleSyncFromDrawer}
+          />
+        )}
+      </Drawer>
+    </div>
+  );
+}
+
+function AnnouncementQuickView({
+  id,
+  userId,
+  onSync,
+}: {
+  id: string;
+  userId?: string;
+  onSync: (a: AnnouncementData) => void;
+}) {
+  const [data, setData] = useState<AnnouncementData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [commentText, setCommentText] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setData(null);
+    setLoading(true);
+    announcementApi
+      .getById(id)
+      .then((res) => setData(res.data.data ?? null))
+      .catch(() => toast.error("Failed to load announcement"))
+      .finally(() => setLoading(false));
+  }, [id]);
+
+  const handleReact = async (type: string) => {
+    try {
+      const res = await announcementApi.react(id, type);
+      if (res.data.data) {
+        setData((prev) => (prev ? { ...prev, reactions: res.data.data!.reactions } : prev));
+        onSync(res.data.data);
+      }
+    } catch {
+      toast.error("Failed to react");
+    }
+  };
+
+  const handleComment = async () => {
+    if (!commentText.trim()) return;
+    setSubmitting(true);
+    try {
+      const res = await announcementApi.comment(id, commentText.trim());
+      if (res.data.data) {
+        setData((prev) => (prev ? { ...prev, comments: res.data.data!.comments } : prev));
+        onSync(res.data.data);
+      }
+      setCommentText("");
+      toast.success("Comment added");
+    } catch {
+      toast.error("Failed to comment");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20">
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
+  if (!data) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-20 text-center">
+        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">Announcement not found</p>
+      </div>
+    );
+  }
+
+  const catKey = data.category || "General";
+  const cfg = CAT_CFG[catKey] || CAT_CFG.General;
+  const reactCount = (t: string) => data.reactions[t as keyof typeof data.reactions]?.length || 0;
+  const reacted = (t: string) =>
+    userId ? data.reactions[t as keyof typeof data.reactions]?.includes(userId) : false;
+  const totalReactions = REACTIONS.reduce((s, r) => s + reactCount(r.type), 0);
+
+  return (
+    <div className="space-y-5 p-5 sm:p-6">
+      <div className="flex flex-wrap items-center gap-2">
+        <span
+          className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}
+        >
+          <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+          {catKey}
+        </span>
+        {data.isPinned && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-amber-500/30">
+            <Pin className="h-3 w-3 fill-white" /> Pinned
+          </span>
+        )}
+        <Link
+          to={`/announcements/${data._id}`}
+          className="ml-auto inline-flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+        >
+          <ExternalLink className="h-3 w-3" />
+          Open full page
+        </Link>
+      </div>
+
+      <h2 className="text-2xl font-bold leading-tight tracking-tight text-gray-900 dark:text-white">
+        {data.title}
+      </h2>
+
+      <div className="flex items-center gap-2.5">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow">
+          {initials(data.author?.name)}
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {data.author?.name || "Unknown"}
+          </p>
+          <p className="flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+            {formatDate(data.createdAt)}
+            <span className="text-gray-300 dark:text-gray-700">·</span>
+            <Clock className="h-3 w-3" />
+            {readTime(data.content)} min read
+          </p>
+        </div>
+      </div>
+
+      {data.tags?.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {data.tags.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-800/70 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:text-gray-400"
+            >
+              <Hash className="h-3 w-3" />
+              {tag}
+            </span>
+          ))}
+        </div>
+      )}
+
+      <div className="border-t border-gray-200/70 dark:border-gray-800/60" />
+
+      <div className="whitespace-pre-wrap text-[15px] leading-[1.7] text-gray-700 dark:text-gray-300">
+        {data.content}
+      </div>
+
+      {data.attachments?.length > 0 && (
+        <div className="rounded-xl bg-gray-50/80 dark:bg-gray-800/30 p-4 ring-1 ring-gray-200/60 dark:ring-gray-800/60">
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+            Attachments ({data.attachments.length})
+          </p>
+          <div className="space-y-1.5">
+            {data.attachments.map((a, i) => (
+              <a
+                key={i}
+                href={a}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-lg bg-white dark:bg-gray-900 px-3 py-2 text-sm font-semibold text-indigo-600 dark:text-indigo-400 ring-1 ring-gray-200 dark:ring-gray-800 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 transition-colors"
+              >
+                <Paperclip className="h-3.5 w-3.5" />
+                Attachment {i + 1}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-gradient-to-br from-gray-50/80 to-gray-100/40 dark:from-gray-800/40 dark:to-gray-800/20 p-3 ring-1 ring-gray-200/60 dark:ring-gray-800/60">
+        <div className="flex items-center gap-1.5">
+          {REACTIONS.map((r) => {
+            const count = reactCount(r.type);
+            const active = reacted(r.type);
+            return (
+              <button
+                key={r.type}
+                onClick={() => handleReact(r.type)}
+                className={`inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+                  active
+                    ? "bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/30 scale-105"
+                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 ring-1 ring-gray-200 dark:ring-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800 hover:scale-105"
+                }`}
+              >
+                <span className="leading-none">{r.emoji}</span>
+                <span>{r.label}</span>
+                {count > 0 && (
+                  <span
+                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                      active ? "bg-indigo-600 text-white" : "bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400"
+                    }`}
+                  >
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {totalReactions > 0 && (
+          <span className="text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+            {totalReactions} total
+          </span>
+        )}
+      </div>
+
+      <div>
+        <div className="mb-3 flex items-center gap-2">
+          <MessageCircle className="h-4 w-4 text-indigo-500" />
+          <h3 className="text-sm font-bold text-gray-900 dark:text-white">
+            Comments
+            <span className="ml-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-bold text-gray-600 dark:text-gray-400 tabular-nums">
+              {data.comments?.length || 0}
+            </span>
+          </h3>
+        </div>
+
+        {data.comments?.length > 0 ? (
+          <div className="space-y-2">
+            {data.comments.map((c, idx) => (
+              <div
+                key={c._id || idx}
+                className="flex gap-2.5 rounded-xl bg-gray-50/80 dark:bg-gray-800/30 p-3 ring-1 ring-gray-200/60 dark:ring-gray-800/60"
+              >
+                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-[10px] font-bold text-white ring-2 ring-white dark:ring-gray-900">
+                  {initials(c.userId?.name)}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] font-bold text-gray-900 dark:text-white">
+                    {c.userId?.name || "Unknown"}
+                  </p>
+                  <p className="mt-0.5 whitespace-pre-wrap text-[13px] leading-relaxed text-gray-700 dark:text-gray-300">
+                    {c.text}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs text-gray-400 dark:text-gray-500">No comments yet — be the first.</p>
+        )}
+
+        <div className="mt-3 flex gap-2">
+          <input
+            type="text"
+            value={commentText}
+            onChange={(e) => setCommentText(e.target.value)}
+            placeholder="Write a comment…"
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleComment();
+              }
+            }}
+            className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-3 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+          />
+          <button
+            onClick={handleComment}
+            disabled={submitting || !commentText.trim()}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-3 py-2 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg disabled:opacity-40 disabled:cursor-not-allowed transition-all"
+          >
+            {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

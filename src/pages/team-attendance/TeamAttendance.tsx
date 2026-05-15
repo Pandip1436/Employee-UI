@@ -1,8 +1,13 @@
 import { useState, useEffect, useMemo } from "react";
-import { Search, Users, UserCheck, UserX, Clock, AlertTriangle, CheckCircle2, X, Filter, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Search, Users, UserCheck, UserX, Clock, AlertTriangle, CheckCircle2,
+  X, Filter, Calendar, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp,
+  ArrowDown, Download, LayoutList, Rows3, Circle, MinusCircle, Moon,
+} from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import type { LiveStatusData, LiveEmployee } from "../../types";
 import { fmtHours } from "../../utils/format";
+import { useCompany } from "../../context/CompanyContext";
 
 function todayKey() {
   const d = new Date();
@@ -16,6 +21,77 @@ function shiftIsoDate(iso: string, days: number): string {
   d.setDate(d.getDate() + days);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+/** Parse "HH:MM" and return minutes since midnight. */
+function parseHHMM(s: string): number {
+  const [h, m] = s.split(":").map((x) => parseInt(x, 10));
+  if (isNaN(h) || isNaN(m)) return 9 * 60;
+  return h * 60 + m;
+}
+
+type ActiveStatus = "online" | "away" | "dnd" | "offline";
+
+const activeStatusConfig: Record<ActiveStatus, {
+  label: string;
+  short: string;
+  dot: string;
+  ring: string;
+  badge: string;
+  icon: typeof Circle;
+}> = {
+  online: {
+    label: "Online",
+    short: "Online",
+    dot: "bg-emerald-500",
+    ring: "ring-emerald-500/30",
+    badge: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/25",
+    icon: Circle,
+  },
+  away: {
+    label: "Away",
+    short: "Away",
+    dot: "bg-amber-500",
+    ring: "ring-amber-500/30",
+    badge: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25",
+    icon: Moon,
+  },
+  dnd: {
+    label: "Do not disturb",
+    short: "DND",
+    dot: "bg-rose-500",
+    ring: "ring-rose-500/30",
+    badge: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/25",
+    icon: MinusCircle,
+  },
+  offline: {
+    label: "Offline",
+    short: "Offline",
+    dot: "bg-gray-400 dark:bg-gray-500",
+    ring: "ring-gray-400/30",
+    badge: "bg-gray-100 text-gray-600 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-600/30",
+    icon: Circle,
+  },
+};
+
+/** Inferred presence (used only as a fallback when the backend doesn't supply
+ *  a user-set status, e.g. legacy users without the field populated). */
+function inferActiveStatus(liveStatus: string): ActiveStatus {
+  switch (liveStatus) {
+    case "clocked-in":
+    case "late":        return "online";
+    case "clocked-out": return "away";
+    default:            return "offline";
+  }
+}
+
+/** Resolve the active status to show. Prefers the user's own-set `userStatus`,
+ *  but downgrades to "offline" when there's no attendance activity today. */
+function resolveActiveStatus(emp: LiveEmployee): ActiveStatus {
+  // Hard signal: never show "online" for someone who hasn't marked attendance.
+  if (emp.liveStatus === "not-marked") return "offline";
+  if (emp.userStatus) return emp.userStatus;
+  return inferActiveStatus(emp.liveStatus);
 }
 
 const liveStyles: Record<string, { bg: string; dot: string; label: string; pulse: boolean }> = {
@@ -45,12 +121,26 @@ function paletteFor(name: string): string {
   return PALETTES[Math.abs(hash) % PALETTES.length];
 }
 
-function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
+function Avatar({ name, size = "md", presence }: { name: string; size?: "sm" | "md" | "lg"; presence?: ActiveStatus }) {
   const init = (name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-  const sz = size === "lg" ? "h-10 w-10 text-sm" : "h-9 w-9 text-[11px]";
+  const sz =
+    size === "lg" ? "h-10 w-10 text-sm"
+    : size === "sm" ? "h-7 w-7 text-[10px]"
+    : "h-9 w-9 text-[11px]";
+  const dotSz = size === "lg" ? "h-3 w-3" : size === "sm" ? "h-2 w-2" : "h-2.5 w-2.5";
+  const cfg = presence ? activeStatusConfig[presence] : null;
   return (
-    <div className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900 ${sz} ${paletteFor(name || "?")}`}>
-      {init}
+    <div className="relative shrink-0">
+      <div className={`flex items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900 ${sz} ${paletteFor(name || "?")}`}>
+        {init}
+      </div>
+      {cfg && (
+        <span
+          aria-label={cfg.label}
+          title={cfg.label}
+          className={`absolute -bottom-0.5 -right-0.5 ${dotSz} rounded-full ${cfg.dot} ring-2 ring-white dark:ring-gray-900 ${presence === "online" ? "animate-pulse" : ""}`}
+        />
+      )}
     </div>
   );
 }
@@ -64,17 +154,94 @@ function MiniTile({ label, value, accent }: { label: string; value: string; acce
   );
 }
 
+/** Animated ring gauge displaying a percentage. */
+function RingGauge({ value, total, label }: { value: number; total: number; label: string }) {
+  const pct = total > 0 ? Math.round((value / total) * 100) : 0;
+  const radius = 40;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference - (pct / 100) * circumference;
+  return (
+    <div className="relative flex h-[112px] w-[112px] shrink-0 items-center justify-center">
+      <svg viewBox="0 0 100 100" className="h-full w-full -rotate-90">
+        <defs>
+          <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#60a5fa" />
+          </linearGradient>
+        </defs>
+        <circle cx="50" cy="50" r={radius} fill="none" stroke="rgba(255,255,255,0.10)" strokeWidth="9" />
+        <circle
+          cx="50"
+          cy="50"
+          r={radius}
+          fill="none"
+          stroke="url(#ringGrad)"
+          strokeWidth="9"
+          strokeLinecap="round"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 700ms cubic-bezier(0.16, 1, 0.3, 1)" }}
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-mono text-2xl font-bold tabular-nums leading-none text-white">{pct}%</span>
+        <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">{label}</span>
+      </div>
+    </div>
+  );
+}
+
+/** Compute elapsed "Xh Ym" between an ISO timestamp and now. */
+function elapsedFrom(iso: string, now: number): string {
+  const ms = now - new Date(iso).getTime();
+  if (ms < 0) return "—";
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h && m) return `${h}h ${m}m`;
+  if (h) return `${h}h`;
+  return `${m}m`;
+}
+
 type ViewTab = "all" | "present" | "absent";
+type SortKey = "name" | "department" | "status" | "in" | "hours";
+type SortDir = "asc" | "desc";
+type Density = "comfy" | "compact";
+
+const statusOrder: Record<string, number> = {
+  "clocked-in": 0,
+  late: 1,
+  "clocked-out": 2,
+  "not-marked": 3,
+};
 
 export default function TeamAttendance() {
+  const { attendancePolicy } = useCompany();
   const [liveData, setLiveData] = useState<LiveStatusData | null>(null);
   const [search, setSearch] = useState("");
   const [deptFilter, setDeptFilter] = useState("");
   const [departments, setDepartments] = useState<string[]>([]);
   const [viewTab, setViewTab] = useState<ViewTab>("all");
   const [dateFilter, setDateFilter] = useState<string>(todayKey());
+  const [sortKey, setSortKey] = useState<SortKey>("status");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [density, setDensity] = useState<Density>(() => {
+    const saved = localStorage.getItem("teamAttendance.density");
+    return saved === "compact" ? "compact" : "comfy";
+  });
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   const isToday = dateFilter === todayKey();
+
+  useEffect(() => {
+    localStorage.setItem("teamAttendance.density", density);
+  }, [density]);
+
+  // Tick once a minute to refresh "live elapsed" labels
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     const fetchData = () => {
@@ -97,18 +264,104 @@ export default function TeamAttendance() {
   const absentCount = useMemo(() => (liveData?.employees || []).filter((e) => absentStatuses.includes(e.liveStatus)).length, [liveData]);
   const presentCount = useMemo(() => (liveData?.employees || []).filter((e) => presentStatuses.includes(e.liveStatus)).length, [liveData]);
 
-  const filtered = (liveData?.employees || [])
-    .filter((e) => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.email.toLowerCase().includes(search.toLowerCase()))
-    .filter((e) => !deptFilter || e.department === deptFilter)
-    .filter((e) => {
-      if (viewTab === "absent") return absentStatuses.includes(e.liveStatus);
-      if (viewTab === "present") return presentStatuses.includes(e.liveStatus);
-      return true;
+  const officeStartMin = useMemo(
+    () => parseHHMM(attendancePolicy?.officeStartTime ?? "09:00"),
+    [attendancePolicy?.officeStartTime]
+  );
+
+  /** Compute "late by N minutes" — only meaningful when status === "late". */
+  const lateMinutes = (clockIn: string | null): number | null => {
+    if (!clockIn) return null;
+    const d = new Date(clockIn);
+    const min = d.getHours() * 60 + d.getMinutes();
+    return Math.max(0, min - officeStartMin);
+  };
+
+  const filtered = useMemo(() => {
+    const arr = (liveData?.employees || [])
+      .filter((e) => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.email.toLowerCase().includes(search.toLowerCase()))
+      .filter((e) => !deptFilter || e.department === deptFilter)
+      .filter((e) => {
+        if (viewTab === "absent") return absentStatuses.includes(e.liveStatus);
+        if (viewTab === "present") return presentStatuses.includes(e.liveStatus);
+        return true;
+      });
+
+    const dir = sortDir === "asc" ? 1 : -1;
+    arr.sort((a, b) => {
+      switch (sortKey) {
+        case "name":       return dir * a.name.localeCompare(b.name);
+        case "department": return dir * ((a.department || "").localeCompare(b.department || ""));
+        case "status":     return dir * ((statusOrder[a.liveStatus] ?? 9) - (statusOrder[b.liveStatus] ?? 9));
+        case "in":         return dir * ((a.clockIn ? new Date(a.clockIn).getTime() : Infinity) - (b.clockIn ? new Date(b.clockIn).getTime() : Infinity));
+        case "hours":      return dir * ((a.totalHours ?? -1) - (b.totalHours ?? -1));
+        default: return 0;
+      }
     });
+    return arr;
+  }, [liveData, search, deptFilter, viewTab, sortKey, sortDir]);
 
   const fmtClock = (d: string | null) => d ? new Date(d).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—";
 
   const total = liveData?.employees.length ?? 0;
+  const summary = liveData?.summary;
+
+  // Status segments for the stacked bar (in the hero)
+  const segments = useMemo(() => {
+    if (!summary || total === 0) return [];
+    return [
+      { key: "clocked-in", label: "In",      value: summary.clockedIn, color: "bg-emerald-500", lightColor: "bg-emerald-400" },
+      { key: "late",       label: "Late",    value: summary.late,      color: "bg-amber-500",   lightColor: "bg-amber-400" },
+      { key: "clocked-out",label: "Out",     value: summary.clockedOut,color: "bg-sky-500",     lightColor: "bg-sky-400" },
+      { key: "not-marked", label: "Absent",  value: summary.notMarked, color: "bg-rose-500",    lightColor: "bg-rose-400" },
+    ];
+  }, [summary, total]);
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
+  const SortIcon = ({ k }: { k: SortKey }) => {
+    if (sortKey !== k) return <ArrowUpDown className="ml-1 inline h-3 w-3 opacity-40" />;
+    return sortDir === "asc"
+      ? <ArrowUp className="ml-1 inline h-3 w-3 text-indigo-500 dark:text-indigo-400" />
+      : <ArrowDown className="ml-1 inline h-3 w-3 text-indigo-500 dark:text-indigo-400" />;
+  };
+
+  const handleExportCsv = () => {
+    const rows = [
+      ["Name", "Email", "Department", "Status", "Clock In", "Clock Out", "Hours", "Late By (min)"],
+      ...filtered.map((e) => [
+        e.name,
+        e.email,
+        e.department || "",
+        liveStyles[e.liveStatus]?.label || e.liveStatus,
+        e.clockIn ? new Date(e.clockIn).toLocaleString() : "",
+        e.clockOut ? new Date(e.clockOut).toLocaleString() : "",
+        e.totalHours != null ? fmtHours(e.totalHours) : "",
+        e.liveStatus === "late" ? String(lateMinutes(e.clockIn) ?? "") : "",
+      ]),
+    ];
+    const csv = rows
+      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `team-attendance-${dateFilter}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const rowPad = density === "compact" ? "py-2" : "py-3";
 
   return (
     <div className="space-y-6">
@@ -129,7 +382,8 @@ export default function TeamAttendance() {
             maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
           }}
         />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          {/* Title + meta */}
           <div className="min-w-0">
             <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
               {isToday ? (
@@ -155,28 +409,62 @@ export default function TeamAttendance() {
                 ? "Real-time view of your team's attendance today"
                 : `Attendance for ${new Date(dateFilter + "T00:00:00").toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}`}
             </p>
+
+            {/* Status stacked bar */}
+            {total > 0 && (
+              <div className="mt-5 max-w-md">
+                <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-white/10 ring-1 ring-white/10">
+                  {segments.map((s) => {
+                    const pct = (s.value / total) * 100;
+                    if (pct === 0) return null;
+                    return (
+                      <div
+                        key={s.key}
+                        className={`${s.color} h-full transition-[width] duration-700`}
+                        style={{ width: `${pct}%` }}
+                        title={`${s.label}: ${s.value}`}
+                      />
+                    );
+                  })}
+                </div>
+                <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+                  {segments.map((s) => (
+                    <span key={s.key} className="inline-flex items-center gap-1.5 text-indigo-100/80">
+                      <span className={`h-2 w-2 rounded-full ${s.color}`} />
+                      <span className="font-medium">{s.label}</span>
+                      <span className="font-mono tabular-nums opacity-80">{s.value}</span>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="flex-1 rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm sm:flex-none">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Total</p>
-              <p className="text-xl font-bold tracking-tight">{total}</p>
-            </div>
-            <div className="flex-1 rounded-xl bg-emerald-500/15 px-4 py-2.5 text-center ring-1 ring-emerald-400/30 backdrop-blur-sm sm:flex-none">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-200/90">Present</p>
-              <p className="text-xl font-bold tracking-tight text-emerald-100">{presentCount}</p>
+
+          {/* Ring + counters */}
+          <div className="flex shrink-0 items-center gap-4">
+            <RingGauge value={presentCount} total={total} label="Present" />
+            <div className="flex flex-col gap-2">
+              <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Total</p>
+                <p className="font-mono text-xl font-bold tabular-nums tracking-tight">{total}</p>
+              </div>
+              <div className="rounded-xl bg-rose-500/15 px-4 py-2.5 text-center ring-1 ring-rose-400/30 backdrop-blur-sm">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-200/90">Absent</p>
+                <p className="font-mono text-xl font-bold tabular-nums tracking-tight text-rose-100">{absentCount}</p>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* ── Summary Tiles ── */}
-      {liveData?.summary && (
+      {summary && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {[
-            { label: "Logged In", value: liveData.summary.clockedIn, icon: UserCheck, gradient: "from-emerald-500 to-teal-600" },
-            { label: "Late Login", value: liveData.summary.late, icon: AlertTriangle, gradient: "from-amber-500 to-orange-600" },
-            { label: "Logged Out", value: liveData.summary.clockedOut, icon: CheckCircle2, gradient: "from-sky-500 to-blue-600" },
-            { label: "Not Marked", value: liveData.summary.notMarked, icon: Clock, gradient: "from-gray-500 to-gray-600" },
+            { label: "Logged In", value: summary.clockedIn, icon: UserCheck, gradient: "from-emerald-500 to-teal-600" },
+            { label: "Late Login", value: summary.late, icon: AlertTriangle, gradient: "from-amber-500 to-orange-600" },
+            { label: "Logged Out", value: summary.clockedOut, icon: CheckCircle2, gradient: "from-sky-500 to-blue-600" },
+            { label: "Not Marked", value: summary.notMarked, icon: Clock, gradient: "from-gray-500 to-gray-600" },
             { label: "Absent", value: absentCount, icon: UserX, gradient: "from-rose-500 to-pink-600" },
           ].map((c) => (
             <div key={c.label} className={`${cardCls} group relative overflow-hidden p-4`}>
@@ -187,7 +475,7 @@ export default function TeamAttendance() {
               <div className="flex items-start justify-between">
                 <div className="min-w-0">
                   <p className={labelCls}>{c.label}</p>
-                  <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+                  <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
                 </div>
                 <div className={`rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
                   <c.icon className="h-4 w-4 text-white" />
@@ -302,24 +590,73 @@ export default function TeamAttendance() {
               {departments.map((d) => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
+
+          {/* Density toggle */}
+          <div className="hidden items-center gap-0.5 rounded-lg border border-gray-300 bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800 md:inline-flex">
+            <button
+              onClick={() => setDensity("comfy")}
+              title="Comfortable rows"
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                density === "comfy"
+                  ? "bg-indigo-500/15 text-indigo-600 ring-1 ring-indigo-500/30 dark:bg-indigo-400/20 dark:text-indigo-300"
+                  : "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+              }`}
+            >
+              <LayoutList className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => setDensity("compact")}
+              title="Compact rows"
+              className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                density === "compact"
+                  ? "bg-indigo-500/15 text-indigo-600 ring-1 ring-indigo-500/30 dark:bg-indigo-400/20 dark:text-indigo-300"
+                  : "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+              }`}
+            >
+              <Rows3 className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {/* Export CSV */}
+          <button
+            onClick={handleExportCsv}
+            disabled={filtered.length === 0}
+            title="Export current view as CSV"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300 dark:disabled:hover:bg-gray-800 dark:disabled:hover:text-gray-300"
+          >
+            <Download className="h-3.5 w-3.5" />
+            Export
+          </button>
         </div>
       </div>
 
       {/* ── Desktop table ── */}
       <div className={`${cardCls} hidden overflow-hidden p-0 md:block`}>
-        <div className="overflow-x-auto">
+        <div className="max-h-[640px] overflow-auto">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-gray-200/70 bg-gray-50/60 dark:border-gray-800/80 dark:bg-gray-800/40">
+            <thead className="sticky top-0 z-10 border-b border-gray-200/70 bg-gray-50/95 backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-800/95">
               <tr>
-                {["Employee", "Dept", "Status", "In", "Out", "Hours"].map((h) => (
-                  <th key={h} className={`px-4 py-3 ${labelCls}`}>{h}</th>
+                {([
+                  { key: "name" as SortKey,       label: "Employee" },
+                  { key: "department" as SortKey, label: "Dept" },
+                  { key: null,                    label: "Active" },
+                  { key: "status" as SortKey,     label: "Status" },
+                  { key: "in" as SortKey,         label: "In" },
+                  { key: null,                    label: "Out" },
+                  { key: "hours" as SortKey,      label: "Hours" },
+                ]).map((h) => (
+                  <th key={h.label} className={`px-4 py-3 ${labelCls} ${h.key ? "cursor-pointer select-none transition-colors hover:text-gray-700 dark:hover:text-gray-200" : ""}`}
+                      onClick={h.key ? () => handleSort(h.key as SortKey) : undefined}>
+                    {h.label}
+                    {h.key && <SortIcon k={h.key} />}
+                  </th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-16 text-center">
+                  <td colSpan={7} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
                         <Users className="h-5 w-5 text-gray-400" />
@@ -331,26 +668,61 @@ export default function TeamAttendance() {
                 </tr>
               ) : filtered.map((emp) => {
                 const s = liveStyles[emp.liveStatus] || liveStyles["not-marked"];
+                const active = resolveActiveStatus(emp);
+                const aCfg = activeStatusConfig[active];
+                const ActiveIcon = aCfg.icon;
+                const isLive = emp.liveStatus === "clocked-in" || emp.liveStatus === "late";
+                const elapsed = isToday && isLive && emp.clockIn ? elapsedFrom(emp.clockIn, nowMs) : null;
+                const lateMin = emp.liveStatus === "late" ? lateMinutes(emp.clockIn) : null;
                 return (
                   <tr key={emp._id} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
-                    <td className="px-4 py-3">
+                    <td className={`px-4 ${rowPad}`}>
                       <div className="flex items-center gap-3">
-                        <Avatar name={emp.name} />
+                        <Avatar name={emp.name} size={density === "compact" ? "sm" : "md"} presence={active} />
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-gray-900 dark:text-white">{emp.name}</p>
-                          <p className="truncate text-xs text-gray-500 dark:text-gray-400">{emp.email}</p>
+                          {density === "comfy" && (
+                            <p className="truncate text-xs text-gray-500 dark:text-gray-400">{emp.email}</p>
+                          )}
                         </div>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 dark:text-gray-400">{emp.department || "—"}</td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.bg}`}>
-                        <span className={`h-1.5 w-1.5 rounded-full ${s.dot} ${s.pulse ? "animate-pulse" : ""}`} />{s.label}
+                    <td className={`px-4 ${rowPad} text-gray-600 dark:text-gray-400`}>{emp.department || "—"}</td>
+                    <td className={`px-4 ${rowPad}`}>
+                      <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${aCfg.badge}`}>
+                        <ActiveIcon
+                          className="h-2.5 w-2.5"
+                          fill={active === "online" ? "currentColor" : "none"}
+                          strokeWidth={2.5}
+                        />
+                        {aCfg.short}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(emp.clockIn)}</td>
-                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">{fmtClock(emp.clockOut)}</td>
-                    <td className="px-4 py-3 font-semibold tracking-tight text-gray-900 dark:text-white">{emp.totalHours ? fmtHours(emp.totalHours) : "—"}</td>
+                    <td className={`px-4 ${rowPad}`}>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.bg}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${s.dot} ${s.pulse ? "animate-pulse" : ""}`} />{s.label}
+                        </span>
+                        {lateMin != null && lateMin > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/30">
+                            +{lateMin}m
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className={`px-4 ${rowPad} text-gray-700 dark:text-gray-300`}>
+                      <div className="flex flex-col">
+                        <span className="font-mono tabular-nums">{fmtClock(emp.clockIn)}</span>
+                        {elapsed && (
+                          <span className="text-[10px] font-medium text-emerald-600 dark:text-emerald-400">
+                            <span className="mr-1 inline-block h-1 w-1 animate-pulse rounded-full bg-emerald-500 align-middle" />
+                            {elapsed} active
+                          </span>
+                        )}
+                      </div>
+                    </td>
+                    <td className={`px-4 ${rowPad} font-mono tabular-nums text-gray-700 dark:text-gray-300`}>{fmtClock(emp.clockOut)}</td>
+                    <td className={`px-4 ${rowPad} font-mono font-semibold tabular-nums tracking-tight text-gray-900 dark:text-white`}>{emp.totalHours ? fmtHours(emp.totalHours) : "—"}</td>
                   </tr>
                 );
               })}
@@ -370,20 +742,49 @@ export default function TeamAttendance() {
           </div>
         ) : filtered.map((emp) => {
           const s = liveStyles[emp.liveStatus] || liveStyles["not-marked"];
+          const active = resolveActiveStatus(emp);
+          const aCfg = activeStatusConfig[active];
+          const ActiveIcon = aCfg.icon;
+          const isLive = emp.liveStatus === "clocked-in" || emp.liveStatus === "late";
+          const elapsed = isToday && isLive && emp.clockIn ? elapsedFrom(emp.clockIn, nowMs) : null;
+          const lateMin = emp.liveStatus === "late" ? lateMinutes(emp.clockIn) : null;
           return (
             <div key={emp._id} className={`${cardCls} p-4`}>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <Avatar name={emp.name} size="lg" />
+                  <Avatar name={emp.name} size="lg" presence={active} />
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-gray-900 dark:text-white">{emp.name}</p>
-                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">{emp.department || "No Dept"}</p>
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${aCfg.badge}`}>
+                        <ActiveIcon
+                          className="h-2 w-2"
+                          fill={active === "online" ? "currentColor" : "none"}
+                          strokeWidth={2.5}
+                        />
+                        {aCfg.short}
+                      </span>
+                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">{emp.department || "No Dept"}</p>
+                    </div>
                   </div>
                 </div>
-                <span className={`inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.bg}`}>
-                  <span className={`h-1.5 w-1.5 rounded-full ${s.dot} ${s.pulse ? "animate-pulse" : ""}`} />{s.label}
-                </span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${s.bg}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${s.dot} ${s.pulse ? "animate-pulse" : ""}`} />{s.label}
+                  </span>
+                  {lateMin != null && lateMin > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/30">
+                      Late +{lateMin}m
+                    </span>
+                  )}
+                </div>
               </div>
+              {elapsed && (
+                <p className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+                  {elapsed} active session
+                </p>
+              )}
               <div className="mt-3 grid grid-cols-3 gap-2">
                 <MiniTile label="In" value={fmtClock(emp.clockIn)} />
                 <MiniTile label="Out" value={fmtClock(emp.clockOut)} />

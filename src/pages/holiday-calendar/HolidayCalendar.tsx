@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Plus, Trash2, X, Star, Building, Globe, ChevronLeft, ChevronRight,
-  PartyPopper, CalendarDays, List, LayoutGrid, Sparkles,
+  PartyPopper, CalendarDays, List, LayoutGrid, Sparkles, Sun, Coffee, Loader2,
 } from "lucide-react";
 import { holidayApi } from "../../api/holidayApi";
 import { useAuth } from "../../context/AuthContext";
@@ -93,12 +93,47 @@ export default function HolidayCalendar() {
   );
 
   const upcoming = useMemo(() => sorted.filter((h) => new Date(h.date) >= new Date()), [sorted]);
+  const nextHoliday = upcoming[0];
 
   const countsByType = useMemo(() => {
     const acc: Record<string, number> = { public: 0, restricted: 0, company: 0 };
     for (const h of holidays) acc[h.type] = (acc[h.type] ?? 0) + 1;
     return acc;
   }, [holidays]);
+
+  // Days remaining until a holiday (0 = today, negative = past).
+  const daysUntil = (dateIso: string): number => {
+    const target = new Date(dateIso);
+    target.setHours(0, 0, 0, 0);
+    const t = new Date();
+    t.setHours(0, 0, 0, 0);
+    return Math.round((target.getTime() - t.getTime()) / 86_400_000);
+  };
+
+  /** Detect 3+ day weekends formed by a holiday landing on Mon/Fri (and Tue/Thu
+   *  when bridged by an adjacent holiday). Returns null when not a long weekend. */
+  const longWeekend = (dateIso: string): { length: number; label: string } | null => {
+    const d = new Date(dateIso);
+    d.setHours(0, 0, 0, 0);
+    const dow = d.getDay();
+    const dateKey = (date: Date) =>
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+    const hasHolidayOn = (offsetDays: number) => {
+      const x = new Date(d);
+      x.setDate(d.getDate() + offsetDays);
+      return holidayByDate.has(dateKey(x));
+    };
+
+    // Fri (5): Fri + Sat + Sun = 3 days
+    if (dow === 5) return { length: 3, label: "3-day weekend" };
+    // Mon (1): Sat + Sun + Mon = 3 days
+    if (dow === 1) return { length: 3, label: "3-day weekend" };
+    // Thu (4) bridged with Fri holiday → Thu/Fri/Sat/Sun = 4 days
+    if (dow === 4 && hasHolidayOn(1)) return { length: 4, label: "4-day weekend" };
+    // Tue (2) bridged with Mon holiday → Sat/Sun/Mon/Tue = 4 days
+    if (dow === 2 && hasHolidayOn(-1)) return { length: 4, label: "4-day weekend" };
+    return null;
+  };
 
   const yearOptions = [year - 1, year, year + 1, year + 2];
 
@@ -206,6 +241,95 @@ export default function HolidayCalendar() {
 
       {view === "list" ? (
         <>
+          {/* Next Holiday Spotlight — countdown + long-weekend hint */}
+          {nextHoliday && (() => {
+            const d = new Date(nextHoliday.date);
+            const days = daysUntil(nextHoliday.date);
+            const lw = longWeekend(nextHoliday.date);
+            const s = typeStyle[nextHoliday.type] || typeStyle.public;
+            return (
+              <div className={`${cardCls} relative overflow-hidden p-0`}>
+                {/* Vivid gradient strip on the left */}
+                <div className={`absolute inset-y-0 left-0 w-1.5 bg-gradient-to-b ${s.gradient}`} />
+                {/* Aurora blobs */}
+                <div aria-hidden className="pointer-events-none absolute inset-0">
+                  <div className={`absolute -right-10 -top-10 h-48 w-48 rounded-full bg-gradient-to-br ${s.gradient} opacity-15 blur-3xl`} />
+                  <div className="absolute -bottom-16 right-1/3 h-40 w-40 rounded-full bg-indigo-400/15 blur-3xl" />
+                </div>
+                <div className="relative flex flex-col gap-5 p-6 sm:flex-row sm:items-center sm:p-7">
+                  {/* Big date tile */}
+                  <div className={`relative flex h-24 w-24 shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br ${s.gradient} text-white shadow-xl ring-1 ring-white/15 sm:h-28 sm:w-28`}>
+                    <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/90">
+                      {d.toLocaleDateString(undefined, { month: "short" })}
+                    </span>
+                    <span className="text-4xl font-bold leading-none sm:text-5xl">{d.getDate()}</span>
+                    <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-white/85">
+                      {d.toLocaleDateString(undefined, { weekday: "short" })}
+                    </span>
+                  </div>
+
+                  {/* Countdown + meta */}
+                  <div className="min-w-0 flex-1">
+                    <p className={labelCls}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Sparkles className="h-3 w-3 text-indigo-500 dark:text-indigo-400" />
+                        Next holiday
+                      </span>
+                    </p>
+                    <h3 className="mt-1 truncate text-xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
+                      {nextHoliday.name}
+                    </h3>
+                    <p className="mt-0.5 truncate text-sm text-gray-500 dark:text-gray-400">
+                      {d.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+                      {nextHoliday.description ? ` · ${nextHoliday.description}` : ""}
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold capitalize ${s.bg}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${s.dot}`} />
+                        {nextHoliday.type}
+                      </span>
+                      {lw && (
+                        <span className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-amber-50 to-orange-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 ring-1 ring-amber-500/30 dark:from-amber-500/10 dark:to-orange-500/10 dark:text-amber-300 dark:ring-amber-400/30">
+                          <Sun className="h-3 w-3" />
+                          {lw.label}
+                        </span>
+                      )}
+                      {days === 0 && (
+                        <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 ring-1 ring-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/30">
+                          <PartyPopper className="h-3 w-3" />
+                          Today!
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Countdown number */}
+                  <div className="shrink-0 rounded-2xl border border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-4 text-center ring-1 ring-indigo-500/10 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900 dark:ring-indigo-400/20 sm:min-w-[160px]">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-500/80 dark:text-indigo-400/80">
+                      {days === 0 ? "Happening" : days === 1 ? "Tomorrow" : "In"}
+                    </p>
+                    <p className="mt-1 flex items-baseline justify-center gap-1.5">
+                      <span className="font-mono text-4xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white sm:text-5xl">
+                        {days === 0 ? "🎉" : days}
+                      </span>
+                      {days > 0 && (
+                        <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">
+                          day{days === 1 ? "" : "s"}
+                        </span>
+                      )}
+                    </p>
+                    {lw && days > 0 && (
+                      <p className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold text-amber-600 dark:text-amber-300">
+                        <Coffee className="h-3 w-3" />
+                        Plan ahead
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+
           {/* Upcoming highlight */}
           {upcoming.length > 0 && (
             <div className={`${cardCls} relative overflow-hidden p-5`}>
@@ -223,13 +347,21 @@ export default function HolidayCalendar() {
                 {upcoming.slice(0, 5).map((h) => {
                   const s = typeStyle[h.type] || typeStyle.public;
                   const d = new Date(h.date);
+                  const lw = longWeekend(h.date);
                   return (
                     <div
                       key={h._id}
                       className={`group rounded-xl border border-gray-200/70 bg-white/80 p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800/80 dark:bg-gray-900/60`}
                     >
-                      <div className={`mb-2 inline-flex items-center gap-1 rounded-md bg-gradient-to-br ${s.gradient} px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm ring-1 ring-white/10`}>
-                        {d.toLocaleDateString(undefined, { month: "short" })} · {d.getDate()}
+                      <div className="mb-2 flex items-center gap-1.5">
+                        <span className={`inline-flex items-center gap-1 rounded-md bg-gradient-to-br ${s.gradient} px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm ring-1 ring-white/10`}>
+                          {d.toLocaleDateString(undefined, { month: "short" })} · {d.getDate()}
+                        </span>
+                        {lw && (
+                          <span title={lw.label} className="inline-flex h-4 w-4 items-center justify-center rounded-md bg-amber-100 text-amber-600 ring-1 ring-amber-500/30 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/30">
+                            <Sun className="h-2.5 w-2.5" />
+                          </span>
+                        )}
                       </div>
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{h.name}</p>
                       <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{d.toLocaleDateString(undefined, { weekday: "long" })}</p>
@@ -256,6 +388,7 @@ export default function HolidayCalendar() {
               const key = h.date.split("T")[0];
               const isToday = key === todayKey;
               const isPast = d < new Date() && !isToday;
+              const lw = !isPast ? longWeekend(h.date) : null;
               return (
                 <div
                   key={h._id}
@@ -268,12 +401,18 @@ export default function HolidayCalendar() {
                     <p className="text-xl font-bold leading-none">{d.getDate()}</p>
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <p className="truncate font-semibold text-gray-900 dark:text-white">{h.name}</p>
                       {isToday && (
                         <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
                           <span className="h-1 w-1 rounded-full bg-indigo-500" />
                           Today
+                        </span>
+                      )}
+                      {lw && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-amber-50 to-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-500/30 dark:from-amber-500/10 dark:to-orange-500/10 dark:text-amber-300 dark:ring-amber-400/30">
+                          <Sun className="h-2.5 w-2.5" />
+                          {lw.label}
                         </span>
                       )}
                     </div>
@@ -371,79 +510,254 @@ export default function HolidayCalendar() {
         </div>
       )}
 
-      {/* ── Add Modal ── */}
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm" onClick={() => setShowAdd(false)} />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="add-holiday-title"
-            className="relative w-full max-w-md overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10"
-          >
-            <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
-              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/20 blur-2xl" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
-                    <PartyPopper className="h-5 w-5 text-white" />
+      {/* ── Add Drawer (premium right-side panel) ── */}
+      {showAdd && (() => {
+        const sType = typeStyle[type] || typeStyle.public;
+        const previewDate = date ? new Date(`${date}T00:00:00`) : null;
+        const previewLw = date ? longWeekend(date) : null;
+        return (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div
+              className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm"
+              onClick={() => setShowAdd(false)}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="add-holiday-title"
+              className="relative flex h-full w-full max-w-md animate-drawer-slide-right flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10 sm:max-w-lg sm:rounded-l-3xl"
+            >
+              {/* Left gradient strip — color follows the selected type */}
+              <span aria-hidden className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${sType.gradient}`} />
+
+              {/* ── Header ── */}
+              <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 px-5 pt-6 pb-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:via-gray-900 dark:to-purple-500/10">
+                <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-indigo-400/25 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-purple-400/15 blur-3xl" />
+                <div className="relative flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3.5">
+                    <div className={`rounded-2xl bg-gradient-to-br ${sType.gradient} p-3 shadow-lg shadow-black/[0.08] ring-1 ring-white/15`}>
+                      <PartyPopper className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                        <Sparkles className="h-3 w-3" />
+                        New calendar entry
+                      </p>
+                      <h2 id="add-holiday-title" className="mt-0.5 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
+                        Add Holiday
+                      </h2>
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        Visible to everyone in the workspace
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 id="add-holiday-title" className="text-base font-bold text-gray-900 dark:text-white">Add Holiday</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Create a new calendar entry</p>
+                  <button
+                    onClick={() => setShowAdd(false)}
+                    aria-label="Close"
+                    className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* ── Form (scrollable body) ── */}
+              <div className="premium-scroll flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+                {/* Holiday name */}
+                <div>
+                  <label className={labelCls}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <PartyPopper className="h-3 w-3 text-indigo-500 dark:text-indigo-400" />
+                      Holiday name
+                    </span>
+                  </label>
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className={`${inputCls} mt-1.5`}
+                    placeholder="e.g. Independence Day"
+                    autoFocus
+                  />
+                </div>
+
+                {/* Date */}
+                <div>
+                  <label className={labelCls}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <CalendarDays className="h-3 w-3 text-sky-500 dark:text-sky-400" />
+                      Date
+                    </span>
+                  </label>
+                  <input
+                    type="date"
+                    value={date}
+                    onChange={(e) => setDate(e.target.value)}
+                    className={`${inputCls} mt-1.5`}
+                  />
+                </div>
+
+                {/* Type — visual 3-card selector replacing the dropdown */}
+                <div>
+                  <label className={labelCls}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Star className="h-3 w-3 text-amber-500 dark:text-amber-400" />
+                      Type
+                    </span>
+                  </label>
+                  <div className="mt-1.5 grid grid-cols-3 gap-2">
+                    {(["public", "restricted", "company"] as const).map((k) => {
+                      const cfg = typeStyle[k];
+                      const Icon = cfg.icon;
+                      const active = type === k;
+                      return (
+                        <button
+                          key={k}
+                          type="button"
+                          onClick={() => setType(k)}
+                          className={`group relative overflow-hidden rounded-xl border p-3 text-left transition-all ${
+                            active
+                              ? "border-transparent shadow-md ring-2 ring-offset-2 ring-offset-white dark:ring-offset-gray-900"
+                              : "border-gray-200/80 hover:border-gray-300 hover:bg-gray-50 dark:border-gray-700/80 dark:hover:border-gray-600 dark:hover:bg-gray-800/60"
+                          }`}
+                          style={
+                            active
+                              ? {
+                                  // Subtle tinted bg + matching ring color via inline because we
+                                  // can't synthesize ring colors from the gradient class.
+                                  background:
+                                    k === "public"
+                                      ? "linear-gradient(135deg, rgba(16,185,129,0.10), rgba(20,184,166,0.05))"
+                                      : k === "restricted"
+                                        ? "linear-gradient(135deg, rgba(245,158,11,0.10), rgba(249,115,22,0.05))"
+                                        : "linear-gradient(135deg, rgba(14,165,233,0.10), rgba(37,99,235,0.05))",
+                                  boxShadow:
+                                    "0 0 0 2px " +
+                                    (k === "public"
+                                      ? "rgba(16,185,129,0.55)"
+                                      : k === "restricted"
+                                        ? "rgba(245,158,11,0.55)"
+                                        : "rgba(14,165,233,0.55)"),
+                                }
+                              : undefined
+                          }
+                        >
+                          <div className={`mb-1.5 inline-flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br ${cfg.gradient} text-white shadow-sm ring-1 ring-white/10`}>
+                            <Icon className="h-3.5 w-3.5" />
+                          </div>
+                          <p className="text-[12px] font-semibold capitalize text-gray-900 dark:text-white">{k}</p>
+                          <p className="text-[10px] leading-tight text-gray-500 dark:text-gray-400">
+                            {k === "public"
+                              ? "Govt. observed"
+                              : k === "restricted"
+                                ? "Optional"
+                                : "Internal-only"}
+                          </p>
+                          {active && (
+                            <span aria-hidden className="absolute right-1.5 top-1.5 flex h-3.5 w-3.5 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm ring-1 ring-black/5">
+                              <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowAdd(false)}
-                  aria-label="Close"
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-            <div className="space-y-4 p-5">
-              <div>
-                <label className={`mb-1.5 block ${labelCls}`}>Holiday Name</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} placeholder="e.g. Independence Day" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
+
+                {/* Description */}
                 <div>
-                  <label className={`mb-1.5 block ${labelCls}`}>Date</label>
-                  <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className={inputCls} />
+                  <label className={labelCls}>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Sparkles className="h-3 w-3 text-rose-500 dark:text-rose-400" />
+                      Description
+                    </span>
+                  </label>
+                  <input
+                    value={desc}
+                    onChange={(e) => setDesc(e.target.value)}
+                    className={`${inputCls} mt-1.5`}
+                    placeholder="Optional note for employees"
+                  />
                 </div>
-                <div>
-                  <label className={`mb-1.5 block ${labelCls}`}>Type</label>
-                  <select value={type} onChange={(e) => setType(e.target.value)} className={inputCls}>
-                    <option value="public">Public</option>
-                    <option value="restricted">Restricted</option>
-                    <option value="company">Company</option>
-                  </select>
+
+                {/* Live preview — appears only when name + date are filled */}
+                {(name || date) && (
+                  <div className="rounded-2xl border border-gray-200/70 bg-gradient-to-br from-gray-50 to-white p-3.5 ring-1 ring-black/[0.02] dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900/40 dark:ring-white/[0.02]">
+                    <p className={`${labelCls} mb-2.5`}>
+                      <span className="inline-flex items-center gap-1.5">
+                        <Sparkles className="h-3 w-3 text-indigo-500 dark:text-indigo-400" />
+                        Live preview
+                      </span>
+                    </p>
+                    <div className="flex items-center gap-3">
+                      {/* Date tile */}
+                      <div className={`flex h-12 w-12 shrink-0 flex-col items-center justify-center overflow-hidden rounded-xl bg-gradient-to-br ${sType.gradient} text-white shadow-md ring-1 ring-white/10`}>
+                        <span className="text-[8px] font-bold uppercase tracking-wider text-white/90">
+                          {previewDate ? previewDate.toLocaleDateString(undefined, { month: "short" }) : "—"}
+                        </span>
+                        <span className="text-base font-bold leading-none">
+                          {previewDate ? previewDate.getDate() : "?"}
+                        </span>
+                      </div>
+                      {/* Name + meta */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                            {name || <span className="text-gray-400 dark:text-gray-500">Holiday name…</span>}
+                          </p>
+                          {previewLw && (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-gradient-to-r from-amber-50 to-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-500/30 dark:from-amber-500/10 dark:to-orange-500/10 dark:text-amber-300 dark:ring-amber-400/30">
+                              <Sun className="h-2.5 w-2.5" />
+                              {previewLw.label}
+                            </span>
+                          )}
+                        </div>
+                        <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                          {previewDate
+                            ? previewDate.toLocaleDateString(undefined, { weekday: "long", year: "numeric" })
+                            : "Pick a date to see how it appears"}
+                        </p>
+                      </div>
+                      {/* Type pill */}
+                      <span className={`hidden shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-[10px] font-semibold capitalize sm:inline-flex ${sType.bg}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${sType.dot}`} />
+                        {type}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+              </div>
+
+              {/* ── Sticky footer ── */}
+              <div className="shrink-0 border-t border-gray-200/70 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 sm:px-6">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowAdd(false)}
+                    className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAdd}
+                    disabled={saving || !name || !date}
+                    className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10 transition-all hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl hover:shadow-indigo-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                  >
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                    />
+                    <span className="relative inline-flex items-center justify-center gap-2">
+                      {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                      {saving ? "Adding…" : "Add Holiday"}
+                    </span>
+                  </button>
                 </div>
-              </div>
-              <div>
-                <label className={`mb-1.5 block ${labelCls}`}>Description</label>
-                <input value={desc} onChange={(e) => setDesc(e.target.value)} className={inputCls} placeholder="Optional note for employees" />
-              </div>
-              <div className="flex gap-3 pt-1">
-                <button
-                  onClick={() => setShowAdd(false)}
-                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleAdd}
-                  disabled={saving}
-                  className="flex-1 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl disabled:opacity-60"
-                >
-                  {saving ? "Adding..." : "Add Holiday"}
-                </button>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

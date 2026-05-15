@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { LogIn, LogOut, Clock, Calendar, Timer, X, Activity, Users, AlertTriangle, CheckCircle2, UserX, Power, Loader2 } from "lucide-react";
+import { LogIn, LogOut, Clock, Calendar, Timer, X, Users, AlertTriangle, CheckCircle2, UserX, Power, Loader2, Flame, Sparkles } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
 import { useAuth } from "../../context/AuthContext";
@@ -58,6 +58,10 @@ export default function Attendance() {
   const [myStatusFilter, setMyStatusFilter] = useState<"all" | "present" | "late" | "half-day" | "absent">("all");
   const [weeklyHours, setWeeklyHours] = useState(0);
   const [monthlyHours, setMonthlyHours] = useState(0);
+  // Premium "My Attendance" extras
+  const [weekDayStatus, setWeekDayStatus] = useState<(string | undefined)[]>([]); // Mon..Sun
+  const [monthCounts, setMonthCounts] = useState({ present: 0, late: 0, halfDay: 0, absent: 0, onLeave: 0 });
+  const [streak, setStreak] = useState(0);
   const [employees, setEmployees] = useState<User[]>([]);
   const [autoClockOut, setAutoClockOut] = useState(true);
   const [prefSaving, setPrefSaving] = useState(false);
@@ -131,14 +135,42 @@ export default function Attendance() {
       const diffToMon = dow === 0 ? -6 : 1 - dow;
       weekStart.setDate(now.getDate() + diffToMon);
       weekStart.setHours(0, 0, 0, 0);
+
       let week = 0, month_ = 0;
+      const counts = { present: 0, late: 0, halfDay: 0, absent: 0, onLeave: 0 };
+      const dayMap: (string | undefined)[] = [undefined, undefined, undefined, undefined, undefined, undefined, undefined]; // Mon..Sun
+
       for (const rec of recs) {
         const h = rec.totalHours || 0;
         month_ += h;
-        if (new Date(rec.date) >= weekStart) week += h;
+        const recDate = new Date(rec.date);
+        if (recDate >= weekStart) {
+          week += h;
+          const idx = (recDate.getDay() + 6) % 7; // Mon=0..Sun=6
+          dayMap[idx] = rec.status;
+        }
+        if (rec.status === "present")       counts.present++;
+        else if (rec.status === "late")     counts.late++;
+        else if (rec.status === "half-day") counts.halfDay++;
+        else if (rec.status === "absent")   counts.absent++;
+        else if (rec.status === "on-leave") counts.onLeave++;
       }
+
       setWeeklyHours(Math.round(week * 100) / 100);
       setMonthlyHours(Math.round(month_ * 100) / 100);
+      setWeekDayStatus(dayMap);
+      setMonthCounts(counts);
+
+      // On-time streak: walk back from most recent record, count consecutive
+      // "present" / "half-day" (i.e., non-late, non-absent) days. Stops at the
+      // first late/absent or as soon as we run out of records.
+      const sorted = [...recs].sort((a, b) => +new Date(b.date) - +new Date(a.date));
+      let s = 0;
+      for (const rec of sorted) {
+        if (rec.status === "present" || rec.status === "half-day") s++;
+        else break;
+      }
+      setStreak(s);
     }).catch(() => {});
   }, [today]);
   useEffect(() => { if (canViewAll) userApi.getAll({ limit: 200 }).then((r) => setEmployees(r.data.data)).catch(() => {}); }, [canViewAll]);
@@ -178,8 +210,9 @@ export default function Attendance() {
           }}
         />
 
-        <div className="relative flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
-          <div className="min-w-0">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* ── LEFT: identity + status ── */}
+          <div className="min-w-0 flex-1 lg:max-w-[520px]">
             <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
@@ -187,46 +220,67 @@ export default function Attendance() {
             <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
               Attendance & <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Time Tracking</span>
             </h1>
-
-            {/* Live timer */}
-            {today?.clockIn && !today?.clockOut && (
-              <div className="mt-4 flex w-fit items-baseline gap-2 rounded-2xl bg-white/5 px-4 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
-                <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Elapsed</span>
-                <span className="font-mono text-3xl font-bold tracking-wider sm:text-4xl">{fmtTime(elapsed)}</span>
-              </div>
-            )}
-
-            {/* Time chips */}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                <LogIn className="h-3.5 w-3.5 text-indigo-200" />
-                <span className="text-indigo-200/80">In</span>
-                <span className="font-semibold">{fmtClock(today?.clockIn ?? null)}</span>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                <LogOut className="h-3.5 w-3.5 text-indigo-200" />
-                <span className="text-indigo-200/80">Out</span>
-                <span className="font-semibold">{fmtClock(today?.clockOut ?? null)}</span>
-              </div>
-              {today?.totalHours != null && (
-                <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                  <Timer className="h-3.5 w-3.5 text-indigo-200" />
-                  <span className="text-indigo-200/80">Total</span>
-                  <span className="font-semibold">{fmtHours(today.totalHours)}</span>
-                </div>
-              )}
-            </div>
+            <p className="mt-2 max-w-md text-sm text-indigo-200/70">
+              Track your day, manage your shifts, and keep your timesheet in sync.
+            </p>
 
             {/* Late badge */}
             {today?.status === "late" && (
-              <div className="mt-3 flex w-fit items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
-                <span className="h-1.5 w-1.5 rounded-full bg-rose-400 animate-pulse" />
+              <div className="mt-4 flex w-fit items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
                 Late — {today?.lateByMinutes ? `${today?.lateByMinutes} min` : "after office hours"}
               </div>
             )}
+          </div>
 
-            {/* Auto clock-out toggle */}
-            <div className="mt-4 flex w-full max-w-md items-center gap-3 rounded-2xl bg-white/5 px-3.5 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
+          {/* ── RIGHT: action stack (timer + clock button + auto toggle) ── */}
+          <div className="flex w-full shrink-0 flex-col gap-3 lg:w-[360px]">
+            {/* Live timer — only while clocked-in, big and prominent */}
+            {today?.clockIn && !today?.clockOut && (
+              <div className="flex items-baseline justify-between gap-3 rounded-2xl bg-white/5 px-4 py-3 ring-1 ring-white/10 backdrop-blur-sm">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  Elapsed
+                </span>
+                <span className="font-mono text-3xl font-bold tabular-nums tracking-wider sm:text-4xl">
+                  {fmtTime(elapsed)}
+                </span>
+              </div>
+            )}
+
+            {/* Clock action button — fills the column width */}
+            {!today?.clockIn ? (
+              <button
+                onClick={handleClockIn}
+                disabled={loading}
+                className="group inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98] disabled:opacity-50"
+              >
+                <span className="rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 p-1.5">
+                  <LogIn className="h-4 w-4 text-white" />
+                </span>
+                Clock In
+              </button>
+            ) : !today?.clockOut ? (
+              <button
+                onClick={handleClockOut}
+                disabled={loading}
+                className="group inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/15 transition-all hover:shadow-xl hover:shadow-rose-500/40 active:scale-[0.98] disabled:opacity-50"
+              >
+                <span className="rounded-lg bg-white/15 p-1.5">
+                  <LogOut className="h-4 w-4" />
+                </span>
+                Clock Out
+              </button>
+            ) : (
+              <div className="inline-flex w-full items-center justify-center gap-2.5 rounded-2xl bg-emerald-500/15 px-6 py-3.5 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                <span className="rounded-lg bg-emerald-500/25 p-1.5">
+                  <CheckCircle2 className="h-4 w-4" />
+                </span>
+                Day Complete
+              </div>
+            )}
+
+            {/* Auto clock-out toggle — compact, fills column width */}
+            <div className="flex items-center gap-3 rounded-2xl bg-white/5 px-3.5 py-2.5 ring-1 ring-white/10 backdrop-blur-sm">
               <div
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
                   autoClockOut
@@ -237,11 +291,11 @@ export default function Attendance() {
                 <Power className="h-4 w-4" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-xs font-semibold text-white">Auto clock-out at {autoClockOutLabel}</p>
-                <p className="text-[11px] text-indigo-200/70 leading-snug">
-                  {autoClockOut
-                    ? "Open shifts will be closed automatically"
-                    : "You'll need to clock out manually"}
+                <p className="truncate text-xs font-semibold text-white">
+                  Auto clock-out at {autoClockOutLabel}
+                </p>
+                <p className="truncate text-[11px] leading-snug text-indigo-200/70">
+                  {autoClockOut ? "Open shifts close automatically" : "Manual clock-out only"}
                 </p>
               </div>
               <button
@@ -264,65 +318,386 @@ export default function Attendance() {
               </button>
             </div>
           </div>
-
-          {/* Clock button */}
-          <div className="shrink-0">
-            {!today?.clockIn ? (
-              <button
-                onClick={handleClockIn}
-                disabled={loading}
-                className="group inline-flex items-center gap-2.5 rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98] disabled:opacity-50"
-              >
-                <span className="rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 p-1.5">
-                  <LogIn className="h-4 w-4 text-white" />
-                </span>
-                Clock In
-              </button>
-            ) : !today?.clockOut ? (
-              <button
-                onClick={handleClockOut}
-                disabled={loading}
-                className="group inline-flex items-center gap-2.5 rounded-2xl bg-gradient-to-br from-rose-500 to-red-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/15 transition-all hover:shadow-xl hover:shadow-rose-500/40 active:scale-[0.98] disabled:opacity-50"
-              >
-                <span className="rounded-lg bg-white/15 p-1.5">
-                  <LogOut className="h-4 w-4" />
-                </span>
-                Clock Out
-              </button>
-            ) : (
-              <div className="inline-flex items-center gap-2.5 rounded-2xl bg-emerald-500/15 px-6 py-3.5 text-sm font-semibold text-emerald-200 ring-1 ring-emerald-400/30 backdrop-blur-sm">
-                <span className="rounded-lg bg-emerald-500/25 p-1.5">
-                  <CheckCircle2 className="h-4 w-4" />
-                </span>
-                Day Complete
-              </div>
-            )}
-          </div>
         </div>
       </div>
 
-      {/* ── Quick Stats ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-        {[
-          { icon: Timer, label: "Today's Hours", value: today?.totalHours ? fmtHours(today.totalHours) : today?.clockIn ? fmtTime(elapsed) : "—", color: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-50 dark:bg-indigo-500/10", ring: "ring-indigo-500/10 dark:ring-indigo-400/20" },
-          { icon: Calendar, label: "Status", value: today?.status ? statusStyle[today.status]?.label || today.status : "Not Marked", color: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-50 dark:bg-emerald-500/10", ring: "ring-emerald-500/10 dark:ring-emerald-400/20" },
-          { icon: Activity, label: "Clock In", value: fmtClock(today?.clockIn ?? null), color: "text-sky-600 dark:text-sky-400", bg: "bg-sky-50 dark:bg-sky-500/10", ring: "ring-sky-500/10 dark:ring-sky-400/20" },
-          { icon: Clock, label: "Clock Out", value: fmtClock(today?.clockOut ?? null), color: "text-purple-600 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-500/10", ring: "ring-purple-500/10 dark:ring-purple-400/20" },
-          { icon: Timer, label: "Weekly Hours", value: fmtHours(weeklyHours), color: "text-amber-600 dark:text-amber-400", bg: "bg-amber-50 dark:bg-amber-500/10", ring: "ring-amber-500/10 dark:ring-amber-400/20" },
-          { icon: Calendar, label: "Monthly Hours", value: fmtHours(monthlyHours), color: "text-rose-600 dark:text-rose-400", bg: "bg-rose-50 dark:bg-rose-500/10", ring: "ring-rose-500/10 dark:ring-rose-400/20" },
-        ].map((s) => (
-          <div key={s.label} className={`${cardCls} p-4`}>
-            <div className="flex items-center gap-3">
-              <div className={`rounded-lg p-2 ring-1 ${s.bg} ${s.ring}`}>
-                <s.icon className={`h-4 w-4 ${s.color}`} />
+      {/* ── Clock In / Clock Out Cards ── */}
+      {(() => {
+        const officeStartMin = (() => {
+          const [h, m] = (attendancePolicy?.officeStartTime ?? "09:00").split(":").map(Number);
+          return (h || 9) * 60 + (m || 0);
+        })();
+        const inDate = today?.clockIn ? new Date(today.clockIn) : null;
+        const outDate = today?.clockOut ? new Date(today.clockOut) : null;
+        const inMinutes = inDate ? inDate.getHours() * 60 + inDate.getMinutes() : null;
+        const lateBy = inMinutes != null ? inMinutes - officeStartMin : null;
+        const isLate = today?.status === "late" || (lateBy != null && lateBy > 0);
+        const earlyBy = lateBy != null && lateBy < 0 ? Math.abs(lateBy) : 0;
+        const stillWorking = !!today?.clockIn && !today?.clockOut;
+        return (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            {/* Clock In */}
+            <div className={`${cardCls} relative overflow-hidden p-5`}>
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-2xl ${
+                  isLate
+                    ? "bg-gradient-to-br from-amber-500 to-orange-600 opacity-[0.12]"
+                    : inDate
+                      ? "bg-gradient-to-br from-emerald-500 to-teal-600 opacity-[0.12]"
+                      : "bg-gradient-to-br from-indigo-500 to-purple-600 opacity-[0.08]"
+                }`}
+              />
+              <div className="relative">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className={labelCls}>Clock In</p>
+                    <p className="mt-1.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                      {inDate
+                        ? inDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : <span className="text-gray-300 dark:text-gray-700">— : —</span>}
+                    </p>
+                    {inDate && (
+                      <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                        {inDate.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+                      </p>
+                    )}
+                  </div>
+                  <div
+                    className={`rounded-xl p-2.5 shadow-lg ring-1 ring-white/10 ${
+                      isLate
+                        ? "bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/25"
+                        : inDate
+                          ? "bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/25"
+                          : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-500/25"
+                    }`}
+                  >
+                    <LogIn className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+
+                {/* Status row */}
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {!inDate ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-600/20">
+                        <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+                        Not yet clocked in
+                      </span>
+                      <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                        Office starts at {formatHHMMTo12h(attendancePolicy?.officeStartTime ?? "09:00")}
+                      </span>
+                    </>
+                  ) : isLate ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20">
+                        <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-amber-500" />
+                        Late
+                      </span>
+                      <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                        +{today?.lateByMinutes ?? lateBy ?? 0} min after {formatHHMMTo12h(attendancePolicy?.officeStartTime ?? "09:00")}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20">
+                        <CheckCircle2 className="h-3 w-3" />
+                        On time
+                      </span>
+                      {earlyBy > 0 && (
+                        <span className="text-[11px] font-medium text-emerald-700 dark:text-emerald-300">
+                          {earlyBy} min early
+                        </span>
+                      )}
+                    </>
+                  )}
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className={labelCls}>{s.label}</p>
-                <p className="mt-0.5 truncate text-base font-bold capitalize tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+            </div>
+
+            {/* Clock Out */}
+            <div className={`${cardCls} relative overflow-hidden p-5`}>
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full blur-2xl ${
+                  outDate
+                    ? "bg-gradient-to-br from-sky-500 to-blue-600 opacity-[0.12]"
+                    : stillWorking
+                      ? "bg-gradient-to-br from-rose-500 to-pink-600 opacity-[0.10]"
+                      : "bg-gradient-to-br from-gray-400 to-gray-600 opacity-[0.06]"
+                }`}
+              />
+              <div className="relative">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className={labelCls}>Clock Out</p>
+                    <p className="mt-1.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                      {outDate
+                        ? outDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                        : stillWorking
+                          ? <span className="text-rose-500 dark:text-rose-400">{fmtTime(elapsed)}</span>
+                          : <span className="text-gray-300 dark:text-gray-700">— : —</span>}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">
+                      {outDate
+                        ? `Worked ${today?.totalHours ? fmtHours(today.totalHours) : "—"} today`
+                        : stillWorking
+                          ? "Still active · live elapsed"
+                          : "Day not started"}
+                    </p>
+                  </div>
+                  <div
+                    className={`rounded-xl p-2.5 shadow-lg ring-1 ring-white/10 ${
+                      outDate
+                        ? "bg-gradient-to-br from-sky-500 to-blue-600 shadow-sky-500/25"
+                        : stillWorking
+                          ? "bg-gradient-to-br from-rose-500 to-pink-600 shadow-rose-500/25"
+                          : "bg-gradient-to-br from-gray-400 to-gray-600 shadow-gray-500/20"
+                    }`}
+                  >
+                    <LogOut className="h-4 w-4 text-white" />
+                  </div>
+                </div>
+
+                {/* Status row */}
+                <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                  {outDate ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-400/20">
+                        <CheckCircle2 className="h-3 w-3" />
+                        Day complete
+                      </span>
+                      <span className="text-[11px] font-medium text-sky-700 dark:text-sky-300">
+                        {outDate.toLocaleDateString(undefined, { weekday: "long", month: "short", day: "numeric" })}
+                      </span>
+                    </>
+                  ) : stillWorking ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5 rounded-md bg-rose-50 px-2 py-0.5 text-[11px] font-semibold text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-70" />
+                          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-rose-500" />
+                        </span>
+                        Live
+                      </span>
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Auto clock-out at <span className="font-semibold text-gray-700 dark:text-gray-300">{autoClockOutLabel}</span>
+                      </span>
+                    </>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-2 py-0.5 text-[11px] font-semibold text-gray-600 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-600/20">
+                      <span className="h-1.5 w-1.5 rounded-full bg-gray-400" />
+                      Not yet
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
-        ))}
+        );
+      })()}
+
+      {/* ── Premium "My Attendance" Stats ── */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        {/* This Week — day strip + weekly progress */}
+        <div className={`${cardCls} relative overflow-hidden p-5`}>
+          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 opacity-[0.08] blur-2xl" />
+          <div className="relative">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className={labelCls}>This Week</p>
+                <p className="mt-1 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                  {fmtHours(weeklyHours)}
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  of <span className="font-semibold text-gray-700 dark:text-gray-300">40h</span> target
+                </p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/20 ring-1 ring-white/10">
+                <Timer className="h-4 w-4 text-white" />
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-purple-600 transition-[width] duration-700"
+                style={{ width: `${Math.min(100, (weeklyHours / 40) * 100)}%` }}
+              />
+            </div>
+
+            {/* Day strip: Mon..Sun */}
+            <div className="mt-4 grid grid-cols-7 gap-1.5">
+              {["M", "T", "W", "T", "F", "S", "S"].map((dayLetter, i) => {
+                const status = weekDayStatus[i];
+                const dayDate = new Date();
+                const dow = dayDate.getDay();
+                const diffToMon = dow === 0 ? -6 : 1 - dow;
+                dayDate.setDate(dayDate.getDate() + diffToMon + i);
+                dayDate.setHours(0, 0, 0, 0);
+                const now = new Date(); now.setHours(0, 0, 0, 0);
+                const isToday = dayDate.getTime() === now.getTime();
+                const isFuture = dayDate > now;
+                const isWeekend = i >= 5;
+                // Color
+                let dotCls = "bg-gray-200 dark:bg-gray-700";
+                let labelCol = "text-gray-400 dark:text-gray-500";
+                if (status === "present")  { dotCls = "bg-emerald-500"; labelCol = "text-emerald-600 dark:text-emerald-400"; }
+                else if (status === "late") { dotCls = "bg-amber-500";   labelCol = "text-amber-600 dark:text-amber-400"; }
+                else if (status === "half-day") { dotCls = "bg-orange-500"; labelCol = "text-orange-600 dark:text-orange-400"; }
+                else if (status === "absent")   { dotCls = "bg-rose-500";   labelCol = "text-rose-600 dark:text-rose-400"; }
+                else if (status === "on-leave") { dotCls = "bg-sky-500";    labelCol = "text-sky-600 dark:text-sky-400"; }
+                else if (isWeekend) { dotCls = "bg-gray-200/60 dark:bg-gray-700/40"; }
+                return (
+                  <div
+                    key={i}
+                    className={`flex flex-col items-center gap-1 rounded-lg px-1 py-1.5 transition-colors ${
+                      isToday
+                        ? "bg-indigo-50 ring-1 ring-indigo-500/20 dark:bg-indigo-500/10 dark:ring-indigo-400/30"
+                        : ""
+                    }`}
+                    title={dayDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
+                  >
+                    <span className={`text-[10px] font-bold uppercase tracking-wider ${labelCol}`}>{dayLetter}</span>
+                    <span className={`h-2 w-2 rounded-full ${dotCls} ${isToday && (status === "present" || status === "late") ? "animate-pulse" : ""}`} />
+                    {isFuture && !isToday && <span className="text-[8px] text-gray-300 dark:text-gray-600">—</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* This Month — stacked status bar + counts */}
+        <div className={`${cardCls} relative overflow-hidden p-5`}>
+          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 opacity-[0.08] blur-2xl" />
+          <div className="relative">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className={labelCls}>This Month</p>
+                <p className="mt-1 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                  {fmtHours(monthlyHours)}
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  <span className="font-semibold text-gray-700 dark:text-gray-300">
+                    {monthCounts.present + monthCounts.late + monthCounts.halfDay + monthCounts.onLeave}
+                  </span>{" "}
+                  days logged
+                </p>
+              </div>
+              <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-2.5 shadow-lg shadow-emerald-500/20 ring-1 ring-white/10">
+                <Calendar className="h-4 w-4 text-white" />
+              </div>
+            </div>
+
+            {/* Stacked status bar */}
+            {(() => {
+              const tot = monthCounts.present + monthCounts.late + monthCounts.halfDay + monthCounts.absent + monthCounts.onLeave;
+              const segs = [
+                { v: monthCounts.present,  c: "bg-emerald-500" },
+                { v: monthCounts.late,     c: "bg-amber-500" },
+                { v: monthCounts.halfDay,  c: "bg-orange-500" },
+                { v: monthCounts.onLeave,  c: "bg-sky-500" },
+                { v: monthCounts.absent,   c: "bg-rose-500" },
+              ];
+              return (
+                <div className="mt-3 flex h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                  {tot > 0 && segs.map((s, i) => (
+                    s.v > 0 && (
+                      <div
+                        key={i}
+                        className={`${s.c} h-full transition-[width] duration-700`}
+                        style={{ width: `${(s.v / tot) * 100}%` }}
+                      />
+                    )
+                  ))}
+                </div>
+              );
+            })()}
+
+            {/* Counts grid */}
+            <div className="mt-4 grid grid-cols-5 gap-1.5 text-center">
+              {[
+                { v: monthCounts.present, c: "text-emerald-600 dark:text-emerald-400", dot: "bg-emerald-500", l: "Present" },
+                { v: monthCounts.late,    c: "text-amber-600 dark:text-amber-400",     dot: "bg-amber-500",   l: "Late" },
+                { v: monthCounts.halfDay, c: "text-orange-600 dark:text-orange-400",   dot: "bg-orange-500",  l: "Half" },
+                { v: monthCounts.onLeave, c: "text-sky-600 dark:text-sky-400",         dot: "bg-sky-500",     l: "Leave" },
+                { v: monthCounts.absent,  c: "text-rose-600 dark:text-rose-400",       dot: "bg-rose-500",    l: "Absent" },
+              ].map((s) => (
+                <div key={s.l} className="rounded-lg border border-gray-200/60 bg-gray-50/60 px-1 py-1.5 dark:border-gray-800/60 dark:bg-gray-800/40">
+                  <span className={`mx-auto mb-0.5 block h-1 w-1 rounded-full ${s.dot}`} />
+                  <p className={`font-mono text-sm font-bold tabular-nums ${s.c}`}>{s.v}</p>
+                  <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{s.l}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Streak */}
+        <div className={`${cardCls} relative overflow-hidden p-5`}>
+          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 opacity-[0.12] blur-2xl" />
+          <div className="relative">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className={labelCls}>On-time streak</p>
+                <p className="mt-1 flex items-baseline gap-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                  {streak}
+                  <span className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                    day{streak === 1 ? "" : "s"}
+                  </span>
+                </p>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                  {streak === 0
+                    ? "Clock in on time to start a streak"
+                    : streak < 5
+                      ? "Keep it going!"
+                      : streak < 10
+                        ? "On a roll 🔥"
+                        : "Unstoppable!"}
+                </p>
+              </div>
+              <div className="relative rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 p-2.5 shadow-lg shadow-amber-500/30 ring-1 ring-white/10">
+                <Flame className="h-4 w-4 text-white" />
+                {streak >= 5 && (
+                  <span aria-hidden className="absolute inset-0 rounded-xl bg-amber-400/30 blur-md" />
+                )}
+              </div>
+            </div>
+
+            {/* Streak progress towards milestones */}
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-600 transition-[width] duration-700"
+                style={{ width: `${Math.min(100, (streak / 10) * 100)}%` }}
+              />
+            </div>
+
+            {/* Milestone chips */}
+            <div className="mt-3 flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider">
+              {[
+                { n: 3,  label: "Spark" },
+                { n: 5,  label: "Fire" },
+                { n: 10, label: "Blaze" },
+              ].map((m) => {
+                const hit = streak >= m.n;
+                return (
+                  <span
+                    key={m.n}
+                    className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 transition-colors ${
+                      hit
+                        ? "bg-amber-50 text-amber-700 ring-1 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25"
+                        : "bg-gray-100 text-gray-400 ring-1 ring-gray-200 dark:bg-gray-800 dark:text-gray-500 dark:ring-gray-700"
+                    }`}
+                  >
+                    {hit && <Sparkles className="h-2.5 w-2.5" />}
+                    {m.n}d {m.label}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Tabs ── */}

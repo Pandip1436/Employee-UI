@@ -11,7 +11,16 @@ import {
 } from "recharts";
 import { dashboardApi, type HrStats, type PendingApprovalItem } from "../../api/dashboardApi";
 import { useCompany } from "../../context/CompanyContext";
+import { useAuth } from "../../context/AuthContext";
 import { fmtHours } from "../../utils/format";
+
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12)  return "Good morning";
+  if (h >= 12 && h < 18) return "Good afternoon";
+  if (h >= 18 && h < 23) return "Good evening";
+  return "Working late";
+}
 
 type Anniversary = { _id: string; name: string; email: string; department?: string; years: number; eventDate: string };
 
@@ -51,15 +60,23 @@ function Initials({ name }: { name: string }) {
 
 export default function HrDashboard() {
   const { companyName, logo } = useCompany();
+  const { user } = useAuth();
   const logoSrc = logo ? (/^(https?:|\/)/.test(logo) ? logo : `/${logo}`) : "/logodarkmode.png";
   const [stats, setStats] = useState<HrStats | null>(null);
   const [anniversaries, setAnniversaries] = useState<Anniversary[]>([]);
   const [pending, setPending] = useState<{ leaves: PendingApprovalItem[]; timesheets: PendingApprovalItem[] }>({ leaves: [], timesheets: [] });
+  const [now, setNow] = useState<Date>(() => new Date());
 
   useEffect(() => {
     dashboardApi.getHrStats().then((r) => setStats(r.data.data ?? null)).catch(() => {});
     dashboardApi.getUpcomingEvents().then((r) => setAnniversaries(r.data.data?.anniversaries ?? [])).catch(() => {});
     dashboardApi.getPendingApprovals().then((r) => setPending(r.data.data ?? { leaves: [], timesheets: [] })).catch(() => {});
+  }, []);
+
+  // Live clock — ticks every 30s (we display HH:MM)
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
   }, []);
 
   const leaveData = (stats?.leaveStats ?? [])
@@ -104,14 +121,6 @@ export default function HrDashboard() {
       trend: { dir: attendanceRate >= 50 ? "up" : "down", pct: `${attendanceRate}%` } as const,
     },
     {
-      label: "Attrition (YTD)",
-      value: `${stats.attritionRate.toFixed(1)}%`,
-      sub: "Organisation-wide",
-      icon: TrendingDown,
-      gradient: "from-rose-500 to-pink-600",
-      trend: null,
-    },
-    {
       label: "Pending Approvals",
       value: pendingCount,
       sub: `${pending.leaves.length} leaves · ${pending.timesheets.length} timesheets`,
@@ -149,8 +158,9 @@ export default function HrDashboard() {
             maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
           }}
         />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + greeting */}
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="relative shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <img src={logoSrc} alt={`${companyName} logo`} className="h-12 w-12 object-contain" />
             </div>
@@ -158,25 +168,81 @@ export default function HrDashboard() {
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
                 {hero}
+                <span aria-hidden className="h-3 w-px bg-indigo-200/30" />
+                <span className="font-mono tabular-nums">
+                  {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </span>
               </p>
               <h1 className="mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">
-                {companyName}
+                {getGreeting()}
+                {user?.name ? (
+                  <>
+                    ,{" "}
+                    <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">
+                      {user.name}
+                    </span>
+                  </>
+                ) : null}
               </h1>
-              <p className="mt-0.5 text-xs text-indigo-200/70">Workforce overview & operations</p>
+              <p className="mt-0.5 truncate text-xs text-indigo-200/70">
+                {companyName} · workforce overview &amp; operations
+              </p>
+
+              {/* Hero KPI snapshot chips */}
+              {stats && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <Users className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Total</span>
+                    <span className="font-mono font-semibold tabular-nums">{stats.totalEmployees}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                    <UserCheck className="h-3.5 w-3.5 text-emerald-200" />
+                    <span className="text-emerald-200/90">Present</span>
+                    <span className="font-mono font-semibold tabular-nums text-emerald-50">{stats.todayPresent}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs ring-1 ring-rose-400/30 backdrop-blur-sm">
+                    <UserX className="h-3.5 w-3.5 text-rose-200" />
+                    <span className="text-rose-200/90">Absent</span>
+                    <span className="font-mono font-semibold tabular-nums text-rose-50">{stats.todayAbsent}</span>
+                  </span>
+                  {pendingCount > 0 && (
+                    <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
+                      <AlertCircle className="h-3.5 w-3.5 text-amber-200" />
+                      <span className="text-amber-200/90">Pending</span>
+                      <span className="font-mono font-semibold tabular-nums text-amber-50">{pendingCount}</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-          <Link
-            to="/employees"
-            className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
-          >
-            <Users className="h-4 w-4" /> Manage Workforce
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+
+          {/* RIGHT: action buttons */}
+          <div className="flex w-full shrink-0 flex-col gap-2.5 sm:flex-row lg:w-auto lg:flex-col">
+            <Link
+              to="/employees"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98]"
+            >
+              <span className="rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
+                <Users className="h-3.5 w-3.5 text-white" />
+              </span>
+              Manage Workforce
+              <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+            </Link>
+            <Link
+              to="/admin/timesheet/export"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 active:scale-[0.98]"
+            >
+              <Download className="h-3.5 w-3.5 text-indigo-200" />
+              Export Data
+            </Link>
+          </div>
         </div>
       </div>
 
       {/* ── KPI Tiles ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {kpis.map((k) => (
           <div key={k.label} className={`${card} group relative overflow-hidden`}>
             {/* Corner glow accent */}
@@ -187,7 +253,7 @@ export default function HrDashboard() {
             <div className="flex items-start justify-between">
               <div className="min-w-0">
                 <p className={sectionLabel}>{k.label}</p>
-                <p className="mt-2.5 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                <p className="mt-2.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
                   {k.value}
                 </p>
               </div>
@@ -295,7 +361,7 @@ export default function HrDashboard() {
                 </PieChart>
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-3xl font-bold text-gray-900 dark:text-white">{attendanceRate}%</p>
+                <p className="font-mono text-3xl font-bold tabular-nums text-gray-900 dark:text-white">{attendanceRate}%</p>
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400">Present</p>
               </div>
             </div>
@@ -304,11 +370,11 @@ export default function HrDashboard() {
           )}
           <div className="mt-3 grid grid-cols-2 gap-2 text-center">
             <div className="rounded-lg bg-emerald-50 dark:bg-emerald-500/10 p-2">
-              <p className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{stats?.todayPresent ?? 0}</p>
+              <p className="font-mono text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{stats?.todayPresent ?? 0}</p>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Present</p>
             </div>
             <div className="rounded-lg bg-rose-50 dark:bg-rose-500/10 p-2">
-              <p className="text-lg font-bold text-rose-600 dark:text-rose-400">{stats?.todayAbsent ?? 0}</p>
+              <p className="font-mono text-lg font-bold tabular-nums text-rose-600 dark:text-rose-400">{stats?.todayAbsent ?? 0}</p>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400">Absent</p>
             </div>
           </div>
@@ -341,7 +407,7 @@ export default function HrDashboard() {
                 </RadialBarChart>
               </ResponsiveContainer>
               <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                <p className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                <p className="font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
                   {stats.totalEmployees > 0 ? Math.round((stats.activeEmployees / stats.totalEmployees) * 100) : 0}
                   <span className="text-lg font-semibold text-gray-400">%</span>
                 </p>
@@ -519,7 +585,7 @@ function MiniStat({ icon: Icon, label, value, color }: { icon: typeof Users; lab
         <Icon className="h-4 w-4" />
       </div>
       <div>
-        <p className="text-lg font-bold leading-tight tracking-tight text-gray-900 dark:text-white">{value}</p>
+        <p className="font-mono text-lg font-bold leading-tight tabular-nums tracking-tight text-gray-900 dark:text-white">{value}</p>
         <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">{label}</p>
       </div>
     </div>

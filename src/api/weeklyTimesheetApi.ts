@@ -39,6 +39,9 @@ export const weeklyTimesheetApi = {
   getAll: (params?: Record<string, string | number>) =>
     api.get<PaginatedResponse<WeeklyTimesheetData>>("/weekly-timesheet/all", { params }),
 
+  exportExcel: (params: Record<string, string>) =>
+    api.get<Blob>("/weekly-timesheet/export", { params, responseType: "blob" }),
+
   getDashboardStats: () =>
     api.get<ApiResponse<TimesheetDashboardStats>>("/weekly-timesheet/dashboard-stats"),
 

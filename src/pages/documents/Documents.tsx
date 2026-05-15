@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import {
   Upload, Download, Trash2, File, FileText, Image, FolderOpen, Search, X,
-  Sparkles, ChevronLeft, ChevronRight, UserCircle, CalendarDays,
+  Sparkles, ChevronLeft, ChevronRight, UserCircle, CalendarDays, Loader2,
+  Tag, Shield, FilePlus,
 } from "lucide-react";
 import { documentApi } from "../../api/documentApi";
 import { useAuth } from "../../context/AuthContext";
@@ -145,6 +146,22 @@ export default function Documents() {
   };
 
   const total = pagination?.total ?? docs.length;
+  // Counts on this page only (server pagination — true global counts need a stats endpoint)
+  const countBy: Record<string, number> = {};
+  for (const d of docs) countBy[d.category] = (countBy[d.category] ?? 0) + 1;
+
+  // Drag & drop state for the upload drawer
+  const [dragActive, setDragActive] = useState(false);
+  const onDragOver = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragActive(true); };
+  const onDragLeave = (e: React.DragEvent) => { e.preventDefault(); e.stopPropagation(); setDragActive(false); };
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault(); e.stopPropagation(); setDragActive(false);
+    const f = e.dataTransfer.files?.[0];
+    if (f) {
+      setSelectedFile(f);
+      if (!uploadName) setUploadName(f.name.replace(/\.[^.]+$/, ""));
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -155,8 +172,9 @@ export default function Documents() {
           <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-purple-500/20 blur-3xl" />
           <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
         </div>
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + KPI chips */}
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <FolderOpen className="h-10 w-10 text-indigo-200" />
             </div>
@@ -169,16 +187,35 @@ export default function Documents() {
                 Documents & <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Resources</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Manage and access company documents</p>
+
+              {/* Hero KPI chips */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <FolderOpen className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Total</span>
+                  <span className="font-mono font-semibold tabular-nums">{total}</span>
+                </span>
+                {Object.entries(categoryLabels).slice(0, 4).map(([key, label]) => {
+                  const v = countBy[key] || 0;
+                  if (v === 0) return null;
+                  const cfg = categoryConfig[key];
+                  return (
+                    <span key={key} className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                      <span className="text-indigo-200/80">{label}</span>
+                      <span className="font-mono font-semibold tabular-nums">{v}</span>
+                    </span>
+                  );
+                })}
+              </div>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Total</p>
-              <p className="text-xl font-bold tracking-tight">{total}</p>
-            </div>
+
+          {/* RIGHT: action stack */}
+          <div className="flex w-full shrink-0 flex-col gap-2.5 sm:flex-row lg:w-auto lg:flex-col">
             <button
               onClick={() => setShowUpload(true)}
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+              className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98]"
             >
               <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
                 <Upload className="h-3.5 w-3.5 text-white" />
@@ -345,127 +382,243 @@ export default function Documents() {
         </div>
       )}
 
-      {/* ── Upload Modal ── */}
-      {showUpload && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
-            <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
-              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/20 blur-2xl" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
-                    <Upload className="h-5 w-5 text-white" />
+      {/* ── Upload Drawer (premium) ── */}
+      {showUpload && (() => {
+        const previewCfg = categoryConfig[uploadCategory] || categoryConfig.other;
+        const previewFileGrad = selectedFile ? getFileGradient(selectedFile.type) : "from-gray-400 to-gray-500";
+        const PreviewFileIcon = selectedFile ? getFileIcon(selectedFile.type) : FilePlus;
+        return (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div
+              className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm"
+              onClick={() => setShowUpload(false)}
+            />
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="relative flex h-full w-full max-w-md animate-drawer-slide-right flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10 sm:max-w-xl sm:rounded-l-3xl"
+            >
+              {/* Left stripe — recolors with selected category */}
+              <span aria-hidden className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${previewCfg.gradient}`} />
+
+              {/* Header */}
+              <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 px-5 pt-6 pb-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:via-gray-900 dark:to-purple-500/10">
+                <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-indigo-400/25 blur-3xl" />
+                <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-purple-400/15 blur-3xl" />
+                <div className="relative flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3.5">
+                    <div className={`rounded-2xl bg-gradient-to-br ${previewCfg.gradient} p-3 shadow-lg shadow-black/[0.08] ring-1 ring-white/15`}>
+                      <Upload className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                        <Sparkles className="h-3 w-3" />
+                        New document
+                      </p>
+                      <h2 className="mt-0.5 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
+                        Upload Document
+                      </h2>
+                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                        Share with your organisation
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white">Upload Document</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Share with your organisation</p>
+                  <button
+                    onClick={() => setShowUpload(false)}
+                    aria-label="Close"
+                    className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable body */}
+              <div className="premium-scroll flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+                {/* Drag-and-drop zone */}
+                <div>
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-600/70 dark:text-indigo-400/70">
+                    <FilePlus className="h-3 w-3" />
+                    File
+                  </p>
+                  <div
+                    onDragOver={onDragOver}
+                    onDragLeave={onDragLeave}
+                    onDrop={onDrop}
+                    className={`relative rounded-2xl border-2 border-dashed p-5 text-center transition-all ${
+                      dragActive
+                        ? "border-indigo-500 bg-indigo-50/80 ring-2 ring-indigo-500/20 dark:border-indigo-400 dark:bg-indigo-500/10 dark:ring-indigo-400/30"
+                        : selectedFile
+                          ? "border-emerald-300 bg-emerald-50/50 dark:border-emerald-500/40 dark:bg-emerald-500/5"
+                          : "border-gray-300 bg-gray-50/60 hover:border-indigo-400 hover:bg-indigo-50/40 dark:border-gray-700 dark:bg-gray-800/40 dark:hover:border-indigo-500/50 dark:hover:bg-indigo-500/5"
+                    }`}
+                  >
+                    <input
+                      ref={fileRef}
+                      type="file"
+                      onChange={(e) => {
+                        const f = e.target.files?.[0] || null;
+                        setSelectedFile(f);
+                        if (f && !uploadName) setUploadName(f.name.replace(/\.[^.]+$/, ""));
+                      }}
+                      className="hidden"
+                      id="doc-file-input"
+                    />
+                    <label htmlFor="doc-file-input" className="block cursor-pointer">
+                      {selectedFile ? (
+                        <div className="flex items-center justify-center gap-3">
+                          <div className={`rounded-xl bg-gradient-to-br ${getFileGradient(selectedFile.type)} p-3 shadow-md ring-1 ring-white/10`}>
+                            <PreviewFileIcon className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="min-w-0 text-left">
+                            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{selectedFile.name}</p>
+                            <p className="font-mono text-xs tabular-nums text-gray-500 dark:text-gray-400">{formatSize(selectedFile.size)}</p>
+                            <p className="mt-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+                              Click to change · or drag a new file
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col items-center gap-2">
+                          <div className={`rounded-full bg-gradient-to-br ${dragActive ? "from-indigo-500 to-purple-600 scale-110" : "from-indigo-500 to-purple-600"} p-3 shadow-md ring-1 ring-white/10 transition-transform`}>
+                            <Upload className="h-5 w-5 text-white" />
+                          </div>
+                          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                            {dragActive ? "Drop file here" : "Click or drag to upload"}
+                          </p>
+                          <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                            Max 10MB · PDF, images, docs
+                          </p>
+                        </div>
+                      )}
+                    </label>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowUpload(false)}
-                  aria-label="Close"
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
 
-            <div className="space-y-4 p-5">
-              <div>
-                <label className={`${labelCls} mb-1.5 block`}>Document Name</label>
-                <input
-                  value={uploadName}
-                  onChange={(e) => setUploadName(e.target.value)}
-                  className={inputCls}
-                  placeholder="e.g. Employee Handbook 2026"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+                {/* Document details */}
                 <div>
-                  <label className={`${labelCls} mb-1.5 block`}>Category</label>
-                  <select
-                    value={uploadCategory}
-                    onChange={(e) => setUploadCategory(e.target.value)}
-                    className={inputCls}
-                  >
-                    {Object.entries(categoryLabels).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className={`${labelCls} mb-1.5 block`}>Access</label>
-                  <select
-                    value={uploadAccess}
-                    onChange={(e) => setUploadAccess(e.target.value)}
-                    className={inputCls}
-                  >
-                    <option value="all">All Employees</option>
-                    <option value="admin">Admin Only</option>
-                    <option value="hr">HR Only</option>
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className={`${labelCls} mb-1.5 block`}>File</label>
-                <div className="rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/60 p-4 text-center transition-colors hover:border-indigo-400 dark:border-gray-700 dark:bg-gray-800/40 dark:hover:border-indigo-500/50">
-                  <input
-                    ref={fileRef}
-                    type="file"
-                    onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                    className="hidden"
-                    id="doc-file-input"
-                  />
-                  <label htmlFor="doc-file-input" className="block cursor-pointer">
-                    {selectedFile ? (
-                      <div className="flex items-center justify-center gap-3">
-                        <div className={`rounded-lg bg-gradient-to-br ${getFileGradient(selectedFile.type)} p-2 shadow-sm ring-1 ring-white/10`}>
-                          <File className="h-4 w-4 text-white" />
-                        </div>
-                        <div className="min-w-0 text-left">
-                          <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{selectedFile.name}</p>
-                          <p className="text-xs text-gray-500 dark:text-gray-400">{formatSize(selectedFile.size)}</p>
-                        </div>
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-600/70 dark:text-emerald-400/70">
+                    <FileText className="h-3 w-3" />
+                    Details
+                  </p>
+                  <div className="space-y-3">
+                    <div>
+                      <label className={`${labelCls} mb-1.5 flex items-center gap-1.5`}>
+                        <FileText className="h-3 w-3 text-emerald-500 dark:text-emerald-400" />
+                        Document name
+                      </label>
+                      <input
+                        value={uploadName}
+                        onChange={(e) => setUploadName(e.target.value)}
+                        className={inputCls}
+                        placeholder="e.g. Employee Handbook 2026"
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className={`${labelCls} mb-1.5 flex items-center gap-1.5`}>
+                          <Tag className="h-3 w-3 text-amber-500 dark:text-amber-400" />
+                          Category
+                        </label>
+                        <select
+                          value={uploadCategory}
+                          onChange={(e) => setUploadCategory(e.target.value)}
+                          className={inputCls}
+                        >
+                          {Object.entries(categoryLabels).map(([k, v]) => (
+                            <option key={k} value={k}>{v}</option>
+                          ))}
+                        </select>
                       </div>
-                    ) : (
-                      <div className="flex flex-col items-center gap-1.5">
-                        <div className="rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 p-2 shadow-sm ring-1 ring-white/10">
-                          <Upload className="h-4 w-4 text-white" />
-                        </div>
-                        <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
-                          Click to choose a file
+                      <div>
+                        <label className={`${labelCls} mb-1.5 flex items-center gap-1.5`}>
+                          <Shield className="h-3 w-3 text-rose-500 dark:text-rose-400" />
+                          Access
+                        </label>
+                        <select
+                          value={uploadAccess}
+                          onChange={(e) => setUploadAccess(e.target.value)}
+                          className={inputCls}
+                        >
+                          <option value="all">All Employees</option>
+                          <option value="admin">Admin Only</option>
+                          <option value="hr">HR Only</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Live preview */}
+                <div className="relative overflow-hidden rounded-2xl border border-gray-200/70 bg-gradient-to-br from-gray-50 to-white p-4 ring-1 ring-black/[0.02] dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900/40 dark:ring-white/[0.02]">
+                  <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent" />
+                  <span aria-hidden className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${previewCfg.gradient} opacity-15 blur-2xl`} />
+                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                    <Sparkles className="h-3 w-3" />
+                    Live preview
+                  </p>
+                  <div className="rounded-xl border border-gray-200/70 bg-white p-3 shadow-sm dark:border-gray-700/70 dark:bg-gray-900">
+                    <div className="flex items-start gap-3">
+                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${previewFileGrad} shadow-md ring-1 ring-white/10`}>
+                        <PreviewFileIcon className="h-5 w-5 text-white" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                          {uploadName || <span className="text-gray-400 dark:text-gray-500">Document name…</span>}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">
-                          Max 10MB · PDF, images, docs
+                        <p className="mt-0.5 font-mono text-xs tabular-nums text-gray-500 dark:text-gray-400">
+                          {selectedFile ? formatSize(selectedFile.size) : "—"}
                         </p>
                       </div>
-                    )}
-                  </label>
+                    </div>
+                    <span className={`mt-3 inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${previewCfg.badge}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full ${previewCfg.dot}`} />
+                      {categoryLabels[uploadCategory] || uploadCategory}
+                    </span>
+                    <div className="mt-3 flex items-center gap-2.5 border-t border-gray-200/70 pt-2.5 text-[10px] text-gray-500 dark:border-gray-800/80 dark:text-gray-400">
+                      <span className="inline-flex items-center gap-1">
+                        <Shield className="h-2.5 w-2.5" />
+                        {uploadAccess === "all" ? "All employees" : uploadAccess === "admin" ? "Admin only" : "HR only"}
+                      </span>
+                      <span className="inline-flex items-center gap-1">
+                        <CalendarDays className="h-2.5 w-2.5" />
+                        Just now
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex gap-3 pt-1">
-                <button
-                  onClick={() => setShowUpload(false)}
-                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleUpload}
-                  disabled={uploading}
-                  className="flex-1 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl disabled:opacity-60"
-                >
-                  {uploading ? "Uploading..." : "Upload"}
-                </button>
+              {/* Sticky footer */}
+              <div className="shrink-0 border-t border-gray-200/70 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 sm:px-6">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowUpload(false)}
+                    className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleUpload}
+                    disabled={uploading || !selectedFile || !uploadName}
+                    className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10 transition-all hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl hover:shadow-indigo-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+                  >
+                    <span
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                    />
+                    <span className="relative inline-flex items-center justify-center gap-2">
+                      {uploading
+                        ? <><Loader2 className="h-4 w-4 animate-spin" />Uploading…</>
+                        : <><Upload className="h-4 w-4" />Upload</>}
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

@@ -3,8 +3,8 @@ import {
   Plus,
   Pencil,
   Trash2,
-  X,
   Pin,
+  PinOff,
   Loader2,
   Sparkles,
   Megaphone,
@@ -16,10 +16,12 @@ import {
   Tag,
   Users,
   Activity,
+  ArrowDownWideNarrow,
 } from "lucide-react";
 import { announcementApi, type AnnouncementData } from "../../api/announcementApi";
 import toast from "react-hot-toast";
 import { useConfirm } from "../../context/ConfirmContext";
+import Drawer from "../../components/Drawer";
 
 // ── Config ──
 const CATEGORY_OPTIONS: { value: string; label: string }[] = [
@@ -149,6 +151,8 @@ export default function AdminAnnouncements() {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [catFilter, setCatFilter] = useState<string>("all-categories");
+  const [sort, setSort] = useState<"newest" | "oldest" | "reactions" | "comments">("newest");
+  const [pinBusy, setPinBusy] = useState<string | null>(null);
 
   const fetchAnnouncements = () => {
     setLoading(true);
@@ -222,6 +226,28 @@ export default function AdminAnnouncements() {
     }
   };
 
+  const handleTogglePin = async (a: AnnouncementData) => {
+    setPinBusy(a._id);
+    const next = !a.isPinned;
+    setAnnouncements((prev) => prev.map((x) => (x._id === a._id ? { ...x, isPinned: next } : x)));
+    try {
+      await announcementApi.update(a._id, {
+        title: a.title,
+        content: a.content,
+        category: a.category,
+        targetAudience: a.targetAudience,
+        tags: a.tags,
+        isPinned: next,
+      });
+      toast.success(next ? "Pinned" : "Unpinned");
+    } catch {
+      setAnnouncements((prev) => prev.map((x) => (x._id === a._id ? { ...x, isPinned: !next } : x)));
+      toast.error("Failed to update pin");
+    } finally {
+      setPinBusy(null);
+    }
+  };
+
   const handleDelete = async (id: string, title: string) => {
     if (
       !(await confirm({
@@ -264,7 +290,11 @@ export default function AdminAnnouncements() {
 
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return announcements.filter((a) => {
+    const reactionsOf = (a: AnnouncementData) =>
+      (a.reactions?.like?.length || 0) +
+      (a.reactions?.love?.length || 0) +
+      (a.reactions?.celebrate?.length || 0);
+    const filtered = announcements.filter((a) => {
       const cat = (a.category || "all").toLowerCase();
       if (catFilter !== "all-categories" && cat !== catFilter) return false;
       if (!q) return true;
@@ -274,7 +304,130 @@ export default function AdminAnnouncements() {
         a.tags?.some((t) => t.toLowerCase().includes(q))
       );
     });
-  }, [announcements, search, catFilter]);
+    const sorted = [...filtered].sort((a, b) => {
+      switch (sort) {
+        case "oldest":
+          return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        case "reactions":
+          return reactionsOf(b) - reactionsOf(a);
+        case "comments":
+          return (b.comments?.length || 0) - (a.comments?.length || 0);
+        default:
+          return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+    });
+    return sorted;
+  }, [announcements, search, catFilter, sort]);
+
+  const pinnedVisible = useMemo(() => visible.filter((a) => a.isPinned), [visible]);
+  const regularVisible = useMemo(() => visible.filter((a) => !a.isPinned), [visible]);
+
+  const renderRow = (a: AnnouncementData) => {
+    const catKey = (a.category || "all").toLowerCase();
+    const cfg = CAT_CFG[catKey] || CAT_CFG.all;
+    const totalReactions =
+      (a.reactions?.like?.length || 0) +
+      (a.reactions?.love?.length || 0) +
+      (a.reactions?.celebrate?.length || 0);
+    const busy = pinBusy === a._id;
+    return (
+      <div
+        key={a._id}
+        className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 backdrop-blur-sm transition-all hover:border-indigo-300/60 dark:hover:border-indigo-600/40 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-black/30"
+      >
+        <div
+          aria-hidden
+          className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${cfg.accent} blur-2xl opacity-50 group-hover:opacity-80 transition-opacity`}
+        />
+        <div className="relative p-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <span
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                {cfg.label}
+              </span>
+              {a.isPinned && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-amber-500/30">
+                  <Pin className="h-3 w-3 fill-white" /> Pinned
+                </span>
+              )}
+              <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                {formatDate(a.createdAt)}
+              </span>
+            </div>
+            <h3 className="truncate text-base font-bold tracking-tight text-gray-900 dark:text-white sm:text-lg">
+              {a.title}
+            </h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
+              {a.content}
+            </p>
+            {a.tags?.length > 0 && (
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                {a.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-800/70 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:text-gray-400"
+                  >
+                    <Hash className="h-3 w-3" />
+                    {tag}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
+              <span className="inline-flex items-center gap-1">
+                <Heart className="h-3.5 w-3.5 text-rose-400" />
+                <span className="tabular-nums">{totalReactions}</span>
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <MessageCircle className="h-3.5 w-3.5 text-indigo-400" />
+                <span className="tabular-nums">{a.comments?.length || 0}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => handleTogglePin(a)}
+                disabled={busy}
+                title={a.isPinned ? "Unpin" : "Pin to top"}
+                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all disabled:opacity-50 ${
+                  a.isPinned
+                    ? "border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20"
+                    : "border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-300 dark:hover:border-amber-500/40"
+                }`}
+              >
+                {busy ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : a.isPinned ? (
+                  <PinOff className="h-4 w-4" />
+                ) : (
+                  <Pin className="h-4 w-4" />
+                )}
+              </button>
+              <button
+                onClick={() => openEdit(a)}
+                title="Edit"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleDelete(a._id, a.title)}
+                title="Delete"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-300 dark:hover:border-rose-600/40 transition-all"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="space-y-6">
@@ -342,15 +495,30 @@ export default function AdminAnnouncements() {
             </button>
           ))}
         </div>
-        <div className="relative w-full sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search title, content, tag…"
-            className={`${input} pl-10`}
-          />
+        <div className="flex flex-1 gap-2 sm:max-w-md">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search title, content, tag…"
+              className={`${input} pl-10`}
+            />
+          </div>
+          <div className="relative">
+            <ArrowDownWideNarrow className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as typeof sort)}
+              className={`${input} appearance-none pl-9 pr-8 cursor-pointer`}
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="reactions">Most reactions</option>
+              <option value="comments">Most comments</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -385,135 +553,76 @@ export default function AdminAnnouncements() {
           )}
         </div>
       ) : (
-        <div className="space-y-3">
-          {visible.map((a) => {
-            const catKey = (a.category || "all").toLowerCase();
-            const cfg = CAT_CFG[catKey] || CAT_CFG.all;
-            const totalReactions =
-              (a.reactions?.like?.length || 0) +
-              (a.reactions?.love?.length || 0) +
-              (a.reactions?.celebrate?.length || 0);
-            return (
-              <div
-                key={a._id}
-                className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 backdrop-blur-sm transition-all hover:border-indigo-300/60 dark:hover:border-indigo-600/40 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-black/30"
-              >
-                {/* Category accent orb */}
-                <div
-                  aria-hidden
-                  className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${cfg.accent} blur-2xl opacity-50 group-hover:opacity-80 transition-opacity`}
-                />
-                <div className="relative p-5 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-                  {/* Left */}
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2 mb-2">
-                      <span
-                        className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}
-                      >
-                        <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-                        {cfg.label}
-                      </span>
-                      {a.isPinned && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-amber-500/30">
-                          <Pin className="h-3 w-3 fill-white" /> Pinned
-                        </span>
-                      )}
-                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {formatDate(a.createdAt)}
-                      </span>
-                    </div>
-                    <h3 className="truncate text-base font-bold tracking-tight text-gray-900 dark:text-white sm:text-lg">
-                      {a.title}
-                    </h3>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2 leading-relaxed">
-                      {a.content}
-                    </p>
-                    {a.tags?.length > 0 && (
-                      <div className="mt-2.5 flex flex-wrap gap-1.5">
-                        {a.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-800/70 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:text-gray-400"
-                          >
-                            <Hash className="h-3 w-3" />
-                            {tag}
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Right — Metrics + Actions */}
-                  <div className="flex items-center gap-3 shrink-0">
-                    <div className="flex items-center gap-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
-                      <span className="inline-flex items-center gap-1">
-                        <Heart className="h-3.5 w-3.5 text-rose-400" />
-                        <span className="tabular-nums">{totalReactions}</span>
-                      </span>
-                      <span className="inline-flex items-center gap-1">
-                        <MessageCircle className="h-3.5 w-3.5 text-indigo-400" />
-                        <span className="tabular-nums">{a.comments?.length || 0}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() => openEdit(a)}
-                        title="Edit"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all"
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(a._id, a.title)}
-                        title="Delete"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-300 dark:hover:border-rose-600/40 transition-all"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
+        <div className="space-y-6">
+          {pinnedVisible.length > 0 && (
+            <section>
+              <div className="mb-3 flex items-center gap-2">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 shadow-md shadow-amber-500/30">
+                  <Pin className="h-3.5 w-3.5 fill-white text-white" />
                 </div>
+                <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Pinned</h2>
+                <span className="rounded-full bg-amber-50 dark:bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-700 dark:text-amber-400 ring-1 ring-amber-500/20">
+                  {pinnedVisible.length}
+                </span>
+                <div className="ml-2 h-px flex-1 bg-gradient-to-r from-amber-300/60 to-transparent dark:from-amber-500/30" />
               </div>
-            );
-          })}
+              <div className="space-y-3">{pinnedVisible.map(renderRow)}</div>
+            </section>
+          )}
+
+          {regularVisible.length > 0 && (
+            <section>
+              {pinnedVisible.length > 0 && (
+                <div className="mb-3 flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md shadow-indigo-500/30">
+                    <Megaphone className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <h2 className="text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300">Latest</h2>
+                  <div className="ml-2 h-px flex-1 bg-gradient-to-r from-indigo-300/60 to-transparent dark:from-indigo-500/30" />
+                </div>
+              )}
+              <div className="space-y-3">{regularVisible.map(renderRow)}</div>
+            </section>
+          )}
         </div>
       )}
 
-      {/* ━━━ Modal ━━━ */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-full max-w-2xl overflow-hidden rounded-3xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900 shadow-2xl">
-            {/* Modal Header — gradient banner */}
-            <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 px-6 py-5 text-white">
-              <div aria-hidden className="pointer-events-none absolute inset-0">
-                <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-500/30 blur-3xl" />
-                <div className="absolute -bottom-12 -left-12 h-32 w-32 rounded-full bg-fuchsia-500/20 blur-3xl" />
-              </div>
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15 backdrop-blur-sm">
-                    <Megaphone className="h-5 w-5 text-indigo-200" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-200/80">
-                      {editingId ? "Edit" : "Create"}
-                    </p>
-                    <h2 className="text-lg font-bold leading-tight">
-                      {editingId ? "Edit Announcement" : "New Announcement"}
-                    </h2>
-                  </div>
-                </div>
-                <button
-                  onClick={closeModal}
-                  className="rounded-lg p-2 text-indigo-200/80 hover:bg-white/10 hover:text-white transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+      {/* ━━━ Drawer (Create / Edit) ━━━ */}
+      <Drawer
+        open={showModal}
+        onClose={closeModal}
+        side="right"
+        size="xl"
+        icon={<Megaphone className="h-5 w-5 text-indigo-200" />}
+        subtitle={editingId ? "Edit" : "Create"}
+        title={editingId ? "Edit Announcement" : "New Announcement"}
+        footer={
+          <div className="flex items-center justify-between gap-3">
+            <p className="hidden sm:flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
+              <Activity className="h-3.5 w-3.5" />
+              {editingId ? "Changes will be saved immediately" : "Will be visible to selected audience"}
+            </p>
+            <div className="flex items-center gap-2 ml-auto">
+              <button
+                onClick={closeModal}
+                className="rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving}
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-5 py-2 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              >
+                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+                {editingId ? "Update" : "Publish"}
+              </button>
             </div>
-
-            {/* Modal Body */}
-            <div className="max-h-[60vh] overflow-y-auto px-6 py-5 space-y-5">
+          </div>
+        }
+      >
+        <div className="px-6 py-5 space-y-5">
               {/* Title */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">
@@ -646,34 +755,7 @@ export default function AdminAnnouncements() {
                 </button>
               </div>
             </div>
-
-            {/* Modal Footer */}
-            <div className="flex items-center justify-between gap-3 border-t border-gray-200/70 dark:border-gray-800/60 bg-gray-50/60 dark:bg-gray-900/60 px-6 py-4">
-              <p className="hidden sm:flex items-center gap-1.5 text-[11px] text-gray-500 dark:text-gray-400">
-                <Activity className="h-3.5 w-3.5" />
-                {editingId ? "Changes will be saved immediately" : "Will be visible to selected audience"}
-              </p>
-              <div className="flex items-center gap-2 ml-auto">
-                <button
-                  onClick={closeModal}
-                  className="rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-4 py-2 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving}
-                  className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-5 py-2 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                >
-                  <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                  {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                  {editingId ? "Update" : "Publish"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </Drawer>
     </div>
   );
 }

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import {
   Clock, ChevronLeft, ChevronRight, CheckCircle2, XCircle, FileText, X,
   Users, Eye, MessageSquare, AlertTriangle, Sparkles, Inbox, Briefcase,
-  FolderKanban, CalendarDays,
+  FolderKanban, CalendarDays, Search,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
@@ -115,6 +115,7 @@ export default function TimesheetApprovals() {
   const [projectLoading, setProjectLoading] = useState(false);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
 
   const fetchApprovals = () => {
     setLoading(true);
@@ -198,6 +199,18 @@ export default function TimesheetApprovals() {
   const isPending = tab === "submitted";
   const pendingTotal = pagination?.total ?? (isPending ? timesheets.length : 0);
 
+  // Filter timesheets client-side by employee name/email
+  const filteredTimesheets = search.trim()
+    ? timesheets.filter((ts) => {
+        const q = search.trim().toLowerCase();
+        return getUserName(ts.userId).toLowerCase().includes(q) || getUserEmail(ts.userId).toLowerCase().includes(q);
+      })
+    : timesheets;
+
+  // Aggregate metrics for the visible (filtered) page
+  const visibleHours = filteredTimesheets.reduce((s, ts) => s + (ts.totalHours || 0), 0);
+  const visibleEntries = filteredTimesheets.reduce((s, ts) => s + ts.entries.length, 0);
+
   return (
     <div className="space-y-6">
       {/* ── Hero (no grid) ── */}
@@ -207,8 +220,9 @@ export default function TimesheetApprovals() {
           <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
           <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-emerald-500/15 blur-3xl" />
         </div>
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + KPI chips */}
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <Clock className="h-10 w-10 text-indigo-200" />
             </div>
@@ -221,49 +235,103 @@ export default function TimesheetApprovals() {
                 Timesheet <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Approvals</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Review and manage employee timesheet submissions</p>
+
+              {/* KPI chips */}
+              {timesheets.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm ring-1 ${
+                    tab === "submitted" ? "bg-amber-500/15 ring-amber-400/30 text-amber-50"
+                    : tab === "approved" ? "bg-emerald-500/15 ring-emerald-400/30 text-emerald-50"
+                    : "bg-rose-500/15 ring-rose-400/30 text-rose-50"
+                  }`}>
+                    <FileText className="h-3.5 w-3.5 opacity-90" />
+                    <span className="opacity-80">{tabs.find((t) => t.key === tab)?.label}</span>
+                    <span className="font-mono font-semibold tabular-nums">{pendingTotal}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <Clock className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Total hours</span>
+                    <span className="font-mono font-semibold tabular-nums">{fmtHours(visibleHours)}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <Briefcase className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Entries</span>
+                    <span className="font-mono font-semibold tabular-nums">{visibleEntries}</span>
+                  </span>
+                  {isPending && selected.size > 0 && (
+                    <span className="inline-flex items-center gap-2 rounded-lg bg-indigo-500/20 px-3 py-1.5 text-xs ring-1 ring-indigo-400/40 backdrop-blur-sm">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-indigo-100" />
+                      <span className="text-indigo-100/90">Selected</span>
+                      <span className="font-mono font-semibold tabular-nums text-indigo-50">{selected.size}</span>
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">{tabs.find((t) => t.key === tab)?.label}</p>
-              <p className="text-xl font-bold tracking-tight">{pendingTotal}</p>
-            </div>
-            {isPending && selected.size > 0 && (
+
+          {/* RIGHT: action stack */}
+          {isPending && selected.size > 0 && (
+            <div className="flex w-full shrink-0 flex-col gap-2.5 sm:flex-row lg:w-auto lg:flex-col">
               <button
                 onClick={handleBulkApprove}
                 disabled={actionLoading === "bulk"}
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 disabled:opacity-60"
+                className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98] disabled:opacity-60"
               >
                 <span className="rounded-md bg-gradient-to-br from-emerald-500 to-teal-600 p-1">
                   <CheckCircle2 className="h-3.5 w-3.5 text-white" />
                 </span>
-                Approve {selected.size} selected
+                Approve <span className="font-mono tabular-nums">{selected.size}</span>
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-white/60 p-1 ring-1 ring-black/[0.02] backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-900/60 dark:ring-white/[0.03]">
-        {tabs.map((t) => {
-          const active = tab === t.key;
-          const cfg = tsStatusConfig[t.key];
-          return (
+      {/* ── Filter Bar (tabs + search) ── */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
+        {/* Tabs */}
+        <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-white/60 p-1 ring-1 ring-black/[0.02] backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-900/60 dark:ring-white/[0.03]">
+          {tabs.map((t) => {
+            const active = tab === t.key;
+            const cfg = tsStatusConfig[t.key];
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                className={`inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-[13px] font-semibold transition-all sm:flex-none ${
+                  active
+                    ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
+                    : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white"
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Search */}
+        <div className="relative flex-1 lg:max-w-md">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search by employee name or email..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className={`w-full rounded-xl border border-gray-200/70 bg-white/80 py-2 pl-9 ${search ? "pr-8" : "pr-3"} text-sm text-gray-900 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-colors placeholder:text-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-800/80 dark:bg-gray-900/80 dark:text-white dark:placeholder:text-gray-500 dark:ring-white/[0.03]`}
+          />
+          {search && (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
-                active
-                  ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
-                  : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white"
-              }`}
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
             >
-              <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
-              {t.label}
+              <X className="h-3.5 w-3.5" />
             </button>
-          );
-        })}
+          )}
+        </div>
       </div>
 
       {/* ── Content ── */}
@@ -272,21 +340,25 @@ export default function TimesheetApprovals() {
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600 dark:border-gray-700 dark:border-t-indigo-400" />
           <p className="text-sm text-gray-500 dark:text-gray-400">Loading approvals...</p>
         </div>
-      ) : timesheets.length === 0 ? (
+      ) : filteredTimesheets.length === 0 ? (
         <div className={`${cardCls} flex flex-col items-center gap-2 py-16 text-center`}>
           <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
             <Inbox className="h-5 w-5 text-gray-400" />
           </div>
           <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
-            No {tabs.find((t) => t.key === tab)?.label.toLowerCase()} timesheets
+            {timesheets.length === 0
+              ? `No ${tabs.find((t) => t.key === tab)?.label.toLowerCase()} timesheets`
+              : `No matches for "${search}"`}
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500">
-            {isPending ? "All submitted timesheets have been reviewed" : `Timesheets will appear here once ${tab}`}
+            {timesheets.length === 0
+              ? (isPending ? "All submitted timesheets have been reviewed" : `Timesheets will appear here once ${tab}`)
+              : "Try a different search or clear the filter"}
           </p>
         </div>
       ) : (
         <div className="space-y-3">
-          {timesheets.map((ts) => {
+          {filteredTimesheets.map((ts) => {
             const userName = getUserName(ts.userId);
             const userEmail = getUserEmail(ts.userId);
             const sConfig = tsStatusConfig[ts.status] || tsStatusConfig.submitted;
@@ -308,7 +380,7 @@ export default function TimesheetApprovals() {
                       <p className="text-[10px] font-bold uppercase tracking-wider text-white/90">
                         {start.toLocaleDateString(undefined, { month: "short" })}
                       </p>
-                      <p className="text-lg font-bold leading-none">{start.getDate()}</p>
+                      <p className="font-mono text-lg font-bold tabular-nums leading-none">{start.getDate()}</p>
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-3">
@@ -329,10 +401,10 @@ export default function TimesheetApprovals() {
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
                           <Clock className="h-3 w-3" />
-                          {fmtHours(ts.totalHours)}
+                          <span className="font-mono tabular-nums">{fmtHours(ts.totalHours)}</span>
                         </span>
                         <span className="text-xs text-gray-400 dark:text-gray-500">
-                          {ts.entries.length} {ts.entries.length === 1 ? "row" : "rows"}
+                          <span className="font-mono tabular-nums">{ts.entries.length}</span> {ts.entries.length === 1 ? "row" : "rows"}
                         </span>
                         {ts.submittedAt && (
                           <span className="text-xs text-gray-400 dark:text-gray-500">
@@ -454,37 +526,109 @@ export default function TimesheetApprovals() {
         </div>
       )}
 
-      {/* ── Preview Modal ── */}
-      {(previewSheet || previewLoading) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
-          <div className="flex max-h-[85vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
-            <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
-              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/20 blur-2xl" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
-                    <FileText className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white">Timesheet Preview</h2>
+      {/* ── Preview Drawer (premium) ── */}
+      {(previewSheet || previewLoading) && (() => {
+        const psCfg = previewSheet ? (tsStatusConfig[previewSheet.status] || tsStatusConfig.submitted) : tsStatusConfig.submitted;
+        const stripeGradient =
+          previewSheet?.status === "rejected" ? "from-rose-500 to-pink-600"
+          : previewSheet?.status === "approved" ? "from-emerald-500 to-teal-600"
+          : "from-amber-500 to-orange-600";
+        const projectCount = previewSheet
+          ? new Set(previewSheet.entries.map((e) => typeof e.projectId === "object" ? (e.projectId as Project)._id : e.projectId)).size
+          : 0;
+        const daysWorked = previewSheet
+          ? (() => {
+              let count = 0;
+              for (let i = 0; i < 7; i++) {
+                if (previewSheet.entries.some((e) => (e.hours?.[i] || 0) > 0)) count++;
+              }
+              return count;
+            })()
+          : 0;
+        const userName = previewSheet ? getUserName(previewSheet.userId) : "";
+        return (
+        <div
+          className="fixed inset-0 z-50 flex justify-end"
+          onClick={(e) => { if (e.target === e.currentTarget) setPreviewSheet(null); }}
+        >
+          <div
+            className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm"
+            onClick={() => setPreviewSheet(null)}
+          />
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="relative flex h-full w-full max-w-md animate-drawer-slide-right flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10 sm:max-w-3xl sm:rounded-l-3xl"
+          >
+            {/* Status-keyed left stripe */}
+            <span aria-hidden className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${stripeGradient}`} />
+
+            {/* Header */}
+            <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 px-5 pt-6 pb-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:via-gray-900 dark:to-purple-500/10">
+              <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-indigo-400/25 blur-3xl" />
+              <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-purple-400/15 blur-3xl" />
+              <div className="relative flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-3.5">
+                  {previewSheet ? (
+                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${paletteFor(userName)} text-base font-semibold text-white shadow-lg shadow-black/[0.08] ring-1 ring-white/15`}>
+                      {userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                    </div>
+                  ) : (
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 ring-1 ring-white/15">
+                      <FileText className="h-5 w-5 text-white" />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                      <Sparkles className="h-3 w-3" />
+                      Timesheet preview
+                    </p>
+                    <h2 className="mt-0.5 truncate text-lg font-bold tracking-tight text-gray-900 dark:text-white">
+                      {previewSheet ? userName : "Loading…"}
+                    </h2>
                     {previewSheet && (
-                      <p className="text-xs text-gray-500 dark:text-gray-400">
-                        {getUserName(previewSheet.userId)} · {formatDate(previewSheet.weekStart)} — {formatDate(previewSheet.weekEnd)}
+                      <p className="mt-0.5 inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
+                        <CalendarDays className="h-3 w-3 text-gray-400" />
+                        <span className="font-mono tabular-nums">{formatDate(previewSheet.weekStart)} — {formatDate(previewSheet.weekEnd)}</span>
                       </p>
+                    )}
+
+                    {/* Header KPI chips */}
+                    {previewSheet && (
+                      <div className="mt-3 flex flex-wrap gap-1.5">
+                        <span className={`inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${psCfg.badge}`}>
+                          <span className={`h-1.5 w-1.5 rounded-full ${psCfg.dot}`} />
+                          {psCfg.label}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/25">
+                          <Clock className="h-3 w-3" />
+                          <span className="font-mono tabular-nums">{fmtHours(previewSheet.totalHours)}</span>
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
+                          <Briefcase className="h-3 w-3" />
+                          <span className="font-mono tabular-nums">{projectCount}</span>
+                          {projectCount === 1 ? " project" : " projects"}
+                        </span>
+                        <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/25">
+                          <CalendarDays className="h-3 w-3" />
+                          <span className="font-mono tabular-nums">{daysWorked}</span>
+                          {daysWorked === 1 ? " day" : " days"}
+                        </span>
+                      </div>
                     )}
                   </div>
                 </div>
                 <button
                   onClick={() => setPreviewSheet(null)}
                   aria-label="Close"
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-5">
+            <div className="premium-scroll flex-1 overflow-y-auto p-5 sm:p-6">
               {previewLoading ? (
                 <div className="flex flex-col items-center gap-3 py-12 text-center">
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600 dark:border-gray-700 dark:border-t-indigo-400" />
@@ -526,11 +670,11 @@ export default function TimesheetApprovals() {
                               </span>
                             </td>
                             {DAY_LABELS.map((_, di) => (
-                              <td key={di} className="px-2 py-2.5 text-center text-gray-600 dark:text-gray-400">
+                              <td key={di} className="px-2 py-2.5 text-center font-mono tabular-nums text-gray-600 dark:text-gray-400">
                                 {entry.hours?.[di] || 0}
                               </td>
                             ))}
-                            <td className="py-2.5 pl-2 text-right font-bold tracking-tight text-gray-900 dark:text-white">
+                            <td className="py-2.5 pl-2 text-right font-mono font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
                               {rowTotal}h
                             </td>
                           </tr>
@@ -543,13 +687,13 @@ export default function TimesheetApprovals() {
                         {DAY_LABELS.map((_, di) => {
                           const dayTotal = previewSheet.entries.reduce((s, e) => s + (e.hours?.[di] || 0), 0);
                           return (
-                            <td key={di} className="px-2 py-2.5 text-center text-sm font-bold text-gray-900 dark:text-white">
+                            <td key={di} className="px-2 py-2.5 text-center font-mono text-sm font-bold tabular-nums text-gray-900 dark:text-white">
                               {dayTotal || "—"}
                             </td>
                           );
                         })}
                         <td className="py-2.5 pl-2 text-right">
-                          <span className="inline-flex items-center rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 px-2.5 py-0.5 text-sm font-bold text-white shadow-sm ring-1 ring-white/10">
+                          <span className="inline-flex items-center rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 px-2.5 py-0.5 font-mono text-sm font-bold tabular-nums text-white shadow-sm ring-1 ring-white/10">
                             {fmtHours(previewSheet.totalHours)}
                           </span>
                         </td>
@@ -574,39 +718,58 @@ export default function TimesheetApprovals() {
             </div>
 
             {previewSheet && (
-              <div className="flex items-center justify-end gap-2 border-t border-gray-200/70 p-4 dark:border-gray-800/80">
-                <button
-                  onClick={() => setPreviewSheet(null)}
-                  className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Close
-                </button>
-                {previewSheet.status === "submitted" && (
-                  <>
-                    <button
-                      onClick={() => { handleApprove(previewSheet._id); setPreviewSheet(null); }}
-                      className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl"
-                    >
-                      <CheckCircle2 className="h-4 w-4" /> Approve
-                    </button>
-                    <button
-                      onClick={() => { setRejectId(previewSheet._id); setRejectComment(""); setPreviewSheet(null); }}
-                      className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition-colors hover:bg-rose-50 dark:border-rose-500/30 dark:bg-gray-900 dark:text-rose-400 dark:hover:bg-rose-500/10"
-                    >
-                      <XCircle className="h-4 w-4" /> Reject
-                    </button>
-                  </>
-                )}
+              <div className="shrink-0 border-t border-gray-200/70 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 sm:px-6">
+                <div className="flex items-center justify-end gap-2">
+                  <span className={`mr-auto inline-flex items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold ${psCfg.badge}`}>
+                    <span className={`h-1.5 w-1.5 rounded-full ${psCfg.dot}`} />
+                    {psCfg.label}
+                  </span>
+                  <button
+                    onClick={() => setPreviewSheet(null)}
+                    className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    Close
+                  </button>
+                  {previewSheet.status === "submitted" && (
+                    <>
+                      <button
+                        onClick={() => { setRejectId(previewSheet._id); setRejectComment(""); setPreviewSheet(null); }}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition-colors hover:bg-rose-50 dark:border-rose-500/30 dark:bg-gray-900 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                      >
+                        <XCircle className="h-4 w-4" />
+                        Reject
+                      </button>
+                      <button
+                        onClick={() => { handleApprove(previewSheet._id); setPreviewSheet(null); }}
+                        className="group relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10 transition-all hover:from-emerald-700 hover:to-teal-700 hover:shadow-xl hover:shadow-emerald-500/35 active:scale-[0.98]"
+                      >
+                        <span
+                          aria-hidden
+                          className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                        />
+                        <span className="relative inline-flex items-center gap-1.5">
+                          <CheckCircle2 className="h-4 w-4" />
+                          Approve
+                        </span>
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       {/* ── Project Modal ── */}
       {(projectDetail || projectLoading) && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-gray-950/50 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
+        <div
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setProjectDetail(null); }}
+        >
+          <div className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md animate-modal-enter overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
             <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-sky-50 to-white p-5 dark:border-gray-800/80 dark:from-sky-500/10 dark:to-gray-900">
               <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-sky-400/20 blur-2xl" />
               <div className="relative flex items-center justify-between">
@@ -715,8 +878,12 @@ export default function TimesheetApprovals() {
 
       {/* ── Reject Modal ── */}
       {rejectId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-4"
+          onClick={(e) => { if (e.target === e.currentTarget) setRejectId(null); }}
+        >
+          <div className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm" />
+          <div className="relative w-full max-w-md animate-modal-enter overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
             <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-rose-50 to-white p-5 dark:border-gray-800/80 dark:from-rose-500/10 dark:to-gray-900">
               <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-rose-400/25 blur-2xl" />
               <div className="relative flex items-center justify-between">

@@ -1,5 +1,5 @@
 import api from "./axios";
-import type { ApiResponse, AuthData } from "../types";
+import type { ApiResponse, AuthData, UserStatus } from "../types";
 
 export const authApi = {
   login: (data: { userId: string; password: string }) =>
@@ -14,4 +14,7 @@ export const authApi = {
 
   changePassword: (data: { currentPassword: string; newPassword: string }) =>
     api.put<ApiResponse>("/auth/change-password", data),
+
+  updateStatus: (userStatus: UserStatus) =>
+    api.put<ApiResponse<AuthData["user"]>>("/auth/status", { userStatus }),
 };

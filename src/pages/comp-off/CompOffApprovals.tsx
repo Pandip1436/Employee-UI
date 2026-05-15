@@ -1,7 +1,8 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   CheckCircle, XCircle, Gift, ChevronLeft, ChevronRight, X, AlertTriangle,
   CalendarDays, ArrowRight, Clock3, Sparkles, Inbox, Clock, MessageSquare,
+  Loader2, Search,
 } from "lucide-react";
 import { compOffApi } from "../../api/compOffApi";
 import type { CompOffRequest, Pagination } from "../../types";
@@ -96,6 +97,7 @@ export default function CompOffApprovals() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectComment, setRejectComment] = useState("");
   const [acting, setActing] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
 
   const fetchRequests = () => {
     compOffApi.getAll({ page, limit: 10, status: tab })
@@ -148,6 +150,19 @@ export default function CompOffApprovals() {
     return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
   };
 
+  const filteredRequests = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return requests;
+    return requests.filter((r) => {
+      const user = r.userId as any;
+      const name = (user?.name || "").toLowerCase();
+      const email = (user?.email || "").toLowerCase();
+      const dept = (user?.department || "").toLowerCase();
+      const reason = (r.reason || "").toLowerCase();
+      return name.includes(q) || email.includes(q) || dept.includes(q) || reason.includes(q);
+    });
+  }, [requests, query]);
+
   return (
     <div className="space-y-6">
       {/* ── Hero ── */}
@@ -167,12 +182,12 @@ export default function CompOffApprovals() {
             maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
           }}
         />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <Gift className="h-10 w-10 text-emerald-200" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
                 <Sparkles className="h-3.5 w-3.5" />
                 Worked-date → day-off requests
@@ -182,6 +197,17 @@ export default function CompOffApprovals() {
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Review compensatory time-off requests from your team</p>
             </div>
+          </div>
+          {/* Search */}
+          <div className="relative flex shrink-0 items-center lg:w-72">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/50" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search by name, email, dept, reason…"
+              className="w-full rounded-xl border border-white/15 bg-white/10 pl-9 pr-3 py-2.5 text-sm text-white placeholder-white/50 backdrop-blur-sm outline-none transition-colors focus:border-white/30 focus:bg-white/15"
+            />
           </div>
         </div>
       </div>
@@ -205,7 +231,7 @@ export default function CompOffApprovals() {
               <div className="flex items-start justify-between">
                 <div className="min-w-0">
                   <p className={labelCls}>{cfg.label}</p>
-                  <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+                  <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
                     {counts[key as keyof typeof counts]}
                   </p>
                 </div>
@@ -241,16 +267,20 @@ export default function CompOffApprovals() {
 
       {/* ── Cards ── */}
       <div className="space-y-3">
-        {requests.length === 0 ? (
+        {filteredRequests.length === 0 ? (
           <div className={`${cardCls} flex flex-col items-center gap-2 py-16 text-center`}>
             <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
               <Inbox className="h-5 w-5 text-gray-400" />
             </div>
-            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No {tab} comp-off requests</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">Requests will appear here once submitted</p>
+            <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+              {requests.length === 0 ? `No ${tab} comp-off requests` : "No matches for your search"}
+            </p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">
+              {requests.length === 0 ? "Requests will appear here once submitted" : "Try a different keyword"}
+            </p>
           </div>
         ) : (
-          requests.map((req) => {
+          filteredRequests.map((req) => {
             const sConfig = statusConfig[req.status] || statusConfig.pending;
             const user = req.userId as any;
             const userName: string = user?.name || "Unknown";
@@ -274,7 +304,7 @@ export default function CompOffApprovals() {
                         {upcoming && (
                           <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20">
                             <Clock3 className="h-2.5 w-2.5" />
-                            In {days}d
+                            In <span className="font-mono tabular-nums">{days}</span>d
                           </span>
                         )}
                       </div>
@@ -290,7 +320,7 @@ export default function CompOffApprovals() {
                           {req.dayType || "full"} day
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-md border border-gray-200/70 bg-gray-50/80 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-800/60 dark:text-gray-300">
-                          {req.hoursWorked ?? "—"}h worked
+                          <span className="font-mono tabular-nums">{req.hoursWorked ?? "—"}</span>h worked
                         </span>
                         <span className="text-xs text-gray-400 dark:text-gray-500">
                           Submitted {fmtShort(req.createdAt)}
@@ -304,18 +334,24 @@ export default function CompOffApprovals() {
                       <button
                         disabled={busy}
                         onClick={() => handleApprove(req._id)}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl active:scale-[0.98] disabled:opacity-60 sm:w-auto"
+                        className="group relative inline-flex w-full items-center justify-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98] disabled:opacity-60 sm:w-auto"
                       >
-                        <CheckCircle className="h-4 w-4" />
-                        Approve
+                        <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                        <span className="relative inline-flex items-center gap-1.5">
+                          {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                          {busy ? "Approving…" : "Approve"}
+                        </span>
                       </button>
                       <button
                         disabled={busy}
                         onClick={() => { setRejectId(req._id); setRejectComment(""); }}
-                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition-all hover:bg-rose-50 disabled:opacity-60 dark:border-rose-500/30 dark:bg-gray-900 dark:text-rose-400 dark:hover:bg-rose-500/10 sm:w-auto"
+                        className="group relative inline-flex w-full items-center justify-center gap-1.5 overflow-hidden rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition-all hover:bg-rose-50 disabled:opacity-60 dark:border-rose-500/30 dark:bg-gray-900 dark:text-rose-400 dark:hover:bg-rose-500/10 sm:w-auto"
                       >
-                        <XCircle className="h-4 w-4" />
-                        Reject
+                        <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%] dark:via-rose-400/20" />
+                        <span className="relative inline-flex items-center gap-1.5">
+                          <XCircle className="h-4 w-4" />
+                          Reject
+                        </span>
                       </button>
                     </div>
                   ) : null}
@@ -368,8 +404,8 @@ export default function CompOffApprovals() {
       {pagination && pagination.pages > 1 && (
         <div className={`${cardCls} flex items-center justify-between p-3`}>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Page <span className="font-semibold text-gray-900 dark:text-white">{pagination.page}</span> of{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">{pagination.pages}</span>
+            Page <span className="font-mono font-semibold tabular-nums text-gray-900 dark:text-white">{pagination.page}</span> of{" "}
+            <span className="font-mono font-semibold tabular-nums text-gray-900 dark:text-white">{pagination.pages}</span>
           </p>
           <div className="flex gap-2">
             <button
@@ -392,54 +428,80 @@ export default function CompOffApprovals() {
         </div>
       )}
 
-      {/* ── Reject Modal ── */}
+      {/* ── Reject Drawer ── */}
       {rejectId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div
+            className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm animate-backdrop-fade"
+            onClick={() => acting !== rejectId && setRejectId(null)}
+          />
+          <div className="relative flex h-full w-full max-w-md flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl animate-drawer-slide-right dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
+            {/* Status stripe */}
+            <div aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-rose-500 to-pink-600" />
+
+            {/* Header */}
             <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-rose-50 to-white p-5 dark:border-gray-800/80 dark:from-rose-500/10 dark:to-gray-900">
-              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-rose-400/25 blur-2xl" />
+              <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-rose-400/25 blur-2xl" />
+              <div aria-hidden className="pointer-events-none absolute -bottom-8 left-1/3 h-24 w-24 rounded-full bg-pink-400/20 blur-2xl" />
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 p-2.5 shadow-lg shadow-rose-500/30 ring-1 ring-white/10">
                     <AlertTriangle className="h-5 w-5 text-white" />
                   </div>
                   <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-600/80 dark:text-rose-400/80">Approval action</p>
                     <h2 className="text-base font-bold text-gray-900 dark:text-white">Reject Comp-Off</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Provide a reason for rejection</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Add an optional reason for the employee</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setRejectId(null)}
+                  disabled={acting === rejectId}
                   aria-label="Close"
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
-            <div className="p-5">
+
+            {/* Body */}
+            <div className="premium-scroll flex-1 overflow-y-auto p-5">
+              <label className={`${labelCls} mb-1.5 block`}>Rejection Reason</label>
               <textarea
-                rows={3}
-                placeholder="Reason for rejection (optional)"
+                rows={6}
+                placeholder="Reason for rejection (optional)…"
                 value={rejectComment}
                 onChange={(e) => setRejectComment(e.target.value)}
-                className="mb-4 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
+                className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-sm text-gray-900 outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100"
               />
-              <div className="flex gap-3">
-                <button
-                  onClick={() => setRejectId(null)}
-                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  disabled={acting === rejectId}
-                  onClick={handleReject}
-                  className="flex-1 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl disabled:opacity-60"
-                >
-                  Reject
-                </button>
-              </div>
+              <p className="mt-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+                The employee will see this comment on their request.
+              </p>
+            </div>
+
+            {/* Sticky footer */}
+            <div className="sticky bottom-0 flex gap-3 border-t border-gray-200/70 bg-white/95 p-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95">
+              <button
+                onClick={() => setRejectId(null)}
+                disabled={acting === rejectId}
+                className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                disabled={acting === rejectId}
+                onClick={handleReject}
+                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl hover:shadow-rose-500/40 disabled:opacity-60"
+              >
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                <span className="relative inline-flex items-center justify-center gap-2">
+                  {acting === rejectId
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <XCircle className="h-4 w-4" />}
+                  {acting === rejectId ? "Rejecting…" : "Confirm Reject"}
+                </span>
+              </button>
             </div>
           </div>
         </div>

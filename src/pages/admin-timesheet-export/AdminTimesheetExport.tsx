@@ -66,6 +66,24 @@ function fmt(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+function daysAgoIso(n: number) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return fmt(d);
+}
+
+function firstOfMonthIso(monthOffset = 0) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + monthOffset, 1);
+  return fmt(d);
+}
+
+function lastOfMonthIso(monthOffset = 0) {
+  const d = new Date();
+  d.setMonth(d.getMonth() + monthOffset + 1, 0);
+  return fmt(d);
+}
+
 function downloadBlob(blob: Blob, filename: string) {
   const url = window.URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -102,6 +120,7 @@ export default function AdminTimesheetExport() {
   const [endDate, setEndDate] = useState(() => fmt(new Date()));
   const [status, setStatus] = useState("");
   const [employeeId, setEmployeeId] = useState("");
+  const [deptFilter, setDeptFilter] = useState("");
   const [employees, setEmployees] = useState<User[]>([]);
   const [data, setData] = useState<WeeklyTimesheetData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -119,6 +138,7 @@ export default function AdminTimesheetExport() {
     const params: Record<string, string | number> = { limit: 1000, startDate, endDate };
     if (status) params.status = status;
     if (employeeId) params.userId = employeeId;
+    if (deptFilter) params.department = deptFilter;
     weeklyTimesheetApi
       .getAll(params)
       .then((r) => setData((r.data.data || []).filter((ts) => ts.status !== "draft")))
@@ -126,7 +146,7 @@ export default function AdminTimesheetExport() {
       .finally(() => setLoading(false));
   };
 
-  useEffect(() => { fetchData(); }, [startDate, endDate, status, employeeId]);
+  useEffect(() => { fetchData(); }, [startDate, endDate, status, employeeId, deptFilter]);
 
   const handleCsv = () => {
     if (!data.length) return toast.error("No data to export");
@@ -140,35 +160,54 @@ export default function AdminTimesheetExport() {
     finally { setExporting(null); }
   };
 
-  const handleExcel = () => {
+  const handleExcel = async () => {
     if (!data.length) return toast.error("No data to export");
     setExporting("excel");
     try {
-      const header = "Employee\tEmail\tDepartment\tWeek Start\tWeek End\tTotal Hours\tStatus\tSubmitted At";
-      const rows = data.map((ts) => {
-        const user = typeof ts.userId === "object" ? ts.userId : null;
-        return [
-          user?.name || "",
-          user?.email || "",
-          user?.department || "",
-          ts.weekStart.slice(0, 10),
-          ts.weekEnd.slice(0, 10),
-          ts.totalHours.toFixed(1),
-          ts.status,
-          ts.submittedAt ? new Date(ts.submittedAt).toLocaleDateString() : "",
-        ].join("\t");
-      });
-      const tsv = [header, ...rows].join("\n");
-      const blob = new Blob([tsv], { type: "application/vnd.ms-excel" });
-      downloadBlob(blob, `timesheet-export-${startDate}-to-${endDate}.xls`);
+      const params: Record<string, string> = { startDate, endDate };
+      if (status) params.status = status;
+      if (employeeId) params.userId = employeeId;
+      if (deptFilter) params.department = deptFilter;
+      const res = await weeklyTimesheetApi.exportExcel(params);
+      downloadBlob(res.data, `timesheet-export-${startDate}-to-${endDate}.xlsx`);
       toast.success("Excel downloaded!");
     } catch { toast.error("Export failed"); }
     finally { setExporting(null); }
   };
 
+  // Departments derived from employees (so the dropdown is stable regardless of current results)
+  const departments = (() => {
+    const set = new Set<string>();
+    for (const u of employees) if (u.department) set.add(u.department);
+    return [...set].sort();
+  })();
+
   const totalHours = data.reduce((s, ts) => s + ts.totalHours, 0);
   const approvedCount = data.filter((ts) => ts.status === "approved").length;
+  const submittedCount = data.filter((ts) => ts.status === "submitted").length;
+  const rejectedCount = data.filter((ts) => ts.status === "rejected").length;
   const uniqueEmps = new Set(data.map((ts) => (typeof ts.userId === "object" ? ts.userId._id : ts.userId))).size;
+
+  const presets = [
+    { key: "7",          label: "7d",         start: daysAgoIso(7),         end: fmt(new Date()) },
+    { key: "30",         label: "30d",        start: daysAgoIso(30),        end: fmt(new Date()) },
+    { key: "90",         label: "90d",        start: daysAgoIso(90),        end: fmt(new Date()) },
+    { key: "thisMonth",  label: "This month", start: firstOfMonthIso(0),    end: fmt(new Date()) },
+    { key: "lastMonth",  label: "Last month", start: firstOfMonthIso(-1),   end: lastOfMonthIso(-1) },
+  ];
+
+  const activePreset = presets.find((p) => p.start === startDate && p.end === endDate)?.key ?? null;
+  const applyPreset = (p: typeof presets[number]) => {
+    setStartDate(p.start);
+    setEndDate(p.end);
+  };
+
+  const statusFilters: Array<{ key: string; label: string; count: number; dot: string }> = [
+    { key: "",           label: "All",        count: data.length,      dot: "bg-gray-400" },
+    { key: "submitted",  label: "Submitted",  count: submittedCount,   dot: "bg-sky-500" },
+    { key: "approved",   label: "Approved",   count: approvedCount,    dot: "bg-emerald-500" },
+    { key: "rejected",   label: "Rejected",   count: rejectedCount,    dot: "bg-rose-500" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -179,8 +218,9 @@ export default function AdminTimesheetExport() {
           <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-indigo-500/20 blur-3xl" />
           <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
         </div>
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          {/* LEFT: identity + KPI chips */}
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <Download className="h-10 w-10 text-emerald-200" />
             </div>
@@ -193,9 +233,37 @@ export default function AdminTimesheetExport() {
                 Export <span className="bg-gradient-to-r from-emerald-200 to-indigo-200 bg-clip-text text-transparent">Timesheets</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Filter and export timesheet data for payroll or reporting</p>
+
+              {/* Hero KPI chips */}
+              {!loading && data.length > 0 && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <BarChart3 className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Records</span>
+                    <span className="font-mono font-semibold tabular-nums">{data.length}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                    <Users className="h-3.5 w-3.5 text-indigo-200" />
+                    <span className="text-indigo-200/80">Employees</span>
+                    <span className="font-mono font-semibold tabular-nums">{uniqueEmps}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                    <Clock className="h-3.5 w-3.5 text-emerald-200" />
+                    <span className="text-emerald-200/90">Total hours</span>
+                    <span className="font-mono font-semibold tabular-nums text-emerald-50">{fmtHours(totalHours)}</span>
+                  </span>
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-amber-200" />
+                    <span className="text-amber-200/90">Approved</span>
+                    <span className="font-mono font-semibold tabular-nums text-amber-50">{approvedCount}</span>
+                  </span>
+                </div>
+              )}
             </div>
           </div>
-          <div className="grid w-full grid-cols-2 items-center gap-2 sm:flex sm:w-auto sm:flex-wrap">
+
+          {/* RIGHT: download buttons */}
+          <div className="flex w-full shrink-0 flex-col gap-2.5 sm:flex-row lg:w-auto lg:flex-col">
             <button
               onClick={handleCsv}
               disabled={!!exporting || !data.length}
@@ -213,16 +281,22 @@ export default function AdminTimesheetExport() {
             <button
               onClick={handleExcel}
               disabled={!!exporting || !data.length}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 disabled:cursor-not-allowed disabled:opacity-40"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              {exporting === "excel" ? (
-                <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
-              ) : (
-                <span className="rounded-md bg-gradient-to-br from-emerald-500 to-teal-600 p-1">
-                  <FileSpreadsheet className="h-3.5 w-3.5 text-white" />
-                </span>
-              )}
-              Excel
+              <span
+                aria-hidden
+                className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-emerald-300/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+              />
+              <span className="relative inline-flex items-center gap-2">
+                {exporting === "excel" ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-emerald-600" />
+                ) : (
+                  <span className="rounded-md bg-gradient-to-br from-emerald-500 to-teal-600 p-1">
+                    <FileSpreadsheet className="h-3.5 w-3.5 text-white" />
+                  </span>
+                )}
+                Excel
+              </span>
             </button>
           </div>
         </div>
@@ -230,10 +304,45 @@ export default function AdminTimesheetExport() {
 
       {/* ── Filters ── */}
       <div className={`${cardCls} p-4`}>
-        <div className="mb-3 flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
-          <Filter className="h-3.5 w-3.5" />
-          <span>Refine the dataset before exporting</span>
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+            <Filter className="h-3.5 w-3.5" />
+            <span>Refine the dataset before exporting</span>
+          </div>
+          {/* Date range presets */}
+          <div className="hidden sm:inline-flex items-center gap-1 rounded-lg border border-gray-200/70 bg-gray-50/60 p-1 dark:border-gray-800/80 dark:bg-gray-800/40">
+            {presets.map((p) => (
+              <button
+                key={p.key}
+                onClick={() => applyPreset(p)}
+                className={`whitespace-nowrap rounded-md px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                  activePreset === p.key
+                    ? "bg-white text-indigo-700 shadow-sm ring-1 ring-indigo-500/20 dark:bg-gray-900 dark:text-indigo-300 dark:ring-indigo-400/25"
+                    : "text-gray-600 hover:bg-white hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-900 dark:hover:text-white"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
         </div>
+        {/* Mobile presets (horizontal scroll) */}
+        <div className="mb-3 -mx-1 flex gap-1 overflow-x-auto px-1 sm:hidden">
+          {presets.map((p) => (
+            <button
+              key={p.key}
+              onClick={() => applyPreset(p)}
+              className={`whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                activePreset === p.key
+                  ? "bg-indigo-600 text-white shadow-sm"
+                  : "border border-gray-200/70 bg-white text-gray-600 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+
         <div className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end">
           {/* Date pair — side-by-side on mobile, individual flex children on desktop */}
           <div className="grid grid-cols-2 gap-3 sm:contents">
@@ -246,40 +355,71 @@ export default function AdminTimesheetExport() {
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className={inputCls} />
             </div>
           </div>
-          <div className="w-full sm:w-auto sm:min-w-[140px]">
-            <label className={`${labelCls} mb-1.5 block`}>Status</label>
-            <select value={status} onChange={(e) => setStatus(e.target.value)} className={inputCls}>
-              <option value="">All Statuses</option>
-              <option value="submitted">Submitted</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-            </select>
-          </div>
+          {departments.length > 0 && (
+            <div className="w-full sm:w-auto sm:min-w-[180px]">
+              <label className={`${labelCls} mb-1.5 block`}>Department</label>
+              <select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)} className={inputCls}>
+                <option value="">All Departments</option>
+                {departments.map((d) => (
+                  <option key={d} value={d}>{d}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="w-full sm:min-w-[200px] sm:flex-1">
             <label className={`${labelCls} mb-1.5 block`}>Employee</label>
             <select value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className={inputCls}>
               <option value="">All Employees</option>
-              {employees.map((u) => (
-                <option key={u._id} value={u._id}>{u.name}</option>
-              ))}
+              {employees
+                .filter((u) => !deptFilter || u.department === deptFilter)
+                .map((u) => (
+                  <option key={u._id} value={u._id}>{u.name}</option>
+                ))}
             </select>
           </div>
           <div className="flex w-full items-center gap-2 rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 text-xs text-gray-600 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300 sm:ml-auto sm:inline-flex sm:w-auto">
             <CalendarDays className="h-3.5 w-3.5 shrink-0 text-gray-400" />
             <span className="truncate">
-              <span className="font-semibold text-gray-900 dark:text-white">{data.length}</span> record{data.length === 1 ? "" : "s"}
+              <span className="font-mono font-semibold tabular-nums text-gray-900 dark:text-white">{data.length}</span>
+              {" "}record{data.length === 1 ? "" : "s"}
             </span>
           </div>
+        </div>
+
+        {/* Status chips */}
+        <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-gray-200/70 pt-3 dark:border-gray-800/80">
+          <span className={`mr-1 ${labelCls}`}>Status</span>
+          {statusFilters.map((f) => (
+            <button
+              key={f.key || "all"}
+              onClick={() => setStatus(f.key)}
+              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all ${
+                status === f.key
+                  ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
+                  : "border border-gray-200/70 bg-white/60 text-gray-600 hover:bg-gray-50 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-400 dark:hover:bg-gray-800/60"
+              }`}
+            >
+              <span className={`h-1.5 w-1.5 rounded-full ${f.dot}`} />
+              {f.label}
+              <span className={`inline-flex min-w-[20px] items-center justify-center rounded-md px-1.5 py-0 text-[10px] font-bold ${
+                status === f.key
+                  ? "bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-300"
+                  : "bg-gray-100 text-gray-500 dark:bg-gray-700/50 dark:text-gray-400"
+              }`}>
+                {f.count}
+              </span>
+            </button>
+          ))}
         </div>
       </div>
 
       {/* ── Summary KPIs ── */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: "Total Records", value: data.length, icon: BarChart3, gradient: "from-indigo-500 to-purple-600" },
-          { label: "Employees", value: uniqueEmps, icon: Users, gradient: "from-sky-500 to-blue-600" },
+          { label: "Total Records", value: String(data.length), icon: BarChart3, gradient: "from-indigo-500 to-purple-600" },
+          { label: "Employees", value: String(uniqueEmps), icon: Users, gradient: "from-sky-500 to-blue-600" },
           { label: "Total Hours", value: fmtHours(totalHours), icon: Clock, gradient: "from-emerald-500 to-teal-600" },
-          { label: "Approved", value: approvedCount, icon: CheckCircle2, gradient: "from-amber-500 to-orange-600" },
+          { label: "Approved", value: String(approvedCount), icon: CheckCircle2, gradient: "from-amber-500 to-orange-600" },
         ].map((c) => (
           <div key={c.label} className={`${cardCls} group relative overflow-hidden p-4`}>
             <div
@@ -289,7 +429,7 @@ export default function AdminTimesheetExport() {
             <div className="flex items-start justify-between">
               <div className="min-w-0">
                 <p className={labelCls}>{c.label}</p>
-                <p className="mt-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+                <p className="mt-2 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
               </div>
               <div className={`rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
                 <c.icon className="h-4 w-4 text-white" />
@@ -324,11 +464,11 @@ export default function AdminTimesheetExport() {
                 </div>
                 <p className="text-sm font-semibold text-gray-900 dark:text-white">Preview</p>
                 <span className="rounded-md border border-gray-200/70 bg-white px-1.5 py-0.5 text-[11px] font-semibold text-gray-600 dark:border-gray-700/70 dark:bg-gray-900 dark:text-gray-300">
-                  {data.length} records
+                  <span className="font-mono tabular-nums">{data.length}</span> records
                 </span>
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400">
-                Showing {Math.min(20, data.length)} of {data.length}
+                Showing <span className="font-mono tabular-nums">{Math.min(20, data.length)}</span> of <span className="font-mono tabular-nums">{data.length}</span>
               </p>
             </div>
             <div className="overflow-x-auto">
@@ -365,15 +505,15 @@ export default function AdminTimesheetExport() {
                               <p className="text-[8px] font-bold uppercase tracking-wider text-white/90">
                                 {start.toLocaleDateString(undefined, { month: "short" })}
                               </p>
-                              <p className="text-xs font-bold leading-none">{start.getDate()}</p>
+                              <p className="font-mono text-xs font-bold tabular-nums leading-none">{start.getDate()}</p>
                             </div>
-                            <span className="text-sm text-gray-700 dark:text-gray-300">
+                            <span className="font-mono text-sm tabular-nums text-gray-700 dark:text-gray-300">
                               {start.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
                             </span>
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
+                          <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 font-mono text-xs font-bold tabular-nums tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
                             {fmtHours(ts.totalHours)}
                           </span>
                         </td>
@@ -391,8 +531,8 @@ export default function AdminTimesheetExport() {
             </div>
             {data.length > 20 && (
               <div className="border-t border-gray-200/70 bg-gray-50/40 px-4 py-2.5 text-center text-xs text-gray-500 dark:border-gray-800/80 dark:bg-gray-800/20 dark:text-gray-400">
-                Showing <span className="font-semibold text-gray-900 dark:text-white">20</span> of{" "}
-                <span className="font-semibold text-gray-900 dark:text-white">{data.length}</span> records — export to see all
+                Showing <span className="font-mono font-semibold tabular-nums text-gray-900 dark:text-white">20</span> of{" "}
+                <span className="font-mono font-semibold tabular-nums text-gray-900 dark:text-white">{data.length}</span> records — export to see all
               </div>
             )}
           </div>
@@ -410,7 +550,7 @@ export default function AdminTimesheetExport() {
                       <p className="text-[9px] font-bold uppercase tracking-wider text-white/90">
                         {start.toLocaleDateString(undefined, { month: "short" })}
                       </p>
-                      <p className="text-sm font-bold leading-none">{start.getDate()}</p>
+                      <p className="font-mono text-sm font-bold tabular-nums leading-none">{start.getDate()}</p>
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{user?.name || "—"}</p>
@@ -426,7 +566,7 @@ export default function AdminTimesheetExport() {
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
                       <p className={labelCls}>Hours</p>
-                      <p className="text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(ts.totalHours)}</p>
+                      <p className="font-mono text-sm font-bold tabular-nums tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(ts.totalHours)}</p>
                     </div>
                     <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
                       <p className={labelCls}>Department</p>

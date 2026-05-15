@@ -4,9 +4,131 @@
 
 @layer base {
   body {
-    @apply bg-gray-50 text-gray-900 antialiased;
+    background-color: rgb(249 250 251); /* gray-50 */
+    color: rgb(17 24 39);                /* gray-900 */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   .dark body {
-    @apply bg-gray-950 text-gray-100;
+    background-color: rgb(3 7 18);       /* gray-950 */
+    color: rgb(243 244 246);             /* gray-100 */
   }
+}
+
+@layer utilities {
+  @keyframes topbar-aurora {
+    0%   { background-position:   0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position:   0% 50%; }
+  }
+  .animate-topbar-aurora {
+    background-size: 200% 100%;
+    animation: topbar-aurora 8s ease-in-out infinite;
+  }
+
+  @keyframes status-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 currentColor; opacity: 1; }
+    50%      { box-shadow: 0 0 0 4px transparent; opacity: 0.85; }
+  }
+  .animate-status-pulse {
+    animation: status-pulse 2.2s ease-in-out infinite;
+  }
+
+  @keyframes modal-enter {
+    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  .animate-modal-enter {
+    animation: modal-enter 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes backdrop-fade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+  .animate-backdrop-fade {
+    animation: backdrop-fade 180ms ease-out;
+  }
+
+  @keyframes drawer-slide-right {
+    from { opacity: 0; transform: translateX(24px); }
+    to   { opacity: 1; transform: translateX(0); }
+  }
+  .animate-drawer-slide-right {
+    animation: drawer-slide-right 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes placeholder-swap {
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-placeholder-swap {
+    animation: placeholder-swap 320ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Slowly drifting aurora blobs — three variants so each feels organic. */
+  @keyframes blob-drift-1 {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33%      { transform: translate3d(40px, 30px, 0) scale(1.08); }
+    66%      { transform: translate3d(-25px, 50px, 0) scale(0.95); }
+  }
+  @keyframes blob-drift-2 {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33%      { transform: translate3d(-50px, -30px, 0) scale(0.9); }
+    66%      { transform: translate3d(30px, -40px, 0) scale(1.1); }
+  }
+  @keyframes blob-drift-3 {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33%      { transform: translate3d(35px, -45px, 0) scale(1.05); }
+    66%      { transform: translate3d(-40px, 25px, 0) scale(0.92); }
+  }
+  @keyframes blob-drift-4 {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    33%      { transform: translate3d(-30px, 35px, 0) scale(1.06); }
+    66%      { transform: translate3d(45px, -20px, 0) scale(0.94); }
+  }
+  @keyframes blob-drift-5 {
+    0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+    50%      { transform: translate3d(30px, -25px, 0) scale(1.05); }
+  }
+  .animate-blob-1 { animation: blob-drift-1 28s ease-in-out infinite; }
+  .animate-blob-2 { animation: blob-drift-2 34s ease-in-out infinite; }
+  .animate-blob-3 { animation: blob-drift-3 30s ease-in-out infinite; }
+  .animate-blob-4 { animation: blob-drift-4 36s ease-in-out infinite; }
+  .animate-blob-5 { animation: blob-drift-5 24s ease-in-out infinite; }
+
+  /* Slow diagonal sheen — barely-visible highlight sweeping across the canvas */
+  @keyframes sheen-sweep {
+    0%   { transform: translateX(-100%) skewX(-12deg); }
+    100% { transform: translateX(220%) skewX(-12deg); }
+  }
+  .animate-sheen { animation: sheen-sweep 18s linear infinite; }
+
+  /* Page-level enter on route change */
+  @keyframes page-enter {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .animate-page-enter {
+    animation: page-enter 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  /* Premium thin scrollbar — applied to the main scroll area */
+  .premium-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(99 102 241 / 0.35) transparent;
+  }
+  .premium-scroll::-webkit-scrollbar { width: 10px; height: 10px; }
+  .premium-scroll::-webkit-scrollbar-track { background: transparent; }
+  .premium-scroll::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgb(99 102 241 / 0.35), rgb(168 85 247 / 0.35));
+    border: 2px solid transparent;
+    background-clip: padding-box;
+    border-radius: 10px;
+  }
+  .premium-scroll::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, rgb(99 102 241 / 0.6), rgb(168 85 247 / 0.6));
+    background-clip: padding-box;
+  }
+  .premium-scroll::-webkit-scrollbar-corner { background: transparent; }
 }

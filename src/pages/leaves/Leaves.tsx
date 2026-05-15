@@ -1,8 +1,8 @@
-import { useState, useEffect, type FormEvent } from "react";
+import { useState, useEffect, useMemo, type FormEvent } from "react";
 import {
   Plus, X, CheckCircle, XCircle, CalendarDays, Clock, Briefcase, Heart,
   ChevronLeft, ChevronRight, Trash2, Laptop, Gift, LayoutDashboard, Sparkles,
-  
+  Filter, Loader2, Search,
 } from "lucide-react";
 import { leaveApi } from "../../api/leaveApi";
 import { useAuth } from "../../context/AuthContext";
@@ -100,6 +100,9 @@ export default function Leaves() {
   const [showApply, setShowApply] = useState(false);
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectComment, setRejectComment] = useState("");
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState(false);
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   // Apply form
   const [leaveType, setLeaveType] = useState("casual");
@@ -143,35 +146,61 @@ export default function Leaves() {
   };
 
   const handleApprove = async (id: string) => {
+    setApprovingId(id);
     try {
       await leaveApi.approve(id, { status: "approved" });
       toast.success("Leave approved!");
       fetchLeaves();
-    } catch { /* interceptor */ }
+    } catch { /* interceptor */ } finally { setApprovingId(null); }
   };
 
   const handleReject = async () => {
     if (!rejectId) return;
+    setRejecting(true);
     try {
       await leaveApi.approve(rejectId, { status: "rejected", rejectionComment: rejectComment });
       toast.success("Leave rejected.");
       setRejectId(null); setRejectComment("");
       fetchLeaves();
-    } catch { /* interceptor */ }
+    } catch { /* interceptor */ } finally { setRejecting(false); }
   };
 
   const handleDelete = async (id: string) => {
     if (!(await confirm({ title: "Cancel leave request?", description: "This leave request will be withdrawn. You can always re-apply later.", confirmLabel: "Cancel request", cancelLabel: "Keep" }))) return;
+    setCancellingId(id);
     try {
       await leaveApi.delete(id);
       toast.success("Leave cancelled.");
       fetchLeaves(); fetchBalance();
-    } catch { /* interceptor */ }
+    } catch { /* interceptor */ } finally { setCancellingId(null); }
   };
 
   const totalRemaining = balance
     ? (balance.casual?.remaining ?? 0) + (balance.sick?.remaining ?? 0)
     : 0;
+  const totalUsed = balance
+    ? (balance.casual?.used ?? 0) + (balance.sick?.used ?? 0) + (balance.earned?.used ?? 0) + (balance.compoff?.used ?? 0)
+    : 0;
+  const totalAllowance = balance
+    ? (balance.casual?.total ?? 0) + (balance.sick?.total ?? 0) + (balance.earned?.total ?? 0) + (balance.compoff?.total ?? 0)
+    : 0;
+
+  /* ── List filter (client-side on current page) ── */
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "approved" | "rejected">("all");
+  const [query, setQuery] = useState("");
+  const filteredLeaves = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return leaves.filter((l) => {
+      if (statusFilter !== "all" && l.status !== statusFilter) return false;
+      if (!q) return true;
+      const name = ((l.userId as any)?.name || "").toLowerCase();
+      const reason = (l.reason || "").toLowerCase();
+      const type = (l.type || "").toLowerCase();
+      return name.includes(q) || reason.includes(q) || type.includes(q);
+    });
+  }, [leaves, statusFilter, query]);
+
+  const pendingCount = useMemo(() => leaves.filter((l) => l.status === "pending").length, [leaves]);
 
   return (
     <div className="space-y-6">
@@ -192,12 +221,12 @@ export default function Leaves() {
             maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
           }}
         />
-        <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-4">
+        <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
             <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
               <CalendarDays className="h-10 w-10 text-emerald-200" />
             </div>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
                 <Sparkles className="h-3.5 w-3.5" />
                 {canApprove ? "Approvals & your leaves" : "Your leave workspace"}
@@ -206,23 +235,51 @@ export default function Leaves() {
                 Leave <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Management</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Track and manage your leave requests</p>
+
+              {/* KPI chips */}
+              {balance && (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 ring-1 ring-white/15 backdrop-blur-sm">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-emerald-400/20 ring-1 ring-emerald-300/30">
+                      <CalendarDays className="h-3 w-3 text-emerald-200" />
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Remaining</span>
+                    <span className="font-mono text-sm font-bold tabular-nums tracking-tight">{totalRemaining}</span>
+                    <span className="font-mono text-[11px] tabular-nums text-indigo-200/60">/ {totalAllowance}</span>
+                  </div>
+                  <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 ring-1 ring-white/15 backdrop-blur-sm">
+                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-purple-400/20 ring-1 ring-purple-300/30">
+                      <Clock className="h-3 w-3 text-purple-200" />
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Used</span>
+                    <span className="font-mono text-sm font-bold tabular-nums tracking-tight">{totalUsed}</span>
+                  </div>
+                  {pendingCount > 0 && (
+                    <div className="inline-flex items-center gap-2 rounded-xl bg-amber-400/15 px-3 py-1.5 ring-1 ring-amber-300/30 backdrop-blur-sm">
+                      <span className="relative inline-flex h-2 w-2">
+                        <span className="absolute inset-0 animate-ping rounded-full bg-amber-300/60" />
+                        <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-300" />
+                      </span>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-100/90">Pending</span>
+                      <span className="font-mono text-sm font-bold tabular-nums tracking-tight text-amber-100">{pendingCount}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
-            {balance && (
-              <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Days remaining</p>
-                <p className="text-xl font-bold tracking-tight">{totalRemaining}</p>
-              </div>
-            )}
+          <div className="flex shrink-0 items-center gap-3">
             <button
               onClick={() => setSection("apply")}
-              className="inline-flex items-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
             >
-              <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
-                <Plus className="h-3.5 w-3.5 text-white" />
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-indigo-200/40 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+              <span className="relative inline-flex items-center gap-2">
+                <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
+                  <Plus className="h-3.5 w-3.5 text-white" />
+                </span>
+                Apply Leave
               </span>
-              Apply Leave
             </button>
           </div>
         </div>
@@ -286,10 +343,10 @@ export default function Leaves() {
                   <div className="min-w-0 space-y-1">
                     <p className={labelCls}>{config.label}</p>
                     <div className="flex items-baseline gap-1.5">
-                      <span className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{remaining}</span>
-                      <span className="text-sm text-gray-400 dark:text-gray-500">/ {total}</span>
+                      <span className="font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{remaining}</span>
+                      <span className="font-mono text-sm tabular-nums text-gray-400 dark:text-gray-500">/ {total}</span>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">{used} used this year</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400"><span className="font-mono tabular-nums">{used}</span> used this year</p>
                   </div>
                   <div className={`rounded-xl bg-gradient-to-br ${config.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
                     <Icon className="h-5 w-5 text-white" />
@@ -298,7 +355,7 @@ export default function Leaves() {
                 <div className="mt-5">
                   <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-gray-500 dark:text-gray-400">
                     <span>Used</span>
-                    <span className="font-semibold text-gray-700 dark:text-gray-200">{Math.round(pct)}%</span>
+                    <span className="font-mono font-semibold tabular-nums text-gray-700 dark:text-gray-200">{Math.round(pct)}%</span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                     <div
@@ -335,19 +392,65 @@ export default function Leaves() {
         </div>
       )}
 
+      {/* ── Filter Bar ── */}
+      {section === "leaves" && leaves.length > 0 && (
+        <div className={`${cardCls} flex flex-col gap-3 p-3 sm:flex-row sm:items-center`}>
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={tab === "requests" ? "Search by name, reason, or type…" : "Search by reason or type…"}
+              className="w-full rounded-lg border border-gray-300 bg-white pl-9 pr-3 py-2 text-sm outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+              <Filter className="h-3 w-3" /> Status
+            </span>
+            {(["all", "pending", "approved", "rejected"] as const).map((s) => {
+              const active = statusFilter === s;
+              const tone =
+                s === "pending" ? "from-amber-500 to-orange-500"
+                : s === "approved" ? "from-emerald-500 to-teal-500"
+                : s === "rejected" ? "from-rose-500 to-pink-500"
+                : "from-indigo-500 to-purple-500";
+              return (
+                <button
+                  key={s}
+                  onClick={() => setStatusFilter(s)}
+                  className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[11px] font-semibold capitalize transition-all ${
+                    active
+                      ? `bg-gradient-to-r ${tone} text-white shadow-sm ring-1 ring-white/10`
+                      : "border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  }`}
+                >
+                  {s}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* ── Leave Requests ── */}
       {section === "leaves" && (
         <div className="space-y-3">
-          {leaves.length === 0 ? (
+          {filteredLeaves.length === 0 ? (
             <div className={`${cardCls} flex flex-col items-center gap-2 py-16 text-center`}>
               <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
                 <CalendarDays className="h-5 w-5 text-gray-400" />
               </div>
-              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">No leave requests found</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Leave requests will appear here once created</p>
+              <p className="text-sm font-medium text-gray-600 dark:text-gray-300">
+                {leaves.length === 0 ? "No leave requests found" : "No matches for current filter"}
+              </p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">
+                {leaves.length === 0 ? "Leave requests will appear here once created" : "Try adjusting your search or status filter"}
+              </p>
             </div>
           ) : (
-            leaves.map((leave) => {
+            filteredLeaves.map((leave) => {
               const sConfig = statusConfig[leave.status] || statusConfig.pending;
               const tConfig = typeConfig[leave.type] || typeConfig.casual;
               const start = new Date(leave.startDate);
@@ -417,30 +520,45 @@ export default function Leaves() {
                         <>
                           <button
                             onClick={() => handleApprove(leave._id)}
-                            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl active:scale-[0.98] sm:w-auto"
+                            disabled={approvingId === leave._id}
+                            className="group relative inline-flex w-full items-center justify-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-emerald-500/25 ring-1 ring-white/10 transition-all hover:shadow-xl hover:shadow-emerald-500/40 active:scale-[0.98] disabled:opacity-60 sm:w-auto"
                           >
-                            <CheckCircle className="h-4 w-4" />
-                            Approve
+                            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                            <span className="relative inline-flex items-center gap-1.5">
+                              {approvingId === leave._id
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <CheckCircle className="h-4 w-4" />}
+                              {approvingId === leave._id ? "Approving…" : "Approve"}
+                            </span>
                           </button>
                           <button
                             onClick={() => {
                               setRejectId(leave._id);
                               setRejectComment("");
                             }}
-                            className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition-all hover:bg-rose-50 dark:border-rose-500/30 dark:bg-gray-900 dark:text-rose-400 dark:hover:bg-rose-500/10 sm:w-auto"
+                            className="group relative inline-flex w-full items-center justify-center gap-1.5 overflow-hidden rounded-xl border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 shadow-sm transition-all hover:bg-rose-50 dark:border-rose-500/30 dark:bg-gray-900 dark:text-rose-400 dark:hover:bg-rose-500/10 sm:w-auto"
                           >
-                            <XCircle className="h-4 w-4" />
-                            Reject
+                            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%] dark:via-rose-400/20" />
+                            <span className="relative inline-flex items-center gap-1.5">
+                              <XCircle className="h-4 w-4" />
+                              Reject
+                            </span>
                           </button>
                         </>
                       )}
                       {tab === "my" && leave.status === "pending" && (
                         <button
                           onClick={() => handleDelete(leave._id)}
-                          className="inline-flex w-full items-center justify-center gap-1.5 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 sm:w-auto"
+                          disabled={cancellingId === leave._id}
+                          className="group relative inline-flex w-full items-center justify-center gap-1.5 overflow-hidden rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-60 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 sm:w-auto"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Cancel
+                          <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-gray-200/50 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%] dark:via-gray-500/20" />
+                          <span className="relative inline-flex items-center gap-1.5">
+                            {cancellingId === leave._id
+                              ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              : <Trash2 className="h-3.5 w-3.5" />}
+                            {cancellingId === leave._id ? "Cancelling…" : "Cancel"}
+                          </span>
                         </button>
                       )}
                     </div>
@@ -456,8 +574,8 @@ export default function Leaves() {
       {section === "leaves" && pagination && pagination.pages > 1 && (
         <div className={`${cardCls} flex items-center justify-between p-3`}>
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            Page <span className="font-semibold text-gray-900 dark:text-white">{pagination.page}</span> of{" "}
-            <span className="font-semibold text-gray-900 dark:text-white">{pagination.pages}</span>
+            Page <span className="font-mono font-semibold tabular-nums text-gray-900 dark:text-white">{pagination.page}</span> of{" "}
+            <span className="font-mono font-semibold tabular-nums text-gray-900 dark:text-white">{pagination.pages}</span>
           </p>
           <div className="flex gap-2">
             <button
@@ -563,56 +681,80 @@ export default function Leaves() {
         </div>
       )}
 
-      {/* ── Reject Modal ── */}
+      {/* ── Reject Drawer ── */}
       {rejectId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/50 backdrop-blur-sm px-4">
-          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div
+            className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm animate-backdrop-fade"
+            onClick={() => !rejecting && setRejectId(null)}
+          />
+          <div className="relative flex h-full w-full max-w-md flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl animate-drawer-slide-right dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
+            {/* Status stripe */}
+            <div aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-rose-500 to-pink-600" />
+
+            {/* Header */}
             <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-rose-50 to-white p-5 dark:border-gray-800/80 dark:from-rose-500/10 dark:to-gray-900">
-              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-rose-400/25 blur-2xl" />
+              <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-rose-400/25 blur-2xl" />
+              <div aria-hidden className="pointer-events-none absolute -bottom-8 left-1/3 h-24 w-24 rounded-full bg-pink-400/20 blur-2xl" />
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 p-2.5 shadow-lg shadow-rose-500/30 ring-1 ring-white/10">
                     <XCircle className="h-5 w-5 text-white" />
                   </div>
                   <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-600/80 dark:text-rose-400/80">Approval action</p>
                     <h2 className="text-base font-bold text-gray-900 dark:text-white">Reject Leave</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Provide a reason for rejection</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Add an optional reason for the employee</p>
                   </div>
                 </div>
                 <button
                   onClick={() => setRejectId(null)}
+                  disabled={rejecting}
                   aria-label="Close"
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-300"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
             </div>
-            <div className="p-5">
+
+            {/* Body */}
+            <div className="premium-scroll flex-1 overflow-y-auto p-5">
               <div>
                 <label className={modalLabel}>Rejection Reason</label>
                 <textarea
-                  rows={3}
-                  placeholder="Reason for rejection (optional)"
+                  rows={6}
+                  placeholder="Reason for rejection (optional)…"
                   value={rejectComment}
                   onChange={(e) => setRejectComment(e.target.value)}
                   className={inputClasses}
                 />
+                <p className="mt-1.5 text-[11px] text-gray-400 dark:text-gray-500">
+                  The employee will see this comment on their leave request.
+                </p>
               </div>
-              <div className="mt-4 flex gap-3">
-                <button
-                  onClick={() => setRejectId(null)}
-                  className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleReject}
-                  className="flex-1 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl"
-                >
-                  Reject
-                </button>
-              </div>
+            </div>
+
+            {/* Sticky footer */}
+            <div className="sticky bottom-0 flex gap-3 border-t border-gray-200/70 bg-white/95 p-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95">
+              <button
+                onClick={() => setRejectId(null)}
+                disabled={rejecting}
+                className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={rejecting}
+                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-rose-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl hover:shadow-rose-500/40 disabled:opacity-60"
+              >
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                <span className="relative inline-flex items-center justify-center gap-2">
+                  {rejecting ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />}
+                  {rejecting ? "Rejecting…" : "Confirm Reject"}
+                </span>
+              </button>
             </div>
           </div>
         </div>
