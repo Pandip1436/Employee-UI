@@ -153,7 +153,7 @@ function StatCard({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{value}</p>
+          <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{value}</p>
           {sublabel && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{sublabel}</p>}
         </div>
         <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${tints[tint]} ring-1`}>
@@ -201,6 +201,7 @@ export default function Users() {
 
   // Create modal
   const [creating, setCreating] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState<"activate" | "deactivate" | "delete" | null>(null);
   const [cName, setCName] = useState("");
   const [cEmail, setCEmail] = useState("");
   const [cUserId, setCUserId] = useState("");
@@ -343,11 +344,12 @@ export default function Users() {
         : `Selected users will be ${action}d.`,
       confirmLabel: verb[0].toUpperCase() + verb.slice(1),
     }))) return;
+    setBulkBusy(action);
     try {
       await userApi.bulkAction(selectedWithoutMe, action);
       toast.success(`${selectedWithoutMe.length} user${selectedWithoutMe.length !== 1 ? "s" : ""} ${action}d`);
       fetchUsers();
-    } catch { /* interceptor */ }
+    } catch { /* interceptor */ } finally { setBulkBusy(null); }
   };
 
   const activeFilterCount = (statusFilter ? 1 : 0) + (search.trim() ? 1 : 0);
@@ -397,8 +399,10 @@ export default function Users() {
             onClick={() => setCreating(true)}
             className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 transition-all hover:shadow-xl hover:shadow-indigo-600/40 active:scale-[0.98]"
           >
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-            <UserPlus className="h-4 w-4" /> Create User
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+            <span className="relative inline-flex items-center gap-2">
+              <UserPlus className="h-4 w-4" /> Create User
+            </span>
           </button>
         </div>
       </div>
@@ -460,7 +464,7 @@ export default function Users() {
         <div className="relative overflow-hidden flex flex-wrap items-center gap-3 rounded-2xl border border-indigo-500/30 bg-gradient-to-r from-indigo-50 to-violet-50 dark:from-indigo-500/10 dark:to-violet-500/10 px-4 py-3 backdrop-blur-sm">
           <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-indigo-500/10 blur-2xl" />
           <span className="relative inline-flex items-center gap-2 text-sm font-bold text-indigo-700 dark:text-indigo-300">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-white text-xs font-bold">
+            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-indigo-600 text-xs font-mono font-bold tabular-nums text-white">
               {selectedArray.length}
             </span>
             user{selectedArray.length !== 1 ? "s" : ""} selected
@@ -468,21 +472,42 @@ export default function Users() {
           <div className="relative ml-auto flex flex-wrap gap-2">
             <button
               onClick={() => runBulk("activate")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/40 transition-all"
+              disabled={bulkBusy !== null}
+              className="group/b relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-emerald-500/30 transition-all hover:shadow-lg hover:shadow-emerald-500/40 disabled:opacity-60"
             >
-              <CheckCircle className="h-3.5 w-3.5" /> Activate
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover/b:translate-x-[300%]" />
+              <span className="relative inline-flex items-center gap-1.5">
+                {bulkBusy === "activate"
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <CheckCircle className="h-3.5 w-3.5" />}
+                {bulkBusy === "activate" ? "Activating…" : "Activate"}
+              </span>
             </button>
             <button
               onClick={() => runBulk("deactivate")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-amber-500/30 hover:shadow-lg hover:shadow-amber-500/40 transition-all"
+              disabled={bulkBusy !== null}
+              className="group/b relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-amber-500/30 transition-all hover:shadow-lg hover:shadow-amber-500/40 disabled:opacity-60"
             >
-              <XCircle className="h-3.5 w-3.5" /> Deactivate
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover/b:translate-x-[300%]" />
+              <span className="relative inline-flex items-center gap-1.5">
+                {bulkBusy === "deactivate"
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <XCircle className="h-3.5 w-3.5" />}
+                {bulkBusy === "deactivate" ? "Deactivating…" : "Deactivate"}
+              </span>
             </button>
             <button
               onClick={() => runBulk("delete")}
-              className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-br from-rose-500 to-red-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-500/30 hover:shadow-lg hover:shadow-rose-500/40 transition-all"
+              disabled={bulkBusy !== null}
+              className="group/b relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-br from-rose-500 to-red-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-md shadow-rose-500/30 transition-all hover:shadow-lg hover:shadow-rose-500/40 disabled:opacity-60"
             >
-              <Trash2 className="h-3.5 w-3.5" /> Delete
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover/b:translate-x-[300%]" />
+              <span className="relative inline-flex items-center gap-1.5">
+                {bulkBusy === "delete"
+                  ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  : <Trash2 className="h-3.5 w-3.5" />}
+                {bulkBusy === "delete" ? "Deleting…" : "Delete"}
+              </span>
             </button>
             <button
               onClick={() => setSelected(new Set())}
@@ -610,17 +635,19 @@ export default function Users() {
                         <button
                           onClick={() => openEdit(u)}
                           title="Edit"
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all"
+                          className="group/btn relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all"
                         >
-                          <Pencil className="h-3.5 w-3.5" />
+                          <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-indigo-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-indigo-400/20" />
+                          <Pencil className="relative h-3.5 w-3.5" />
                         </button>
                         <button
                           onClick={() => handleDelete(u._id)}
                           disabled={u._id === me?._id}
                           title={u._id === me?._id ? "Can't delete yourself" : "Delete"}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-300 dark:hover:border-rose-600/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-900 transition-all"
+                          className="group/btn relative inline-flex h-8 w-8 items-center justify-center overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-300 dark:hover:border-rose-600/40 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-white dark:disabled:hover:bg-gray-900 transition-all"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-rose-400/20" />
+                          <Trash2 className="relative h-3.5 w-3.5" />
                         </button>
                       </div>
                     </td>
@@ -717,10 +744,10 @@ export default function Users() {
       {/* ━━━ Pagination ━━━ */}
       {pagination && pagination.pages > 1 && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 backdrop-blur-sm px-5 py-3.5">
-          <p className="text-sm font-medium text-gray-500 dark:text-gray-400 tabular-nums">
-            Page <span className="font-bold text-gray-900 dark:text-white">{pagination.page}</span> of{" "}
-            <span className="font-bold text-gray-900 dark:text-white">{pagination.pages}</span>{" "}
-            <span className="text-xs">· {pagination.total} total</span>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            Page <span className="font-mono font-bold tabular-nums text-gray-900 dark:text-white">{pagination.page}</span> of{" "}
+            <span className="font-mono font-bold tabular-nums text-gray-900 dark:text-white">{pagination.pages}</span>{" "}
+            <span className="text-xs">· <span className="font-mono tabular-nums">{pagination.total}</span> total</span>
           </p>
           <div className="flex gap-2">
             <button
@@ -741,7 +768,7 @@ export default function Users() {
         </div>
       )}
 
-      {/* ━━━ Edit Modal ━━━ */}
+      {/* ━━━ Edit Drawer ━━━ */}
       {editing && (() => {
         const fieldCls = (err?: string) =>
           `${input} ${err ? "!border-rose-400 dark:!border-rose-500 focus:!border-rose-500 focus:!ring-rose-500/20" : ""}`;
@@ -751,9 +778,20 @@ export default function Users() {
         const E = ({ msg }: { msg?: string }) =>
           msg ? <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">{msg}</p> : null;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-            <div className="w-full max-w-md max-h-[92vh] overflow-hidden rounded-3xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
-              {/* Banner */}
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div
+              className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm animate-backdrop-fade"
+              onClick={() => !saving && closeEdit()}
+            />
+            <form
+              onSubmit={handleUpdate}
+              noValidate
+              className="relative flex h-full w-full max-w-md flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl animate-drawer-slide-right dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10"
+            >
+              {/* Status stripe */}
+              <div aria-hidden className={`absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${eActive ? "from-emerald-500 to-teal-600" : "from-rose-500 to-pink-600"}`} />
+
+              {/* Banner header */}
               <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 px-6 py-5 text-white">
                 <div aria-hidden className="pointer-events-none absolute inset-0">
                   <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-500/30 blur-3xl" />
@@ -769,13 +807,14 @@ export default function Users() {
                       <h2 className="text-lg font-bold leading-tight">{editing.name}</h2>
                     </div>
                   </div>
-                  <button onClick={closeEdit} className="rounded-lg p-2 text-indigo-200/80 hover:bg-white/10 hover:text-white transition-colors">
+                  <button type="button" onClick={closeEdit} disabled={saving} className="rounded-lg p-2 text-indigo-200/80 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
-              <form onSubmit={handleUpdate} noValidate className="overflow-y-auto px-6 py-5 space-y-4">
+              {/* Body */}
+              <div className="premium-scroll flex-1 overflow-y-auto px-6 py-5 space-y-4">
                 <div>
                   <L>Name</L>
                   <input value={eName} onChange={(e) => setEName(e.target.value)} className={fieldCls(eErrors.name)} />
@@ -856,26 +895,29 @@ export default function Users() {
                     <span className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform ${eActive ? "translate-x-5" : "translate-x-0.5"}`} />
                   </button>
                 </div>
+              </div>
 
-                <div className="flex gap-3 pt-2">
-                  <button type="button" onClick={closeEdit} className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="group relative flex-1 inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {/* Sticky footer */}
+              <div className="sticky bottom-0 flex gap-3 border-t border-gray-200/70 bg-white/95 p-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95">
+                <button type="button" onClick={closeEdit} disabled={saving} className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">Cancel</button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-600/30 transition-all hover:shadow-lg hover:shadow-indigo-600/40 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                  <span className="relative inline-flex items-center justify-center gap-2">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
                     {saving ? "Saving…" : "Update"}
-                  </button>
-                </div>
-              </form>
-            </div>
+                  </span>
+                </button>
+              </div>
+            </form>
           </div>
         );
       })()}
 
-      {/* ━━━ Create Modal ━━━ */}
+      {/* ━━━ Create Drawer ━━━ */}
       {creating && (() => {
         const fieldCls = (err?: string) =>
           `${input} ${err ? "!border-rose-400 dark:!border-rose-500 focus:!border-rose-500 focus:!ring-rose-500/20" : ""}`;
@@ -885,9 +927,20 @@ export default function Users() {
         const E = ({ msg }: { msg?: string }) =>
           msg ? <p className="mt-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">{msg}</p> : null;
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
-            <div className="w-full max-w-md max-h-[92vh] overflow-hidden rounded-3xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900 shadow-2xl flex flex-col">
-              {/* Banner */}
+          <div className="fixed inset-0 z-50 flex justify-end">
+            <div
+              className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm animate-backdrop-fade"
+              onClick={() => !saving && resetCreate()}
+            />
+            <form
+              onSubmit={handleCreate}
+              noValidate
+              className="relative flex h-full w-full max-w-md flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl animate-drawer-slide-right dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10"
+            >
+              {/* Status stripe */}
+              <div aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-indigo-500 to-purple-600" />
+
+              {/* Banner header */}
               <div className="relative overflow-hidden bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 px-6 py-5 text-white">
                 <div aria-hidden className="pointer-events-none absolute inset-0">
                   <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-indigo-500/30 blur-3xl" />
@@ -903,13 +956,38 @@ export default function Users() {
                       <h2 className="text-lg font-bold leading-tight">Create User</h2>
                     </div>
                   </div>
-                  <button onClick={resetCreate} className="rounded-lg p-2 text-indigo-200/80 hover:bg-white/10 hover:text-white transition-colors">
+                  <button type="button" onClick={resetCreate} disabled={saving} className="rounded-lg p-2 text-indigo-200/80 hover:bg-white/10 hover:text-white transition-colors disabled:opacity-50">
                     <X className="h-5 w-5" />
                   </button>
                 </div>
               </div>
 
-              <form onSubmit={handleCreate} noValidate className="overflow-y-auto px-6 py-5 space-y-4">
+              {/* Live preview */}
+              <div className="border-b border-gray-200/70 px-6 py-4 dark:border-gray-800/80">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">Live Preview</p>
+                <div className="flex items-center gap-3 rounded-xl border border-gray-200/70 bg-gray-50/40 px-3.5 py-3 dark:border-gray-800/60 dark:bg-gray-800/30">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white ring-2 ring-white shadow-md dark:ring-gray-900">
+                    {initials(cName.trim() || "?")}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-bold text-gray-900 dark:text-white">
+                      {cName.trim() || <span className="text-gray-400">Full name…</span>}
+                    </p>
+                    <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                      {cEmail.trim() || <span className="text-gray-400">email@…</span>}
+                      {cUserId.trim() && (
+                        <span className="ml-1 font-mono text-indigo-600 dark:text-indigo-400">· @{cUserId.trim()}</span>
+                      )}
+                    </p>
+                  </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-semibold text-violet-700 ring-1 ring-inset ring-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-400/20">
+                    <ShieldCheck className="h-3 w-3" /> Admin
+                  </span>
+                </div>
+              </div>
+
+              {/* Body */}
+              <div className="premium-scroll flex-1 overflow-y-auto px-6 py-5 space-y-4">
                 <div>
                   <L>Full name</L>
                   <input value={cName} onChange={(e) => setCName(e.target.value)} placeholder="Jane Doe" className={fieldCls(cErrors.name)} />
@@ -956,21 +1034,24 @@ export default function Users() {
                     · Full platform access
                   </p>
                 </div>
+              </div>
 
-                <div className="flex gap-3 pt-2">
-                  <button type="button" onClick={resetCreate} className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">Cancel</button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="group relative flex-1 inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  >
-                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                    {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {/* Sticky footer */}
+              <div className="sticky bottom-0 flex gap-3 border-t border-gray-200/70 bg-white/95 p-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95">
+                <button type="button" onClick={resetCreate} disabled={saving} className="flex-1 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-4 py-2.5 text-sm font-semibold text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50">Cancel</button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-600/30 transition-all hover:shadow-lg hover:shadow-indigo-600/40 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                  <span className="relative inline-flex items-center justify-center gap-2">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
                     {saving ? "Creating…" : "Create User"}
-                  </button>
-                </div>
-              </form>
-            </div>
+                  </span>
+                </button>
+              </div>
+            </form>
           </div>
         );
       })()}

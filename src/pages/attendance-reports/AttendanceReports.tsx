@@ -186,32 +186,6 @@ export default function AttendanceReports() {
               Attendance <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Reports</span>
             </h1>
             <p className="mt-1 text-sm text-indigo-200/70">Generate and export daily, weekly, or monthly attendance</p>
-
-            {/* Hero KPI chips */}
-            {emps.length > 0 && (
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                  <Users className="h-3.5 w-3.5 text-indigo-200" />
-                  <span className="text-indigo-200/80">Employees</span>
-                  <span className="font-mono font-semibold tabular-nums">{total}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-200" />
-                  <span className="text-emerald-200/90">Avg Present</span>
-                  <span className="font-mono font-semibold tabular-nums text-emerald-50">{avg((e) => e.presentDays)}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
-                  <AlertTriangle className="h-3.5 w-3.5 text-amber-200" />
-                  <span className="text-amber-200/90">Avg Late</span>
-                  <span className="font-mono font-semibold tabular-nums text-amber-50">{avg((e) => e.lateDays)}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
-                  <Clock className="h-3.5 w-3.5 text-sky-200" />
-                  <span className="text-sky-200/90">Avg Hours</span>
-                  <span className="font-mono font-semibold tabular-nums text-sky-50">{fmtHours(avg((e) => e.totalHours))}</span>
-                </span>
-              </div>
-            )}
           </div>
 
           {/* RIGHT: export actions */}

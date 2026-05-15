@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
 import {
   Clock, FileCheck, AlertCircle, ArrowRight, Plus, CalendarDays,
-  LayoutDashboard, ClipboardList, History, Sparkles, Timer,
+  ClipboardList, History, Sparkles, Timer,
   FileText,
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { WeeklyTimesheetData } from "../../types";
-import TimesheetDaily from "../timesheet-daily/TimesheetDaily";
-import TimesheetHistory from "../timesheet-history/TimesheetHistory";
 import { fmtHours } from "../../utils/format";
 
 const statusStyle: Record<string, { bg: string; dot: string; gradient: string }> = {
@@ -38,18 +36,9 @@ const cardCls =
   "rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]";
 const labelCls = "text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500";
 
-type Tab = "overview" | "daily" | "history";
-
-const tabs: { id: Tab; label: string; icon: typeof LayoutDashboard }[] = [
-  { id: "overview", label: "Overview", icon: LayoutDashboard },
-  { id: "daily", label: "Daily Log", icon: ClipboardList },
-  { id: "history", label: "History", icon: History },
-];
-
 export default function TimesheetHome() {
   const [current, setCurrent] = useState<WeeklyTimesheetData | null>(null);
   const [recent, setRecent] = useState<WeeklyTimesheetData[]>([]);
-  const [activeTab, setActiveTab] = useState<Tab>("overview");
 
   useEffect(() => {
     weeklyTimesheetApi.getCurrentWeek().then((r) => setCurrent(r.data.data ?? null)).catch(() => { /* interceptor */ });
@@ -173,6 +162,13 @@ export default function TimesheetHome() {
               Quick Log
             </Link>
             <Link
+              to="/timesheet/history"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-white/10 px-4 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 active:scale-[0.98]"
+            >
+              <History className="h-4 w-4" />
+              History
+            </Link>
+            <Link
               to="/timesheet/weekly"
               className="group inline-flex items-center justify-center gap-2 rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.98]"
             >
@@ -185,35 +181,6 @@ export default function TimesheetHome() {
         </div>
       </div>
 
-      {/* ── Tabs ── */}
-      <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-white/60 p-1 ring-1 ring-black/[0.02] backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-900/60 dark:ring-white/[0.03]">
-        {tabs.map((t) => {
-          const active = activeTab === t.id;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setActiveTab(t.id)}
-              className={`group relative inline-flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
-                active
-                  ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
-                  : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white"
-              }`}
-            >
-              <t.icon
-                className={`h-4 w-4 transition-colors ${
-                  active
-                    ? "text-indigo-600 dark:text-indigo-400"
-                    : "text-gray-400 group-hover:text-gray-600 dark:text-gray-500 dark:group-hover:text-gray-300"
-                }`}
-              />
-              <span>{t.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {activeTab === "overview" && (
-        <>
           {/* ── Current Week Summary ── */}
           <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
             {[
@@ -348,12 +315,12 @@ export default function TimesheetHome() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">Last 5 weekly timesheets</p>
                 </div>
               </div>
-              <button
-                onClick={() => setActiveTab("history")}
+              <Link
+                to="/timesheet/history"
                 className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-500/10"
               >
                 View all <ArrowRight className="h-3 w-3" />
-              </button>
+              </Link>
             </div>
 
             {recent.length === 0 ? (
@@ -405,11 +372,6 @@ export default function TimesheetHome() {
               </div>
             )}
           </div>
-        </>
-      )}
-
-      {activeTab === "daily" && <TimesheetDaily />}
-      {activeTab === "history" && <TimesheetHistory />}
     </div>
   );
 }

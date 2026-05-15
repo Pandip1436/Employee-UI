@@ -106,7 +106,7 @@ function StatCard({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white tabular-nums">{value}</p>
+          <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{value}</p>
           {sublabel && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{sublabel}</p>}
         </div>
         <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${tints[tint]} ring-1`}>
@@ -257,8 +257,8 @@ export default function AdminAuditLog() {
           </div>
           <div className="inline-flex items-center gap-2 rounded-2xl bg-white/10 px-4 py-2.5 text-sm font-bold text-white ring-1 ring-white/15 backdrop-blur-sm">
             <Database className="h-4 w-4 text-indigo-200" />
-            <span className="tabular-nums">{totalCount.toLocaleString()}</span>
-            <span className="text-indigo-200/80 font-medium">total records</span>
+            <span className="font-mono tabular-nums">{totalCount.toLocaleString()}</span>
+            <span className="font-medium text-indigo-200/80">total records</span>
           </div>
         </div>
       </div>
@@ -315,18 +315,38 @@ export default function AdminAuditLog() {
             onClick={() => setConfirmClear(true)}
             disabled={totalCount === 0}
             title={isFiltered ? "Clear filtered logs" : "Clear all logs"}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-rose-200 dark:border-rose-500/30 bg-rose-50 dark:bg-rose-500/10 px-3 py-2 text-sm font-semibold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-500/20 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            className="group relative inline-flex shrink-0 items-center gap-1.5 overflow-hidden rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/20"
           >
-            <Trash2 className="h-4 w-4" />
-            <span className="hidden sm:inline">{isFiltered ? "Clear filtered" : "Clear all"}</span>
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%] dark:via-rose-400/20" />
+            <span className="relative inline-flex items-center gap-1.5">
+              <Trash2 className="h-4 w-4" />
+              <span className="hidden sm:inline">{isFiltered ? "Clear filtered" : "Clear all"}</span>
+            </span>
           </button>
         </div>
       </div>
 
       {/* ━━━ Content ━━━ */}
       {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="h-10 w-10 animate-spin text-indigo-500" />
+        <div className="overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 backdrop-blur-sm">
+          <div className="flex items-center gap-2 border-b border-gray-200/70 px-5 py-3 text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:border-gray-800/60 dark:text-gray-500">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500" />
+            Loading audit trail…
+          </div>
+          <div className="divide-y divide-gray-100 dark:divide-gray-800/60">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-4 px-5 py-4">
+                <div className="h-9 w-9 shrink-0 rounded-full bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />
+                <div className="flex-1 space-y-2">
+                  <div className="h-3 w-1/3 rounded bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />
+                  <div className="h-2.5 w-1/4 rounded bg-gray-200/50 dark:bg-gray-800/50 animate-pulse" />
+                </div>
+                <div className="h-5 w-20 rounded-full bg-gray-200/70 dark:bg-gray-800/70 animate-pulse" />
+                <div className="hidden h-2.5 w-32 rounded bg-gray-200/50 dark:bg-gray-800/50 animate-pulse sm:block" />
+                <div className="h-7 w-7 shrink-0 rounded-lg bg-gray-200/50 dark:bg-gray-800/50 animate-pulse" />
+              </div>
+            ))}
+          </div>
         </div>
       ) : logs.length === 0 ? (
         <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 flex flex-col items-center justify-center py-20 text-center">
@@ -397,10 +417,10 @@ export default function AdminAuditLog() {
                         </td>
                         <td className="px-4 py-3.5 text-right whitespace-nowrap">
                           <div className="flex flex-col items-end">
-                            <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 tabular-nums">
+                            <span className="font-mono text-xs font-semibold tabular-nums text-gray-700 dark:text-gray-300">
                               {timeAgo(log.createdAt)}
                             </span>
-                            <span className="text-[11px] text-gray-400 dark:text-gray-500 tabular-nums" title={new Date(log.createdAt).toLocaleString()}>
+                            <span className="font-mono text-[11px] tabular-nums text-gray-400 dark:text-gray-500" title={new Date(log.createdAt).toLocaleString()}>
                               {formatDate(log.createdAt)}
                             </span>
                           </div>
@@ -409,9 +429,10 @@ export default function AdminAuditLog() {
                           <button
                             onClick={() => setDeleteTarget(log)}
                             title="Delete entry"
-                            className="rounded-lg p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors"
+                            className="group/btn relative overflow-hidden rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-rose-400/20" />
+                            <Trash2 className="relative h-4 w-4" />
                           </button>
                         </td>
                       </tr>
@@ -457,16 +478,17 @@ export default function AdminAuditLog() {
                   <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500 dark:text-gray-400">
                     <span className="inline-flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {timeAgo(log.createdAt)}
+                      <span className="font-mono tabular-nums">{timeAgo(log.createdAt)}</span>
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className="tabular-nums">{formatDate(log.createdAt)}</span>
+                      <span className="font-mono tabular-nums">{formatDate(log.createdAt)}</span>
                       <button
                         onClick={() => setDeleteTarget(log)}
                         title="Delete entry"
-                        className="rounded-md p-1 text-gray-400 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400 transition-colors"
+                        className="group/btn relative overflow-hidden rounded-md p-1 text-gray-400 transition-colors hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-rose-400/20" />
+                        <Trash2 className="relative h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
@@ -478,10 +500,10 @@ export default function AdminAuditLog() {
           {/* Pagination */}
           {totalPages > 1 && (
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 backdrop-blur-sm px-5 py-3.5">
-              <p className="text-sm font-medium text-gray-500 dark:text-gray-400 tabular-nums">
-                Page <span className="font-bold text-gray-900 dark:text-white">{page}</span> of{" "}
-                <span className="font-bold text-gray-900 dark:text-white">{totalPages}</span>{" "}
-                <span className="text-xs">· {totalCount.toLocaleString()} total</span>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                Page <span className="font-mono font-bold tabular-nums text-gray-900 dark:text-white">{page}</span> of{" "}
+                <span className="font-mono font-bold tabular-nums text-gray-900 dark:text-white">{totalPages}</span>{" "}
+                <span className="text-xs">· <span className="font-mono tabular-nums">{totalCount.toLocaleString()}</span> total</span>
               </p>
               <div className="flex gap-2">
                 <button

@@ -233,32 +233,6 @@ export default function AdminTimesheetExport() {
                 Export <span className="bg-gradient-to-r from-emerald-200 to-indigo-200 bg-clip-text text-transparent">Timesheets</span>
               </h1>
               <p className="mt-1 text-sm text-indigo-200/70">Filter and export timesheet data for payroll or reporting</p>
-
-              {/* Hero KPI chips */}
-              {!loading && data.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                    <BarChart3 className="h-3.5 w-3.5 text-indigo-200" />
-                    <span className="text-indigo-200/80">Records</span>
-                    <span className="font-mono font-semibold tabular-nums">{data.length}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                    <Users className="h-3.5 w-3.5 text-indigo-200" />
-                    <span className="text-indigo-200/80">Employees</span>
-                    <span className="font-mono font-semibold tabular-nums">{uniqueEmps}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
-                    <Clock className="h-3.5 w-3.5 text-emerald-200" />
-                    <span className="text-emerald-200/90">Total hours</span>
-                    <span className="font-mono font-semibold tabular-nums text-emerald-50">{fmtHours(totalHours)}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-amber-200" />
-                    <span className="text-amber-200/90">Approved</span>
-                    <span className="font-mono font-semibold tabular-nums text-amber-50">{approvedCount}</span>
-                  </span>
-                </div>
-              )}
             </div>
           </div>
 

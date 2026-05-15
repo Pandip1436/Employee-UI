@@ -13,12 +13,12 @@ import {
   RotateCcw,
   Sparkles,
   Users,
-  Layers,
   TrendingUp,
   Network,
 } from "lucide-react";
 import { adminSettingsApi } from "../../api/adminSettingsApi";
 import { userApi } from "../../api/userApi";
+import { useConfirm } from "../../context/ConfirmContext";
 import toast from "react-hot-toast";
 
 // ── Types ──
@@ -69,7 +69,7 @@ function StatCard({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{value}</p>
+          <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{value}</p>
           {sublabel && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{sublabel}</p>}
         </div>
         <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${tints[tint]} ring-1`}>
@@ -84,6 +84,7 @@ const input =
   "w-full rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-3.5 py-2 text-sm text-gray-900 dark:text-white placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all";
 
 export default function AdminOrgStructure() {
+  const confirm = useConfirm();
   const [tab, setTab] = useState<Tab>("departments");
   const [loading, setLoading] = useState(true);
   const [savingDept, setSavingDept] = useState(false);
@@ -172,13 +173,16 @@ export default function AdminOrgStructure() {
     setNewDeptDesc("");
   };
 
-  const deleteDept = (i: number) => {
+  const deleteDept = async (i: number) => {
     const d = departments[i];
     const count = userCounts[d.name] || 0;
-    const msg = count > 0
-      ? `Delete "${d.name}"? ${count} user${count !== 1 ? "s are" : " is"} assigned to it.`
-      : `Delete "${d.name}"?`;
-    if (!confirm(msg)) return;
+    if (!(await confirm({
+      title: `Delete "${d.name}"?`,
+      description: count > 0
+        ? `${count} user${count !== 1 ? "s are" : " is"} currently assigned to this department. Removing it doesn't unassign them — you may want to reassign first.`
+        : "This department will be removed from the list. Existing user assignments using this name will be orphaned.",
+      confirmLabel: "Delete",
+    }))) return;
     setDepartments((prev) => prev.filter((_, idx) => idx !== i));
   };
 
@@ -223,9 +227,13 @@ export default function AdminOrgStructure() {
     setNewDesigGrade("");
   };
 
-  const deleteDesig = (i: number) => {
+  const deleteDesig = async (i: number) => {
     const d = designations[i];
-    if (!confirm(`Delete designation "${d.name}"?`)) return;
+    if (!(await confirm({
+      title: `Delete designation "${d.name}"?`,
+      description: "This title, level, and grade will be removed from the list. Existing user assignments using this title will be orphaned.",
+      confirmLabel: "Delete",
+    }))) return;
     setDesignations((prev) => prev.filter((_, idx) => idx !== i));
   };
 
@@ -250,9 +258,14 @@ export default function AdminOrgStructure() {
     }
   };
 
-  const resetAll = () => {
+  const resetAll = async () => {
     if (!dirty) return;
-    if (!confirm("Discard all unsaved changes?")) return;
+    if (!(await confirm({
+      title: "Discard all unsaved changes?",
+      description: "Your edits to departments and designations will be reverted to the last saved state.",
+      confirmLabel: "Discard",
+      cancelLabel: "Keep editing",
+    }))) return;
     fetchAll();
   };
 
@@ -380,7 +393,7 @@ export default function AdminOrgStructure() {
               <Icon className="h-3.5 w-3.5" />
               {t.label}
               <span
-                className={`ml-1 rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
+                className={`ml-1 rounded-full px-1.5 py-0.5 font-mono text-[10px] font-bold tabular-nums ${
                   tab === t.key
                     ? "bg-white/25 text-white"
                     : "bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
@@ -433,9 +446,12 @@ export default function AdminOrgStructure() {
                 />
                 <button
                   onClick={addDept}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-emerald-500/30 hover:shadow-lg hover:shadow-emerald-500/40 transition-all"
+                  className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 px-4 py-2 text-sm font-bold text-white shadow-md shadow-emerald-500/30 transition-all hover:shadow-lg hover:shadow-emerald-500/40"
                 >
-                  <Plus className="h-4 w-4" /> Add
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                  <span className="relative inline-flex items-center gap-2">
+                    <Plus className="h-4 w-4" /> Add
+                  </span>
                 </button>
               </div>
             </div>
@@ -456,11 +472,13 @@ export default function AdminOrgStructure() {
             <button
               onClick={saveDepts}
               disabled={savingDept || !deptDirty}
-              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-600/30 transition-all hover:shadow-lg hover:shadow-indigo-600/40 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              {savingDept ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Departments
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+              <span className="relative inline-flex items-center gap-2">
+                {savingDept ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {savingDept ? "Saving…" : "Save Departments"}
+              </span>
             </button>
           </div>
 
@@ -498,7 +516,7 @@ export default function AdminOrgStructure() {
                       const count = userCounts[d.name] || 0;
                       return (
                         <tr key={idx} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/30 transition-colors">
-                          <td className="px-4 py-3 tabular-nums text-gray-400 dark:text-gray-500">{idx + 1}</td>
+                          <td className="px-4 py-3 font-mono tabular-nums text-gray-400 dark:text-gray-500">{idx + 1}</td>
                           <td className="px-4 py-3">
                             {editingDeptIdx === idx ? (
                               <input
@@ -536,22 +554,24 @@ export default function AdminOrgStructure() {
                           </td>
                           <td className="px-4 py-3">
                             <span
-                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums ring-1 ${
+                              className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ring-1 ${
                                 count > 0
                                   ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 ring-indigo-500/20"
                                   : "bg-gray-100 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 ring-gray-500/20"
                               }`}
                             >
-                              {count} {count === 1 ? "user" : "users"}
+                              <span className="font-mono tabular-nums">{count}</span>
+                              <span className="ml-1">{count === 1 ? "user" : "users"}</span>
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
                             <button
                               onClick={() => deleteDept(idx)}
-                              className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                              className="group/btn relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
                             >
-                              <Trash2 className="h-3.5 w-3.5" />
-                              Delete
+                              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-rose-400/20" />
+                              <Trash2 className="relative h-3.5 w-3.5" />
+                              <span className="relative">Delete</span>
                             </button>
                           </td>
                         </tr>
@@ -607,13 +627,16 @@ export default function AdminOrgStructure() {
                               : "bg-gray-100 dark:bg-gray-800/50 text-gray-500 ring-gray-500/20"
                           }`}
                         >
-                          {count} {count === 1 ? "user" : "users"}
+                          <span className="font-mono tabular-nums">{count}</span>
+                          <span className="ml-1">{count === 1 ? "user" : "users"}</span>
                         </span>
                         <button
                           onClick={() => deleteDept(idx)}
-                          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                          className="group/btn relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
                         >
-                          <Trash2 className="h-3.5 w-3.5" /> Delete
+                          <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-rose-400/20" />
+                          <Trash2 className="relative h-3.5 w-3.5" />
+                          <span className="relative">Delete</span>
                         </button>
                       </div>
                     </div>
@@ -671,9 +694,12 @@ export default function AdminOrgStructure() {
                 />
                 <button
                   onClick={addDesig}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 px-4 py-2 text-sm font-bold text-white shadow-md shadow-indigo-500/30 hover:shadow-lg hover:shadow-indigo-500/40 transition-all"
+                  className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-violet-700 px-4 py-2 text-sm font-bold text-white shadow-md shadow-indigo-500/30 transition-all hover:shadow-lg hover:shadow-indigo-500/40"
                 >
-                  <Plus className="h-4 w-4" /> Add
+                  <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                  <span className="relative inline-flex items-center gap-2">
+                    <Plus className="h-4 w-4" /> Add
+                  </span>
                 </button>
               </div>
             </div>
@@ -694,11 +720,13 @@ export default function AdminOrgStructure() {
             <button
               onClick={saveDesigs}
               disabled={savingDesig || !desigDirty}
-              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-md shadow-indigo-600/30 transition-all hover:shadow-lg hover:shadow-indigo-600/40 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              {savingDesig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Designations
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+              <span className="relative inline-flex items-center gap-2">
+                {savingDesig ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {savingDesig ? "Saving…" : "Save Designations"}
+              </span>
             </button>
           </div>
 
@@ -734,7 +762,7 @@ export default function AdminOrgStructure() {
                   <tbody className="divide-y divide-gray-100 dark:divide-gray-800/60">
                     {visibleDesigs.map(({ d, idx }) => (
                       <tr key={idx} className="group hover:bg-gray-50/80 dark:hover:bg-gray-800/30 transition-colors">
-                        <td className="px-4 py-3 tabular-nums text-gray-400 dark:text-gray-500">{idx + 1}</td>
+                        <td className="px-4 py-3 font-mono tabular-nums text-gray-400 dark:text-gray-500">{idx + 1}</td>
                         <td className="px-4 py-3">
                           {editingDesigIdx === idx ? (
                             <input
@@ -768,7 +796,7 @@ export default function AdminOrgStructure() {
                             min={0}
                             value={d.level}
                             onChange={(e) => setDesigAt(idx, { level: parseInt(e.target.value, 10) || 0 })}
-                            className="w-24 rounded-lg bg-indigo-50/60 dark:bg-indigo-500/10 px-2.5 py-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/20 outline-none focus:ring-2 focus:ring-indigo-500/30 tabular-nums"
+                            className="w-24 rounded-lg bg-indigo-50/60 dark:bg-indigo-500/10 px-2.5 py-1 font-mono text-xs font-bold tabular-nums text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/20 outline-none focus:ring-2 focus:ring-indigo-500/30"
                           />
                         </td>
                         <td className="px-4 py-3">
@@ -781,10 +809,11 @@ export default function AdminOrgStructure() {
                         <td className="px-4 py-3 text-right">
                           <button
                             onClick={() => deleteDesig(idx)}
-                            className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                            className="group/btn relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg px-2.5 py-1.5 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
                           >
-                            <Trash2 className="h-3.5 w-3.5" />
-                            Delete
+                            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-rose-400/20" />
+                            <Trash2 className="relative h-3.5 w-3.5" />
+                            <span className="relative">Delete</span>
                           </button>
                         </td>
                       </tr>
@@ -827,7 +856,7 @@ export default function AdminOrgStructure() {
                         min={0}
                         value={d.level}
                         onChange={(e) => setDesigAt(idx, { level: parseInt(e.target.value, 10) || 0 })}
-                        className="w-20 rounded-lg bg-indigo-50/60 dark:bg-indigo-500/10 px-2 py-1 text-xs font-bold text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/20 tabular-nums"
+                        className="w-20 rounded-lg bg-indigo-50/60 dark:bg-indigo-500/10 px-2 py-1 font-mono text-xs font-bold tabular-nums text-indigo-700 dark:text-indigo-300 ring-1 ring-indigo-500/20"
                       />
                       <label className="ml-3 text-[11px] font-semibold uppercase tracking-wider text-gray-500">Grade</label>
                       <input
@@ -839,9 +868,11 @@ export default function AdminOrgStructure() {
                     <div className="flex items-center justify-end">
                       <button
                         onClick={() => deleteDesig(idx)}
-                        className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
+                        className="group/btn relative inline-flex items-center gap-1.5 overflow-hidden rounded-lg px-2.5 py-1 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
                       >
-                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                        <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-rose-400/20" />
+                        <Trash2 className="relative h-3.5 w-3.5" />
+                        <span className="relative">Delete</span>
                       </button>
                     </div>
                   </div>
@@ -852,8 +883,6 @@ export default function AdminOrgStructure() {
         </div>
       )}
 
-      {/* silence unused symbol */}
-      <span className="hidden">{Layers.name}</span>
     </div>
   );
 }

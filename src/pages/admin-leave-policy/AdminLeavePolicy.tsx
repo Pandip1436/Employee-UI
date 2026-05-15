@@ -206,11 +206,13 @@ export default function AdminLeavePolicy() {
             <button
               onClick={handleSave}
               disabled={saving || !dirty}
-              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 transition-all hover:shadow-xl hover:shadow-indigo-600/40 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 transition-all hover:shadow-xl hover:shadow-indigo-600/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? "Saving…" : "Save Policy"}
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+              <span className="relative inline-flex items-center gap-2">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saving ? "Saving…" : "Save Policy"}
+              </span>
             </button>
           </div>
         </div>
@@ -223,7 +225,7 @@ export default function AdminLeavePolicy() {
           <div className="relative flex items-start justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Leave types</p>
-              <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{stats.types}</p>
+              <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{stats.types}</p>
               <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Configured policies</p>
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-500/0 ring-1 ring-indigo-500/20 text-indigo-600 dark:text-indigo-400">
@@ -236,7 +238,7 @@ export default function AdminLeavePolicy() {
           <div className="relative flex items-start justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total days/year</p>
-              <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white tabular-nums">{stats.totalDays}</p>
+              <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{stats.totalDays}</p>
               <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Combined annual quota</p>
             </div>
             <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/0 ring-1 ring-emerald-500/20 text-emerald-600 dark:text-emerald-400">
@@ -249,8 +251,8 @@ export default function AdminLeavePolicy() {
           <div className="relative flex items-start justify-between">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Carry-forward</p>
-              <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white tabular-nums">
-                {stats.carryEnabled} <span className="text-base text-gray-400">/ {stats.types}</span>
+              <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                {stats.carryEnabled} <span className="font-mono text-base tabular-nums text-gray-400">/ {stats.types}</span>
               </p>
               <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Types that roll over</p>
             </div>
@@ -273,7 +275,11 @@ export default function AdminLeavePolicy() {
             >
               <div
                 aria-hidden
-                className={`pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-gradient-to-br ${lt.gradient} opacity-10 blur-2xl group-hover:opacity-20 transition-opacity`}
+                className={`pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-gradient-to-br ${lt.gradient} opacity-10 blur-2xl transition-opacity duration-500 group-hover:opacity-30`}
+              />
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${lt.gradient}`}
               />
 
               <div className="relative">
@@ -287,7 +293,7 @@ export default function AdminLeavePolicy() {
                     <p className="text-[11px] text-gray-500 dark:text-gray-400">{lt.description}</p>
                   </div>
                   <div className={`hidden sm:flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold ring-1 ${lt.chipBg} ${lt.chipText} ${lt.ringColor}`}>
-                    <span className="tabular-nums">{data.total}</span>
+                    <span className="font-mono tabular-nums">{data.total}</span>
                     <span className="opacity-70">days</span>
                   </div>
                 </div>
@@ -304,7 +310,7 @@ export default function AdminLeavePolicy() {
                       max={365}
                       value={data.total}
                       onChange={(e) => updateField(lt.key, "total", parseInt(e.target.value, 10) || 0)}
-                      className={`${input} flex-1 tabular-nums`}
+                      className={`${input} flex-1 font-mono tabular-nums`}
                     />
                     {/* Quick chips */}
                     <div className="hidden sm:flex items-center gap-1">
@@ -384,9 +390,9 @@ export default function AdminLeavePolicy() {
                         onChange={(e) =>
                           updateField(lt.key, "maxCarry", parseInt(e.target.value, 10) || 0)
                         }
-                        className={`${input} flex-1 tabular-nums`}
+                        className={`${input} flex-1 font-mono tabular-nums`}
                       />
-                      <span className="text-[11px] text-gray-500 dark:text-gray-400 tabular-nums">
+                      <span className="font-mono text-[11px] tabular-nums text-gray-500 dark:text-gray-400">
                         of {data.total}
                       </span>
                     </div>
@@ -409,7 +415,7 @@ export default function AdminLeavePolicy() {
                 {/* Summary footer */}
                 <div className="mt-5 flex items-center justify-between rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 dark:from-gray-800/40 dark:to-gray-800/20 px-3.5 py-2.5 ring-1 ring-gray-200/60 dark:ring-gray-800/60">
                   <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    <span className="font-bold text-gray-900 dark:text-white tabular-nums">
+                    <span className="font-mono font-bold tabular-nums text-gray-900 dark:text-white">
                       {data.total}
                     </span>{" "}
                     days/year
@@ -417,7 +423,7 @@ export default function AdminLeavePolicy() {
                       <>
                         {" "}
                         ·{" "}
-                        <span className="font-bold text-gray-900 dark:text-white tabular-nums">
+                        <span className="font-mono font-bold tabular-nums text-gray-900 dark:text-white">
                           {data.maxCarry ?? 0}
                         </span>{" "}
                         carry-fwd
@@ -463,11 +469,13 @@ export default function AdminLeavePolicy() {
           <button
             onClick={handleSave}
             disabled={saving || !dirty}
-            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-5 py-2 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-indigo-600/30 transition-all hover:shadow-lg hover:shadow-indigo-600/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {saving ? "Saving…" : "Save Policy"}
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+            <span className="relative inline-flex items-center gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? "Saving…" : "Save Policy"}
+            </span>
           </button>
         </div>
       </div>

@@ -6,7 +6,7 @@ import {
   Grid3X3, FileCheck, AlertTriangle, Download,
   Megaphone, Award, ClipboardCheck, Building, ScrollText,
   MessageCircle, BookOpen,
-  NotebookPen, CalendarClock,
+  NotebookPen, CalendarClock, History,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useCompany } from "../context/CompanyContext";
@@ -39,6 +39,7 @@ const links: SidebarLink[] = [
   { to: "/timesheet", label: "Timesheet Home", icon: Clock, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
   { to: "/timesheet/daily", label: "Daily Works", icon: CalendarClock, roles: [],  section: "Timesheet" },
   { to: "/timesheet/weekly", label: "Weekly Grid", icon: Grid3X3, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
+  { to: "/timesheet/history", label: "History", icon: History, roles: [], excludeRoles: ["admin"], section: "Timesheet" },
   { to: "/timesheet/approvals", label: "Approvals", icon: FileCheck, roles: ["admin", "manager"], section: "Timesheet" },
   { to: "/admin/timesheet/missing", label: "Missing", icon: AlertTriangle, roles: ["admin"], section: "Timesheet" },
   { to: "/admin/timesheet/reports/overtime", label: "Overtime", icon: Clock, roles: ["admin"], section: "Timesheet" },

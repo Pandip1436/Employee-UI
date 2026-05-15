@@ -60,7 +60,7 @@ function StatCard({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{value}</p>
+          <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{value}</p>
           {sublabel && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{sublabel}</p>}
         </div>
         <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${tints[tint]} ring-1`}>
@@ -258,7 +258,10 @@ export default function SurveyResults() {
             onClick={exportCsv}
             className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl border border-white/15 bg-white/10 px-4 py-2.5 text-sm font-bold text-white backdrop-blur-sm transition-all hover:bg-white/15 active:scale-[0.98]"
           >
-            <Download className="h-4 w-4" /> Export CSV
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+            <span className="relative inline-flex items-center gap-2">
+              <Download className="h-4 w-4" /> Export CSV
+            </span>
           </button>
         </div>
       </div>
@@ -332,7 +335,7 @@ export default function SurveyResults() {
             >
               {/* Question header */}
               <div className="mb-5 flex items-start gap-3">
-                <span className="shrink-0 flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white shadow-md shadow-indigo-500/30">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 font-mono text-xs font-bold tabular-nums text-white shadow-md shadow-indigo-500/30 ring-1 ring-white/10">
                   {qi + 1}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -343,16 +346,19 @@ export default function SurveyResults() {
                     <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-800/70 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
                       {q.type === "mcq" ? "Multiple Choice" : q.type === "rating" ? "Rating" : "Open Text"}
                     </span>
-                    {result.type !== "text" && (
+                    {result.type === "mcq" && (
                       <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {result.type === "mcq"
-                          ? `${result.total} vote${result.total !== 1 ? "s" : ""}`
-                          : `${result.total} rating${result.total !== 1 ? "s" : ""}`}
+                        <span className="font-mono tabular-nums">{result.total}</span> vote{result.total !== 1 ? "s" : ""}
+                      </span>
+                    )}
+                    {result.type === "rating" && (
+                      <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                        <span className="font-mono tabular-nums">{result.total}</span> rating{result.total !== 1 ? "s" : ""}
                       </span>
                     )}
                     {result.type === "text" && (
                       <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {result.texts.length} response{result.texts.length !== 1 ? "s" : ""}
+                        <span className="font-mono tabular-nums">{result.texts.length}</span> response{result.texts.length !== 1 ? "s" : ""}
                       </span>
                     )}
                   </div>
@@ -370,8 +376,8 @@ export default function SurveyResults() {
                         <span className="font-bold text-amber-700 dark:text-amber-300">
                           {result.top.name}
                         </span>{" "}
-                        <span className="text-gray-500 dark:text-gray-400 font-normal">
-                          ({result.top.pct}%)
+                        <span className="font-normal text-gray-500 dark:text-gray-400">
+                          (<span className="font-mono tabular-nums">{result.top.pct}%</span>)
                         </span>
                       </span>
                     </div>
@@ -387,7 +393,7 @@ export default function SurveyResults() {
                             <span className="font-semibold text-gray-700 dark:text-gray-300">
                               {d.name}
                             </span>
-                            <span className="tabular-nums text-gray-500 dark:text-gray-400">
+                            <span className="font-mono tabular-nums text-gray-500 dark:text-gray-400">
                               {d.count} · {d.pct}%
                             </span>
                           </div>
@@ -437,7 +443,7 @@ export default function SurveyResults() {
                 <div className="grid gap-6 md:grid-cols-5">
                   {/* Big average */}
                   <div className="md:col-span-2 flex flex-col items-center justify-center rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-500/5 dark:to-orange-500/5 p-5 ring-1 ring-amber-500/20">
-                    <p className="text-5xl font-bold tracking-tight text-amber-600 dark:text-amber-400 tabular-nums">
+                    <p className="font-mono text-5xl font-bold tabular-nums tracking-tight text-amber-600 dark:text-amber-400">
                       {result.average.toFixed(1)}
                     </p>
                     <div className="mt-2 flex items-center gap-0.5">
@@ -453,7 +459,7 @@ export default function SurveyResults() {
                       ))}
                     </div>
                     <p className="mt-2 text-xs font-semibold text-gray-600 dark:text-gray-400">
-                      Avg from {result.total} rating{result.total !== 1 ? "s" : ""}
+                      Avg from <span className="font-mono tabular-nums">{result.total}</span> rating{result.total !== 1 ? "s" : ""}
                     </p>
                   </div>
 
@@ -474,7 +480,7 @@ export default function SurveyResults() {
                               style={{ width: `${pct}%` }}
                             />
                           </div>
-                          <span className="w-14 text-right tabular-nums font-medium text-gray-500 dark:text-gray-400">
+                          <span className="w-14 text-right font-mono font-medium tabular-nums text-gray-500 dark:text-gray-400">
                             {count} · {Math.round(pct)}%
                           </span>
                         </div>

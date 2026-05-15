@@ -147,6 +147,26 @@ export default function AdminCompanySettings() {
   const [notificationEmails, setNotificationEmails] = useState<string[]>([]);
   const [emailDraft, setEmailDraft] = useState("");
   const [origSig, setOrigSig] = useState<string>("");
+  const [nowTick, setNowTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNowTick(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const tzClock = useMemo(() => {
+    try {
+      return new Intl.DateTimeFormat("en-US", {
+        timeZone: timezone,
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }).format(new Date(nowTick));
+    } catch {
+      return "—";
+    }
+  }, [timezone, nowTick]);
 
   const fetchSettings = () => {
     setLoading(true);
@@ -338,9 +358,11 @@ export default function AdminCompanySettings() {
               disabled={saving || !dirty}
               className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow-lg shadow-indigo-600/30 transition-all hover:shadow-xl hover:shadow-indigo-600/40 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              {saving ? "Saving…" : "Save Settings"}
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+              <span className="relative inline-flex items-center gap-2">
+                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                {saving ? "Saving…" : "Save Settings"}
+              </span>
             </button>
           </div>
         </div>
@@ -385,6 +407,15 @@ export default function AdminCompanySettings() {
               <option key={tz} value={tz}>{tz}</option>
             ))}
           </select>
+          <div className="mt-3 flex items-center justify-between rounded-lg border border-emerald-200/70 bg-emerald-50/60 px-3 py-2 dark:border-emerald-500/20 dark:bg-emerald-500/10">
+            <div className="flex items-center gap-2 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300">
+              <Clock className="h-3.5 w-3.5" />
+              Local time
+            </div>
+            <span className="font-mono text-base font-bold tabular-nums tracking-tight text-emerald-700 dark:text-emerald-300">
+              {tzClock}
+            </span>
+          </div>
           <p className="mt-2 text-[11px] text-gray-500 dark:text-gray-400">
             Affects attendance, reports, and scheduled tasks across the platform.
           </p>
@@ -419,7 +450,7 @@ export default function AdminCompanySettings() {
                 max={240}
                 value={graceMinutes}
                 onChange={(e) => setGraceMinutes(Math.max(0, Math.min(240, Number(e.target.value) || 0)))}
-                className={input}
+                className={`${input} font-mono tabular-nums`}
               />
             </div>
             <div>
@@ -473,6 +504,41 @@ export default function AdminCompanySettings() {
           subtitle="Select your organization's working days"
           tint="violet"
         >
+          {/* Presets */}
+          {(() => {
+            const PRESETS = [
+              { label: "Mon–Fri", days: ["Mon", "Tue", "Wed", "Thu", "Fri"] },
+              { label: "Mon–Sat", days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] },
+              { label: "All week", days: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] },
+            ];
+            const eq = (a: string[], b: string[]) => [...a].sort().join(",") === [...b].sort().join(",");
+            return (
+              <div className="mb-3 flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Preset</span>
+                {PRESETS.map((p) => {
+                  const active = eq(workingDays, p.days);
+                  return (
+                    <button
+                      key={p.label}
+                      type="button"
+                      onClick={() => setWorkingDays(p.days)}
+                      className={`group/p relative inline-flex items-center gap-1 overflow-hidden rounded-lg px-2.5 py-1 text-[11px] font-semibold transition-all ${
+                        active
+                          ? "bg-gradient-to-r from-violet-500 to-purple-600 text-white shadow-sm ring-1 ring-white/10"
+                          : "border border-gray-200 bg-white text-gray-600 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-violet-500/40 dark:hover:bg-violet-500/10 dark:hover:text-violet-300"
+                      }`}
+                    >
+                      {!active && (
+                        <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-violet-200/40 to-transparent transition-transform duration-700 ease-out group-hover/p:translate-x-[300%] dark:via-violet-400/20" />
+                      )}
+                      <span className="relative">{p.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           <div className="flex flex-wrap gap-1.5">
             {DAYS.map((d) => {
               const active = workingDays.includes(d.key);
@@ -499,7 +565,7 @@ export default function AdminCompanySettings() {
           </div>
           <div className="mt-3 flex items-center justify-between">
             <p className="text-[11px] text-gray-500 dark:text-gray-400">
-              <span className="font-bold text-gray-900 dark:text-white tabular-nums">
+              <span className="font-mono font-bold tabular-nums text-gray-900 dark:text-white">
                 {workingDays.length}
               </span>{" "}
               day{workingDays.length !== 1 ? "s" : ""} per week
@@ -522,6 +588,18 @@ export default function AdminCompanySettings() {
           tint="indigo"
           className="md:col-span-2"
         >
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/20">
+              <Mail className="h-3 w-3" />
+              <span className="font-mono tabular-nums">{notificationEmails.length}</span> recipient{notificationEmails.length !== 1 ? "s" : ""}
+            </span>
+            {notificationEmails.length === 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20">
+                <AlertCircle className="h-3 w-3" />
+                Falls back to <code className="font-mono">ADMIN_EMAILS</code>
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-2 rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 px-2.5 py-2 focus-within:border-indigo-500 focus-within:ring-2 focus-within:ring-indigo-500/20 transition-all">
             {notificationEmails.map((e) => (
               <span
@@ -587,11 +665,13 @@ export default function AdminCompanySettings() {
           <button
             onClick={handleSave}
             disabled={saving || !dirty}
-            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-5 py-2 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-indigo-600/30 transition-all hover:shadow-lg hover:shadow-indigo-600/40 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {saving ? "Saving…" : "Save Settings"}
+            <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+            <span className="relative inline-flex items-center gap-2">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+              {saving ? "Saving…" : "Save Settings"}
+            </span>
           </button>
         </div>
       </div>

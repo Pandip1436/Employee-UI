@@ -130,7 +130,7 @@ function StatCard({
       <div className="relative flex items-start justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{value}</p>
+          <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{value}</p>
           {sublabel && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{sublabel}</p>}
         </div>
         <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${tints[tint]} ring-1`}>
@@ -382,11 +382,11 @@ export default function AdminAnnouncements() {
             <div className="flex items-center gap-3 text-[11px] font-semibold text-gray-500 dark:text-gray-400">
               <span className="inline-flex items-center gap-1">
                 <Heart className="h-3.5 w-3.5 text-rose-400" />
-                <span className="tabular-nums">{totalReactions}</span>
+                <span className="font-mono tabular-nums">{totalReactions}</span>
               </span>
               <span className="inline-flex items-center gap-1">
                 <MessageCircle className="h-3.5 w-3.5 text-indigo-400" />
-                <span className="tabular-nums">{a.comments?.length || 0}</span>
+                <span className="font-mono tabular-nums">{a.comments?.length || 0}</span>
               </span>
             </div>
             <div className="flex items-center gap-1.5">
@@ -394,33 +394,38 @@ export default function AdminAnnouncements() {
                 onClick={() => handleTogglePin(a)}
                 disabled={busy}
                 title={a.isPinned ? "Unpin" : "Pin to top"}
-                className={`inline-flex h-9 w-9 items-center justify-center rounded-xl border transition-all disabled:opacity-50 ${
+                className={`group/btn relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border transition-all disabled:opacity-50 ${
                   a.isPinned
                     ? "border-amber-300 dark:border-amber-500/40 bg-amber-50 dark:bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-100 dark:hover:bg-amber-500/20"
                     : "border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-amber-50 dark:hover:bg-amber-500/10 hover:text-amber-600 dark:hover:text-amber-400 hover:border-amber-300 dark:hover:border-amber-500/40"
                 }`}
               >
-                {busy ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : a.isPinned ? (
-                  <PinOff className="h-4 w-4" />
-                ) : (
-                  <Pin className="h-4 w-4" />
-                )}
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-amber-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-amber-400/20" />
+                <span className="relative">
+                  {busy ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : a.isPinned ? (
+                    <PinOff className="h-4 w-4" />
+                  ) : (
+                    <Pin className="h-4 w-4" />
+                  )}
+                </span>
               </button>
               <button
                 onClick={() => openEdit(a)}
                 title="Edit"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all"
+                className="group/btn relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-300 dark:hover:border-indigo-600/40 transition-all"
               >
-                <Pencil className="h-4 w-4" />
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-indigo-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-indigo-400/20" />
+                <Pencil className="relative h-4 w-4" />
               </button>
               <button
                 onClick={() => handleDelete(a._id, a.title)}
                 title="Delete"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-300 dark:hover:border-rose-600/40 transition-all"
+                className="group/btn relative inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-600 dark:hover:text-rose-400 hover:border-rose-300 dark:hover:border-rose-600/40 transition-all"
               >
-                <Trash2 className="h-4 w-4" />
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover/btn:translate-x-[300%] dark:via-rose-400/20" />
+                <Trash2 className="relative h-4 w-4" />
               </button>
             </div>
           </div>
@@ -612,17 +617,70 @@ export default function AdminAnnouncements() {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-indigo-700 px-5 py-2 text-sm font-bold text-white shadow-md shadow-indigo-600/30 hover:shadow-lg hover:shadow-indigo-600/40 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2 text-sm font-bold text-white shadow-md shadow-indigo-600/30 transition-all hover:shadow-lg hover:shadow-indigo-600/40 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-                {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-                {editingId ? "Update" : "Publish"}
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                <span className="relative inline-flex items-center gap-2">
+                  {saving
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : (editingId ? <Pencil className="h-4 w-4" /> : <Megaphone className="h-4 w-4" />)}
+                  {saving
+                    ? (editingId ? "Updating…" : "Publishing…")
+                    : (editingId ? "Update" : "Publish")}
+                </span>
               </button>
             </div>
           </div>
         }
       >
-        <div className="px-6 py-5 space-y-5">
+        <div className="premium-scroll px-6 py-5 space-y-5">
+              {/* Live preview */}
+              {(() => {
+                const cfg = CAT_CFG[form.category] || CAT_CFG.all;
+                const tagsArr = form.tags.split(",").map((t) => t.trim()).filter(Boolean);
+                return (
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">Live Preview</p>
+                    <div className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 backdrop-blur-sm">
+                      <div
+                        aria-hidden
+                        className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${cfg.accent} blur-2xl opacity-60`}
+                      />
+                      <div className="relative p-4">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}>
+                            <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                            {cfg.label}
+                          </span>
+                          {form.isPinned && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/90 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm shadow-amber-500/30">
+                              <Pin className="h-3 w-3 fill-white" /> Pinned
+                            </span>
+                          )}
+                          <span className="text-[11px] text-gray-500 dark:text-gray-400">Just now</span>
+                        </div>
+                        <h3 className="truncate text-base font-bold tracking-tight text-gray-900 dark:text-white">
+                          {form.title || <span className="text-gray-400">Announcement title…</span>}
+                        </h3>
+                        {form.content && (
+                          <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-gray-500 dark:text-gray-400">{form.content}</p>
+                        )}
+                        {tagsArr.length > 0 && (
+                          <div className="mt-2.5 flex flex-wrap gap-1.5">
+                            {tagsArr.map((tag) => (
+                              <span key={tag} className="inline-flex items-center gap-1 rounded-md bg-gray-100 dark:bg-gray-800/70 px-2 py-0.5 text-[11px] font-semibold text-gray-600 dark:text-gray-400">
+                                <Hash className="h-3 w-3" />
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               {/* Title */}
               <div>
                 <label className="block text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5">

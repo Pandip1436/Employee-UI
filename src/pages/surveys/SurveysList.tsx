@@ -15,6 +15,7 @@ import {
   X,
   Activity,
   FileCheck2,
+  Send,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { surveyApi, type SurveyData } from "../../api/surveyApi";
@@ -50,7 +51,7 @@ function StatCard({
           <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
             {label}
           </p>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{value}</p>
+          <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{value}</p>
           {sublabel && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{sublabel}</p>}
         </div>
         <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${tints[tint]} ring-1`}>
@@ -230,8 +231,10 @@ export default function SurveysList() {
               onClick={() => setShowCreate(true)}
               className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 px-5 py-3 text-sm font-bold text-gray-900 shadow-lg shadow-teal-500/30 transition-all hover:shadow-xl hover:shadow-teal-500/40 active:scale-[0.98]"
             >
-              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              <Plus className="h-4 w-4" /> Create Survey
+              <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+              <span className="relative inline-flex items-center gap-2">
+                <Plus className="h-4 w-4" /> Create Survey
+              </span>
             </button>
           )}
         </div>
@@ -276,186 +279,227 @@ export default function SurveysList() {
         </div>
       </div>
 
-      {/* ━━━ Create Form ━━━ */}
+      {/* ━━━ Create Drawer ━━━ */}
       {showCreate && isAdmin && (
-        <form
-          onSubmit={handleCreate}
-          className="relative overflow-hidden rounded-2xl border border-teal-500/20 bg-gradient-to-br from-white to-teal-50/50 dark:from-gray-900 dark:to-teal-950/30 shadow-xl"
-        >
-          <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-teal-500/20 blur-3xl" />
-          <div className="relative p-6 sm:p-7 space-y-5">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg shadow-teal-500/30">
-                  <Plus className="h-5 w-5 text-white" />
+        <div className="fixed inset-0 z-50 flex justify-end">
+          <div
+            className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm animate-backdrop-fade"
+            onClick={() => {
+              if (creating) return;
+              setShowCreate(false);
+              resetCreate();
+            }}
+          />
+          <form
+            onSubmit={handleCreate}
+            className="relative flex h-full w-full max-w-xl flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl animate-drawer-slide-right dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10"
+          >
+            {/* Status stripe */}
+            <div aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-teal-500 to-cyan-600" />
+
+            {/* Header */}
+            <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-teal-50 to-white p-5 dark:border-gray-800/80 dark:from-teal-500/10 dark:to-gray-900">
+              <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-28 w-28 rounded-full bg-teal-400/25 blur-2xl" />
+              <div aria-hidden className="pointer-events-none absolute -bottom-8 left-1/3 h-24 w-24 rounded-full bg-cyan-400/20 blur-2xl" />
+              <div className="relative flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 shadow-lg shadow-teal-500/30 ring-1 ring-white/10">
+                    <ClipboardList className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-teal-700/80 dark:text-teal-300/80">New survey</p>
+                    <h2 className="text-base font-bold text-gray-900 dark:text-white">Publish a survey</h2>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">Craft questions and publish to the team</p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowCreate(false);
+                    resetCreate();
+                  }}
+                  disabled={creating}
+                  aria-label="Close"
+                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 disabled:opacity-50 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="premium-scroll flex-1 space-y-5 overflow-y-auto p-5">
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">Title</label>
+                  <input
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="e.g. Q2 Engagement Pulse"
+                    required
+                    className={input}
+                  />
                 </div>
                 <div>
-                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">New Survey</h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Craft a survey and publish it to the team</p>
+                  <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">Description (optional)</label>
+                  <textarea
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="What is this survey about? Help respondents understand the intent."
+                    rows={2}
+                    className={`${input} min-h-[72px] resize-y`}
+                  />
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowCreate(false);
-                  resetCreate();
-                }}
-                className="rounded-lg p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
 
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Title</label>
-                <input
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  placeholder="e.g. Q2 Engagement Pulse"
-                  required
-                  className={input}
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Description (optional)</label>
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="What is this survey about? Help respondents understand the intent."
-                  rows={2}
-                  className={`${input} min-h-[72px] resize-y`}
-                />
-              </div>
-            </div>
-
-            {/* Questions */}
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <p className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                  Questions ({questions.length})
-                </p>
-              </div>
-              {questions.map((q, qi) => (
-                <div
-                  key={qi}
-                  className="rounded-xl border border-gray-200 dark:border-gray-700/80 bg-white/80 dark:bg-gray-900/60 p-4 space-y-3"
-                >
-                  <div className="flex items-start gap-2">
-                    <span className="mt-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 text-xs font-bold text-white">
-                      {qi + 1}
-                    </span>
-                    <input
-                      value={q.text}
-                      onChange={(e) => updateQuestion(qi, "text", e.target.value)}
-                      placeholder="Question text"
-                      required
-                      className={input}
-                    />
-                    {questions.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeQuestion(qi)}
-                        className="mt-1 rounded-lg p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition-colors"
-                        title="Remove question"
-                      >
-                        <Trash className="h-4 w-4" />
-                      </button>
+              {/* Questions */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-400 dark:text-gray-500">
+                    Questions (<span className="font-mono tabular-nums">{questions.length}</span>)
+                  </p>
+                </div>
+                {questions.map((q, qi) => (
+                  <div
+                    key={qi}
+                    className="space-y-3 rounded-xl border border-gray-200 bg-white/80 p-4 dark:border-gray-700/80 dark:bg-gray-900/60"
+                  >
+                    <div className="flex items-start gap-2">
+                      <span className="mt-2 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 font-mono text-xs font-bold tabular-nums text-white shadow-sm ring-1 ring-white/10">
+                        {qi + 1}
+                      </span>
+                      <input
+                        value={q.text}
+                        onChange={(e) => updateQuestion(qi, "text", e.target.value)}
+                        placeholder="Question text"
+                        required
+                        className={input}
+                      />
+                      {questions.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeQuestion(qi)}
+                          className="mt-1 rounded-lg p-2 text-rose-500 transition-colors hover:bg-rose-50 dark:hover:bg-rose-500/10"
+                          title="Remove question"
+                        >
+                          <Trash className="h-4 w-4" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 pl-9">
+                      {(["mcq", "rating", "text"] as const).map((t) => (
+                        <button
+                          key={t}
+                          type="button"
+                          onClick={() => updateQuestion(qi, "type", t)}
+                          className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
+                            q.type === t
+                              ? "bg-teal-500/10 text-teal-700 ring-1 ring-teal-500/30 dark:text-teal-300"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800/60 dark:text-gray-400 dark:hover:bg-gray-700/60"
+                          }`}
+                        >
+                          {t === "mcq" ? "Multiple Choice" : t === "rating" ? "Rating 1–5" : "Free Text"}
+                        </button>
+                      ))}
+                    </div>
+                    {q.type === "mcq" && q.options && (
+                      <div className="space-y-2 pl-9">
+                        {q.options.map((opt, oi) => (
+                          <div key={oi} className="flex items-center gap-2">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gray-300 font-mono text-[10px] font-bold text-gray-500 dark:border-gray-700">
+                              {String.fromCharCode(65 + oi)}
+                            </span>
+                            <input
+                              value={opt}
+                              onChange={(e) => updateOption(qi, oi, e.target.value)}
+                              placeholder={`Option ${oi + 1}`}
+                              required
+                              className={input}
+                            />
+                            {q.options!.length > 2 && (
+                              <button
+                                type="button"
+                                onClick={() => removeOption(qi, oi)}
+                                className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => addOption(qi)}
+                          className="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 hover:text-teal-700 dark:text-teal-400 dark:hover:text-teal-300"
+                        >
+                          <Plus className="h-3 w-3" /> Add option
+                        </button>
+                      </div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 pl-9">
-                    {(["mcq", "rating", "text"] as const).map((t) => (
-                      <button
-                        key={t}
-                        type="button"
-                        onClick={() => updateQuestion(qi, "type", t)}
-                        className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                          q.type === t
-                            ? "bg-teal-500/10 text-teal-700 dark:text-teal-300 ring-1 ring-teal-500/30"
-                            : "bg-gray-100 dark:bg-gray-800/60 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700/60"
-                        }`}
-                      >
-                        {t === "mcq" ? "Multiple Choice" : t === "rating" ? "Rating 1–5" : "Free Text"}
-                      </button>
-                    ))}
-                  </div>
-                  {q.type === "mcq" && q.options && (
-                    <div className="space-y-2 pl-9">
-                      {q.options.map((opt, oi) => (
-                        <div key={oi} className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-gray-300 dark:border-gray-700 text-[10px] font-bold text-gray-500">
-                            {String.fromCharCode(65 + oi)}
-                          </span>
-                          <input
-                            value={opt}
-                            onChange={(e) => updateOption(qi, oi, e.target.value)}
-                            placeholder={`Option ${oi + 1}`}
-                            required
-                            className={input}
-                          />
-                          {q.options!.length > 2 && (
-                            <button
-                              type="button"
-                              onClick={() => removeOption(qi, oi)}
-                              className="rounded-lg p-1.5 text-gray-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10 transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addOption(qi)}
-                        className="inline-flex items-center gap-1 text-xs font-semibold text-teal-600 dark:text-teal-400 hover:text-teal-700 dark:hover:text-teal-300"
-                      >
-                        <Plus className="h-3 w-3" /> Add option
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addQuestion}
-                className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-teal-500/40 bg-teal-50/50 dark:bg-teal-500/5 px-4 py-2 text-sm font-semibold text-teal-700 dark:text-teal-300 hover:bg-teal-50 dark:hover:bg-teal-500/10 transition-colors"
-              >
-                <Plus className="h-4 w-4" /> Add question
-              </button>
+                ))}
+                <button
+                  type="button"
+                  onClick={addQuestion}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-teal-500/40 bg-teal-50/50 px-4 py-2 text-sm font-semibold text-teal-700 transition-colors hover:bg-teal-50 dark:bg-teal-500/5 dark:text-teal-300 dark:hover:bg-teal-500/10"
+                >
+                  <Plus className="h-4 w-4" /> Add question
+                </button>
+              </div>
             </div>
 
-            <div className="flex items-center gap-3 border-t border-gray-200/70 dark:border-gray-800/60 pt-4">
-              <button
-                type="submit"
-                disabled={creating}
-                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-teal-500/30 hover:shadow-xl hover:shadow-teal-500/40 disabled:opacity-50 transition-all"
-              >
-                {creating ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                ) : (
-                  <Plus className="h-4 w-4" />
-                )}
-                {creating ? "Publishing…" : "Publish Survey"}
-              </button>
+            {/* Sticky footer */}
+            <div className="sticky bottom-0 flex gap-3 border-t border-gray-200/70 bg-white/95 p-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95">
               <button
                 type="button"
                 onClick={() => {
                   setShowCreate(false);
                   resetCreate();
                 }}
-                className="rounded-xl px-5 py-2.5 text-sm font-semibold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                disabled={creating}
+                className="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700/80 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
               >
                 Cancel
               </button>
+              <button
+                type="submit"
+                disabled={creating}
+                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 px-4 py-2.5 text-sm font-bold text-white shadow-lg shadow-teal-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl hover:shadow-teal-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                <span className="relative inline-flex items-center justify-center gap-2">
+                  {creating ? (
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  {creating ? "Publishing…" : "Publish Survey"}
+                </span>
+              </button>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       )}
 
       {/* ━━━ Survey Grid ━━━ */}
       {loading ? (
-        <div className="flex justify-center py-20">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-teal-500/20 border-t-teal-500" />
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="rounded-2xl border border-gray-200/70 bg-white p-5 dark:border-gray-800/80 dark:bg-gray-900/80">
+              <div className="mb-3 flex gap-1.5">
+                <div className="h-5 w-16 animate-pulse rounded-full bg-gray-200/70 dark:bg-gray-800/70" />
+                <div className="h-5 w-20 animate-pulse rounded-full bg-gray-200/50 dark:bg-gray-800/50" />
+              </div>
+              <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200/70 dark:bg-gray-800/70" />
+              <div className="mt-2 h-3 w-full animate-pulse rounded bg-gray-200/50 dark:bg-gray-800/50" />
+              <div className="mt-1 h-3 w-5/6 animate-pulse rounded bg-gray-200/50 dark:bg-gray-800/50" />
+              <div className="mt-4 h-5 w-24 animate-pulse rounded-lg bg-gray-200/70 dark:bg-gray-800/70" />
+              <div className="mt-4 flex items-center justify-between border-t border-gray-200/70 pt-3 dark:border-gray-800/60">
+                <div className="h-3 w-24 animate-pulse rounded bg-gray-200/50 dark:bg-gray-800/50" />
+                <div className="h-4 w-4 animate-pulse rounded bg-gray-200/50 dark:bg-gray-800/50" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 flex flex-col items-center justify-center py-20 text-center">
@@ -533,7 +577,7 @@ export default function SurveysList() {
                 {/* Question count */}
                 <div className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-gray-50 dark:bg-gray-800/60 px-2.5 py-1 text-[11px] font-semibold text-gray-600 dark:text-gray-400">
                   <ListChecks className="h-3.5 w-3.5" />
-                  {survey.questions.length} question{survey.questions.length !== 1 ? "s" : ""}
+                  <span className="font-mono tabular-nums">{survey.questions.length}</span> question{survey.questions.length !== 1 ? "s" : ""}
                 </div>
               </div>
 
@@ -558,17 +602,20 @@ export default function SurveysList() {
                       <Link
                         to={`/admin/surveys/${survey._id}/results`}
                         onClick={(e) => e.stopPropagation()}
-                        className="inline-flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-2 py-1 text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-500/20 transition-colors"
+                        className="group/r relative inline-flex items-center gap-1 overflow-hidden rounded-lg bg-indigo-50 px-2 py-1 text-[11px] font-semibold text-indigo-600 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/10 dark:text-indigo-400 dark:hover:bg-indigo-500/20"
                         title="View results"
                       >
-                        <BarChart3 className="h-3 w-3" /> Results
+                        <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-indigo-200/40 to-transparent transition-transform duration-700 ease-out group-hover/r:translate-x-[300%] dark:via-indigo-400/20" />
+                        <BarChart3 className="relative h-3 w-3" />
+                        <span className="relative">Results</span>
                       </Link>
                       <button
                         onClick={(e) => handleDelete(e, survey._id, survey.title)}
                         title="Delete survey"
-                        className="rounded-lg p-1.5 text-gray-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 hover:text-rose-500 transition-colors"
+                        className="group/d relative overflow-hidden rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-500/10"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-rose-200/40 to-transparent transition-transform duration-700 ease-out group-hover/d:translate-x-[300%] dark:via-rose-400/20" />
+                        <Trash2 className="relative h-3.5 w-3.5" />
                       </button>
                     </>
                   )}
