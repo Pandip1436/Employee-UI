@@ -9,7 +9,6 @@ import {
   CalendarDays,
   AlertCircle,
   X,
-  Sparkles,
   CheckCircle2,
   CalendarRange,
   Palmtree,
@@ -480,78 +479,54 @@ export default function AttendanceCalendar() {
 
   return (
     <div className="space-y-6">
-      {/* ── Hero ── */}
-      <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 p-6 text-white shadow-xl ring-1 ring-white/10 sm:p-8 dark:from-black dark:via-indigo-950 dark:to-black">
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-indigo-500/30 blur-3xl" />
-          <div className="absolute -bottom-16 -left-20 h-64 w-64 rounded-full bg-fuchsia-500/20 blur-3xl" />
-          <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-sky-500/15 blur-3xl" />
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-100 dark:bg-indigo-500/20">
+            <CalendarDays className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+              Attendance Calendar
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Your daily attendance, leaves, and holidays at a glance
+            </p>
+          </div>
         </div>
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 opacity-[0.08]"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, rgba(255,255,255,0.3) 1px, transparent 1px), linear-gradient(to bottom, rgba(255,255,255,0.3) 1px, transparent 1px)",
-            backgroundSize: "36px 36px",
-            maskImage: "radial-gradient(ellipse at center, black 40%, transparent 75%)",
-          }}
-        />
-        <div className="relative flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex min-w-0 items-start gap-4">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <CalendarDays className="h-10 w-10 text-indigo-200" />
-            </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                Monthly overview
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Attendance{" "}
-                <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">
-                  Calendar
-                </span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">
-                Your daily attendance, leaves, and holidays at a glance
-              </p>
-            </div>
-          </div>
 
-          {/* Month nav embedded in hero */}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={prevMonth}
-              className="rounded-xl bg-white/10 p-2.5 text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 active:scale-[0.97]"
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <div className="min-w-[160px] rounded-xl bg-white/10 px-4 py-2 text-center ring-1 ring-white/15 backdrop-blur-sm">
-              <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-200/70">
-                {isCurrentMonth ? "This month" : "Viewing"}
-              </p>
-              <p className="font-mono text-sm font-bold tabular-nums tracking-tight">
-                {fmtMonth(year, month)}
-              </p>
-            </div>
-            <button
-              onClick={nextMonth}
-              className="rounded-xl bg-white/10 p-2.5 text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 active:scale-[0.97]"
-              aria-label="Next month"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-            <button
-              onClick={goToToday}
-              disabled={isCurrentMonth}
-              className="ml-1 inline-flex items-center gap-1.5 rounded-xl bg-white px-3.5 py-2.5 text-xs font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <CalendarDays className="h-3.5 w-3.5 text-indigo-600" />
-              Today
-            </button>
+        {/* Month nav */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={prevMonth}
+            className="rounded-xl border border-gray-200 bg-white p-2.5 text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            aria-label="Previous month"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="min-w-[160px] rounded-xl border border-gray-200 bg-white px-4 py-2 text-center dark:border-gray-700 dark:bg-gray-900">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+              {isCurrentMonth ? "This month" : "Viewing"}
+            </p>
+            <p className="font-mono text-sm font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+              {fmtMonth(year, month)}
+            </p>
           </div>
+          <button
+            onClick={nextMonth}
+            className="rounded-xl border border-gray-200 bg-white p-2.5 text-gray-600 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-300 dark:hover:bg-gray-800"
+            aria-label="Next month"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            onClick={goToToday}
+            disabled={isCurrentMonth}
+            className="ml-1 inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+            Today
+          </button>
         </div>
       </div>
 
