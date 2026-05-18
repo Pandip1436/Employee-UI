@@ -310,36 +310,82 @@ export default function AdminMissingTimesheet() {
       </div>
 
       {/* ── Summary KPIs ── */}
-      {!loading && (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className={`${cardCls} group relative overflow-hidden p-4`}>
-            <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-rose-400/25 opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25" />
-            <div className="flex items-start justify-between">
-              <div>
-                <p className={labelCls}>Missing Submissions</p>
-                <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{missingCount}</p>
+      {!loading && (() => {
+        const isHealthy = missingCount === 0;
+        const statusGradient = isHealthy ? "from-emerald-500 to-teal-600" : "from-amber-500 to-orange-600";
+        const statusRing = isHealthy ? "shadow-emerald-500/30" : "shadow-amber-500/30";
+        const tiles = [
+          {
+            label: "Missing Submissions",
+            value: String(missingCount),
+            sub: missingCount === 0 ? "Everyone submitted" : `${missingCount} ${missingCount === 1 ? "person" : "people"} pending`,
+            icon: UserX,
+            gradient: "from-rose-500 to-pink-600",
+            ringColor: "shadow-rose-500/30",
+            toneChip: missingCount > 0
+              ? "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/25"
+              : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+            toneLabel: missingCount > 0 ? "Follow up" : "All here",
+            renderValue: (v: string) => (
+              <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{v}</p>
+            ),
+          },
+          {
+            label: "Status",
+            value: isHealthy ? "All Clear" : "Action Needed",
+            sub: isHealthy ? "Team is on track" : "Send reminders or follow up",
+            icon: isHealthy ? CheckCircle2 : AlertCircle,
+            gradient: statusGradient,
+            ringColor: statusRing,
+            renderValue: (v: string) => (
+              <p className={`mt-2 text-xl font-bold tracking-tight ${isHealthy ? "text-emerald-700 dark:text-emerald-400" : "text-amber-700 dark:text-amber-400"}`}>{v}</p>
+            ),
+          },
+        ];
+        return (
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {tiles.map((c) => (
+              <div
+                key={c.label}
+                className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+              >
+                <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${c.gradient}`} />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${c.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+                />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${c.gradient} opacity-[0.04] blur-2xl`}
+                />
+                <div className="relative p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className={labelCls}>{c.label}</p>
+                      {c.renderValue(c.value)}
+                    </div>
+                    <div
+                      className={`relative shrink-0 rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg ${c.ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                    >
+                      <c.icon className="h-5 w-5 text-white" strokeWidth={2.5} />
+                      <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{c.sub}</p>
+                    {c.toneLabel && c.toneChip && (
+                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset ${c.toneChip}`}>
+                        <span className="h-1 w-1 rounded-full bg-current" />
+                        {c.toneLabel}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10">
-                <UserX className="h-5 w-5 text-white" />
-              </div>
-            </div>
+            ))}
           </div>
-          <div className={`${cardCls} group relative overflow-hidden p-4`}>
-            <div aria-hidden className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25 ${missingCount > 0 ? "bg-amber-400/25" : "bg-emerald-400/25"}`} />
-            <div className="flex items-start justify-between">
-              <div>
-                <p className={labelCls}>Status</p>
-                <p className={`mt-2 text-xl font-bold tracking-tight ${missingCount > 0 ? "text-amber-700 dark:text-amber-400" : "text-emerald-700 dark:text-emerald-400"}`}>
-                  {missingCount > 0 ? "Action Needed" : "All Clear"}
-                </p>
-              </div>
-              <div className={`rounded-xl bg-gradient-to-br ${missingCount > 0 ? "from-amber-500 to-orange-600" : "from-emerald-500 to-teal-600"} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                {missingCount > 0 ? <AlertCircle className="h-5 w-5 text-white" /> : <CheckCircle2 className="h-5 w-5 text-white" />}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Match counter when filters are active */}
       {!loading && missing.length > 0 && (search || deptFilter) && (

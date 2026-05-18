@@ -58,42 +58,35 @@ interface SettingCardProps {
   className?: string;
 }
 
-const TINTS: Record<string, { glow: string; iconBg: string; iconText: string; ring: string }> = {
-  indigo: {
-    glow: "from-indigo-500/20 to-indigo-500/0",
-    iconBg: "bg-gradient-to-br from-indigo-500 to-purple-600",
-    iconText: "text-white",
-    ring: "ring-indigo-500/20",
-  },
-  emerald: {
-    glow: "from-emerald-500/20 to-emerald-500/0",
-    iconBg: "bg-gradient-to-br from-emerald-500 to-teal-600",
-    iconText: "text-white",
-    ring: "ring-emerald-500/20",
-  },
-  amber: {
-    glow: "from-amber-500/20 to-amber-500/0",
-    iconBg: "bg-gradient-to-br from-amber-500 to-orange-600",
-    iconText: "text-white",
-    ring: "ring-amber-500/20",
-  },
-  violet: {
-    glow: "from-violet-500/20 to-violet-500/0",
-    iconBg: "bg-gradient-to-br from-violet-500 to-purple-600",
-    iconText: "text-white",
-    ring: "ring-violet-500/20",
-  },
+const TINTS: Record<string, { grad: string; ringShadow: string }> = {
+  indigo: { grad: "from-indigo-500 to-purple-600", ringShadow: "shadow-indigo-500/30" },
+  emerald: { grad: "from-emerald-500 to-teal-600", ringShadow: "shadow-emerald-500/30" },
+  amber: { grad: "from-amber-500 to-orange-600", ringShadow: "shadow-amber-500/30" },
+  violet: { grad: "from-violet-500 to-purple-600", ringShadow: "shadow-violet-500/30" },
 };
 
 function SettingCard({ icon: Icon, title, subtitle, tint, children, className = "" }: SettingCardProps) {
   const t = TINTS[tint];
   return (
-    <div className={`group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-5 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-black/30 ${className}`}>
-      <div aria-hidden className={`pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-gradient-to-br ${t.glow} blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
-      <div className="relative">
+    <div
+      className={`group relative overflow-hidden rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06] ${className}`}
+    >
+      <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${t.grad}`} />
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${t.grad} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+      />
+      <div
+        aria-hidden
+        className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${t.grad} opacity-[0.04] blur-2xl`}
+      />
+      <div className="relative p-5">
         <div className="mb-4 flex items-center gap-3">
-          <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${t.iconBg} shadow-md ring-1 ${t.ring}`}>
-            <Icon className={`h-5 w-5 ${t.iconText}`} strokeWidth={2.25} />
+          <div
+            className={`relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${t.grad} shadow-lg ${t.ringShadow} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+          >
+            <Icon className="h-5 w-5 text-white" strokeWidth={2.5} />
+            <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
           </div>
           <div className="min-w-0">
             <h3 className="text-sm font-bold text-gray-900 dark:text-white">{title}</h3>

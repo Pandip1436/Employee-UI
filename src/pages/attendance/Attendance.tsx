@@ -500,9 +500,11 @@ export default function Attendance() {
       {/* ── Premium "My Attendance" Stats ── */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* This Week — day strip + weekly progress */}
-        <div className={`${cardCls} relative overflow-hidden p-5`}>
-          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 opacity-[0.08] blur-2xl" />
-          <div className="relative">
+        <div className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}>
+          <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-indigo-500 to-purple-600" />
+          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110" />
+          <div aria-hidden className="pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 opacity-[0.04] blur-2xl" />
+          <div className="relative p-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className={labelCls}>This Week</p>
@@ -513,8 +515,9 @@ export default function Attendance() {
                   of <span className="font-semibold text-gray-700 dark:text-gray-300">40h</span> target
                 </p>
               </div>
-              <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/20 ring-1 ring-white/10">
-                <Timer className="h-4 w-4 text-white" />
+              <div className="relative rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105">
+                <Timer className="h-4 w-4 text-white" strokeWidth={2.5} />
+                <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
             </div>
 
@@ -569,9 +572,11 @@ export default function Attendance() {
         </div>
 
         {/* This Month — stacked status bar + counts */}
-        <div className={`${cardCls} relative overflow-hidden p-5`}>
-          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 opacity-[0.08] blur-2xl" />
-          <div className="relative">
+        <div className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}>
+          <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-emerald-500 to-teal-600" />
+          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110" />
+          <div aria-hidden className="pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 opacity-[0.04] blur-2xl" />
+          <div className="relative p-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className={labelCls}>This Month</p>
@@ -585,8 +590,9 @@ export default function Attendance() {
                   days logged
                 </p>
               </div>
-              <div className="rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-2.5 shadow-lg shadow-emerald-500/20 ring-1 ring-white/10">
-                <Calendar className="h-4 w-4 text-white" />
+              <div className="relative rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 p-2.5 shadow-lg shadow-emerald-500/30 ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105">
+                <Calendar className="h-4 w-4 text-white" strokeWidth={2.5} />
+                <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
             </div>
 
@@ -635,9 +641,11 @@ export default function Attendance() {
         </div>
 
         {/* Streak */}
-        <div className={`${cardCls} relative overflow-hidden p-5`}>
-          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 opacity-[0.12] blur-2xl" />
-          <div className="relative">
+        <div className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}>
+          <span aria-hidden className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-amber-500 to-orange-600" />
+          <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 opacity-[0.12] blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110" />
+          <div aria-hidden className="pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 opacity-[0.04] blur-2xl" />
+          <div className="relative p-5">
             <div className="flex items-start justify-between">
               <div>
                 <p className={labelCls}>On-time streak</p>
@@ -657,11 +665,12 @@ export default function Attendance() {
                         : "Unstoppable!"}
                 </p>
               </div>
-              <div className="relative rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 p-2.5 shadow-lg shadow-amber-500/30 ring-1 ring-white/10">
-                <Flame className="h-4 w-4 text-white" />
+              <div className="relative rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 p-2.5 shadow-lg shadow-amber-500/30 ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105">
+                <Flame className="h-4 w-4 text-white" strokeWidth={2.5} />
                 {streak >= 5 && (
                   <span aria-hidden className="absolute inset-0 rounded-xl bg-amber-400/30 blur-md" />
                 )}
+                <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
             </div>
 

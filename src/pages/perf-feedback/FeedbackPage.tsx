@@ -81,23 +81,29 @@ function StatCard({
   sublabel?: string;
   tint: "indigo" | "emerald" | "amber" | "rose";
 }) {
-  const tints: Record<string, string> = {
-    indigo: "from-indigo-500/20 to-indigo-500/0 text-indigo-600 dark:text-indigo-400 ring-indigo-500/20",
-    emerald: "from-emerald-500/20 to-emerald-500/0 text-emerald-600 dark:text-emerald-400 ring-emerald-500/20",
-    amber: "from-amber-500/20 to-amber-500/0 text-amber-600 dark:text-amber-400 ring-amber-500/20",
-    rose: "from-rose-500/20 to-rose-500/0 text-rose-600 dark:text-rose-400 ring-rose-500/20",
+  const themes: Record<string, { grad: string; ring: string }> = {
+    indigo: { grad: "from-indigo-500 to-purple-600", ring: "shadow-indigo-500/30" },
+    emerald: { grad: "from-emerald-500 to-teal-600", ring: "shadow-emerald-500/30" },
+    amber: { grad: "from-amber-500 to-orange-600", ring: "shadow-amber-500/30" },
+    rose: { grad: "from-rose-500 to-pink-600", ring: "shadow-rose-500/30" },
   };
+  const t = themes[tint];
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-4 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-black/30">
-      <div className={`absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br ${tints[tint]} blur-2xl opacity-60 group-hover:opacity-100 transition-opacity`} />
-      <div className="relative flex items-start justify-between">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
-          <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{value}</p>
-          {sublabel && <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">{sublabel}</p>}
-        </div>
-        <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${tints[tint]} ring-1`}>
-          <Icon className="h-4 w-4" strokeWidth={2.25} />
+    <div className="group relative overflow-hidden rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]">
+      <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${t.grad}`} />
+      <div aria-hidden className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${t.grad} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`} />
+      <div aria-hidden className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${t.grad} opacity-[0.04] blur-2xl`} />
+      <div className="relative p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
+            <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{value}</p>
+            {sublabel && <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{sublabel}</p>}
+          </div>
+          <div className={`relative shrink-0 rounded-xl bg-gradient-to-br ${t.grad} p-2.5 shadow-lg ${t.ring} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}>
+            <Icon className="h-4 w-4 text-white" strokeWidth={2.5} />
+            <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+          </div>
         </div>
       </div>
     </div>

@@ -212,24 +212,45 @@ export default function TimesheetHome() {
                 icon: AlertCircle,
                 gradient: current?.status === "draft" ? "from-amber-500 to-orange-600" : "from-emerald-500 to-teal-600",
               },
-            ].map((s) => (
-              <div key={s.label} className={`${cardCls} group relative overflow-hidden p-5`}>
+            ].map((s) => {
+              const ringColor =
+                /indigo/.test(s.gradient) ? "shadow-indigo-500/30" :
+                /emerald/.test(s.gradient) ? "shadow-emerald-500/30" :
+                /amber/.test(s.gradient) ? "shadow-amber-500/30" :
+                /sky/.test(s.gradient) ? "shadow-sky-500/30" :
+                /rose/.test(s.gradient) ? "shadow-rose-500/30" :
+                /orange/.test(s.gradient) ? "shadow-orange-500/30" :
+                "shadow-gray-500/30";
+              return (
                 <div
-                  aria-hidden
-                  className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${s.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`}
-                />
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0">
-                    <p className={labelCls}>{s.label}</p>
-                    <p className="mt-2 font-mono text-2xl font-bold capitalize tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
-                  </div>
-                  <div className={`rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                    <s.icon className="h-4 w-4 text-white" />
+                  key={s.label}
+                  className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+                >
+                  <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${s.gradient}`} />
+                  <div
+                    aria-hidden
+                    className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${s.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+                  />
+                  <div
+                    aria-hidden
+                    className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${s.gradient} opacity-[0.04] blur-2xl`}
+                  />
+                  <div className="relative p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className={labelCls}>{s.label}</p>
+                        <p className="mt-2 font-mono text-2xl font-bold capitalize tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+                      </div>
+                      <div className={`relative shrink-0 rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg ${ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}>
+                        <s.icon className="h-4 w-4 text-white" strokeWidth={2.5} />
+                        <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                      </div>
+                    </div>
+                    <p className="mt-3 truncate text-xs text-gray-500 dark:text-gray-400">{s.sub}</p>
                   </div>
                 </div>
-                <p className="mt-3 truncate text-xs text-gray-500 dark:text-gray-400">{s.sub}</p>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {/* ── This Week — day strip ── */}

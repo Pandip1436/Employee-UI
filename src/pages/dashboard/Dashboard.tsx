@@ -262,29 +262,113 @@ export default function Dashboard() {
 
       {/* ── KPI Tiles ── */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        {[
-          { label: "Attendance", value: `${kpis?.attendancePercent || 0}%`, sub: `${kpis?.attendanceDays || 0} days this month`, icon: CheckCircle, gradient: "from-emerald-500 to-teal-600" },
-          { label: "Hours Logged", value: fmtHours(kpis?.totalHoursThisMonth ?? 0), sub: "This month", icon: Clock, gradient: "from-indigo-500 to-purple-600" },
-          { label: "Leaves Taken", value: `${kpis?.leaveDaysTaken || 0}`, sub: "This month", icon: CalendarDays, gradient: "from-amber-500 to-orange-600" },
-          { label: "Pending TS", value: `${kpis?.pendingTimesheets || 0}`, sub: "Draft sheets", icon: AlertCircle, gradient: "from-rose-500 to-pink-600" },
-        ].map((s) => (
-          <div key={s.label} className={`${card} group relative overflow-hidden`}>
+        {(() => {
+          const attPct = kpis?.attendancePercent || 0;
+          const tiles = [
+            {
+              label: "Attendance",
+              value: `${attPct}%`,
+              sub: `${kpis?.attendanceDays || 0} days this month`,
+              icon: CheckCircle,
+              gradient: "from-emerald-500 to-teal-600",
+              ringColor: "shadow-emerald-500/30",
+              progress: attPct, // 0-100, drives the bottom progress bar
+              tone:
+                attPct >= 90 ? "text-emerald-600 dark:text-emerald-400" :
+                attPct >= 75 ? "text-amber-600 dark:text-amber-400" :
+                "text-rose-600 dark:text-rose-400",
+              toneChip:
+                attPct >= 90 ? "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25" :
+                attPct >= 75 ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25" :
+                "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/25",
+              toneLabel: attPct >= 90 ? "Excellent" : attPct >= 75 ? "On track" : "Needs focus",
+            },
+            {
+              label: "Hours Logged",
+              value: fmtHours(kpis?.totalHoursThisMonth ?? 0),
+              sub: "This month",
+              icon: Clock,
+              gradient: "from-indigo-500 to-purple-600",
+              ringColor: "shadow-indigo-500/30",
+            },
+            {
+              label: "Leaves Taken",
+              value: `${kpis?.leaveDaysTaken || 0}`,
+              sub: "This month",
+              icon: CalendarDays,
+              gradient: "from-amber-500 to-orange-600",
+              ringColor: "shadow-amber-500/30",
+            },
+            {
+              label: "Pending TS",
+              value: `${kpis?.pendingTimesheets || 0}`,
+              sub: "Draft sheets",
+              icon: AlertCircle,
+              gradient: "from-rose-500 to-pink-600",
+              ringColor: "shadow-rose-500/30",
+              toneChip: (kpis?.pendingTimesheets || 0) > 0
+                ? "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/25"
+                : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+              toneLabel: (kpis?.pendingTimesheets || 0) > 0 ? "Action needed" : "All clear",
+            },
+          ];
+          return tiles.map((s) => (
             <div
-              aria-hidden
-              className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${s.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-20`}
-            />
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className={sectionLabel}>{s.label}</p>
-                <p className="mt-2.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
-              </div>
-              <div className={`rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                <s.icon className="h-5 w-5 text-white" />
+              key={s.label}
+              className={`${card} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+            >
+              {/* Top gradient stripe */}
+              <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${s.gradient}`} />
+
+              {/* Decorative halos */}
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${s.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+              />
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${s.gradient} opacity-[0.04] blur-2xl`}
+              />
+
+              <div className="relative p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className={sectionLabel}>{s.label}</p>
+                    <p className="mt-2.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                      {s.value}
+                    </p>
+                  </div>
+                  <div
+                    className={`relative shrink-0 rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg ${s.ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                  >
+                    <s.icon className="h-5 w-5 text-white" strokeWidth={2.5} />
+                    <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </div>
+                </div>
+
+                <div className="mt-3 flex items-center justify-between gap-2">
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">{s.sub}</p>
+                  {s.toneLabel && s.toneChip && (
+                    <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset ${s.toneChip}`}>
+                      <span className={`h-1 w-1 rounded-full bg-current ${s.tone || ""}`} />
+                      {s.toneLabel}
+                    </span>
+                  )}
+                </div>
+
+                {/* Progress bar (only for Attendance) */}
+                {typeof s.progress === "number" && (
+                  <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div
+                      className={`h-full rounded-full bg-gradient-to-r ${s.gradient} transition-[width] duration-700`}
+                      style={{ width: `${Math.min(100, s.progress)}%` }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
-            <p className="mt-3 truncate text-xs text-gray-500 dark:text-gray-400">{s.sub}</p>
-          </div>
-        ))}
+          ));
+        })()}
       </div>
 
       {/* ── This Week strip (Mon–Fri attendance pattern) ── */}

@@ -552,21 +552,49 @@ function AdminDailyView() {
       {/* ── Summary KPIs ── */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {[
-          { label: "Employees with entries", value: String(totals.employees), icon: Users, gradient: "from-indigo-500 to-purple-600" },
-          { label: "Total hours logged", value: fmtHours(totals.totalHours), icon: Clock, gradient: "from-emerald-500 to-teal-600" },
+          {
+            label: "Employees with entries",
+            value: String(totals.employees),
+            sub: totals.employees === 1 ? "logged today" : "logged today",
+            icon: Users,
+            gradient: "from-indigo-500 to-purple-600",
+            ringColor: "shadow-indigo-500/30",
+          },
+          {
+            label: "Total hours logged",
+            value: fmtHours(totals.totalHours),
+            sub: totals.employees > 0 ? `${fmtHours(totals.totalHours / totals.employees)} avg per employee` : "No entries",
+            icon: Clock,
+            gradient: "from-emerald-500 to-teal-600",
+            ringColor: "shadow-emerald-500/30",
+          },
         ].map((s) => (
-          <div key={s.label} className={`${cardCls} group relative overflow-hidden p-5`}>
+          <div
+            key={s.label}
+            className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+          >
+            <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${s.gradient}`} />
             <div
               aria-hidden
-              className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${s.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`}
+              className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${s.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
             />
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className={labelCls}>{s.label}</p>
-                <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
-              </div>
-              <div className={`rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                <s.icon className="h-5 w-5 text-white" />
+            <div
+              aria-hidden
+              className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${s.gradient} opacity-[0.04] blur-2xl`}
+            />
+            <div className="relative p-5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className={labelCls}>{s.label}</p>
+                  <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+                  <p className="mt-1 truncate text-[11px] text-gray-500 dark:text-gray-400">{s.sub}</p>
+                </div>
+                <div
+                  className={`relative shrink-0 rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg ${s.ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                >
+                  <s.icon className="h-5 w-5 text-white" strokeWidth={2.5} />
+                  <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
               </div>
             </div>
           </div>

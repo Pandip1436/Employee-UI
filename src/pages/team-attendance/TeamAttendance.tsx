@@ -458,33 +458,127 @@ export default function TeamAttendance() {
       </div>
 
       {/* ── Summary Tiles ── */}
-      {summary && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-          {[
-            { label: "Logged In", value: summary.clockedIn, icon: UserCheck, gradient: "from-emerald-500 to-teal-600" },
-            { label: "Late Login", value: summary.late, icon: AlertTriangle, gradient: "from-amber-500 to-orange-600" },
-            { label: "Logged Out", value: summary.clockedOut, icon: CheckCircle2, gradient: "from-sky-500 to-blue-600" },
-            { label: "Not Marked", value: summary.notMarked, icon: Clock, gradient: "from-gray-500 to-gray-600" },
-            { label: "Absent", value: absentCount, icon: UserX, gradient: "from-rose-500 to-pink-600" },
-          ].map((c) => (
-            <div key={c.label} className={`${cardCls} group relative overflow-hidden p-4`}>
+      {summary && (() => {
+        const totalTeam = summary.clockedIn + summary.clockedOut + summary.late + summary.notMarked + absentCount;
+        const presentPct = totalTeam > 0 ? Math.round(((summary.clockedIn + summary.clockedOut + summary.late) / totalTeam) * 100) : 0;
+        const tiles = [
+          {
+            label: "Logged In",
+            value: summary.clockedIn,
+            sub: totalTeam > 0 ? `${Math.round((summary.clockedIn / totalTeam) * 100)}% of team` : "—",
+            icon: UserCheck,
+            gradient: "from-emerald-500 to-teal-600",
+            ringColor: "shadow-emerald-500/30",
+            progress: presentPct,
+            toneChip:
+              presentPct >= 80 ? "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25" :
+              presentPct >= 50 ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25" :
+              "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/25",
+            toneLabel: presentPct >= 80 ? "Strong" : presentPct >= 50 ? "Steady" : "Low",
+          },
+          {
+            label: "Late Login",
+            value: summary.late,
+            sub: summary.late === 0 ? "All punctual" : `${summary.late} late ${summary.late === 1 ? "arrival" : "arrivals"}`,
+            icon: AlertTriangle,
+            gradient: "from-amber-500 to-orange-600",
+            ringColor: "shadow-amber-500/30",
+            toneChip: summary.late > 0
+              ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25"
+              : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+            toneLabel: summary.late > 0 ? "Watch list" : "On time",
+          },
+          {
+            label: "Logged Out",
+            value: summary.clockedOut,
+            sub: summary.clockedOut === 0 ? "Still active" : "Shift complete",
+            icon: CheckCircle2,
+            gradient: "from-sky-500 to-blue-600",
+            ringColor: "shadow-sky-500/30",
+          },
+          {
+            label: "Not Marked",
+            value: summary.notMarked,
+            sub: summary.notMarked === 0 ? "Everyone checked in" : "Pending check-in",
+            icon: Clock,
+            gradient: "from-gray-500 to-gray-600",
+            ringColor: "shadow-gray-500/30",
+            toneChip: summary.notMarked > 0
+              ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25"
+              : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+            toneLabel: summary.notMarked > 0 ? "Awaiting" : "Complete",
+          },
+          {
+            label: "Absent",
+            value: absentCount,
+            sub: absentCount === 0 ? "Full attendance" : `${absentCount} ${absentCount === 1 ? "member" : "members"} out`,
+            icon: UserX,
+            gradient: "from-rose-500 to-pink-600",
+            ringColor: "shadow-rose-500/30",
+            toneChip: absentCount > 0
+              ? "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/25"
+              : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+            toneLabel: absentCount > 0 ? "Follow up" : "All here",
+          },
+        ];
+        return (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+            {tiles.map((c) => (
               <div
-                aria-hidden
-                className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${c.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`}
-              />
-              <div className="flex items-start justify-between">
-                <div className="min-w-0">
-                  <p className={labelCls}>{c.label}</p>
-                  <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
-                </div>
-                <div className={`rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                  <c.icon className="h-4 w-4 text-white" />
+                key={c.label}
+                className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+              >
+                {/* Top gradient stripe */}
+                <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${c.gradient}`} />
+
+                {/* Decorative halos */}
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${c.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+                />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${c.gradient} opacity-[0.04] blur-2xl`}
+                />
+
+                <div className="relative p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className={labelCls}>{c.label}</p>
+                      <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+                    </div>
+                    <div
+                      className={`relative shrink-0 rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg ${c.ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                    >
+                      <c.icon className="h-4 w-4 text-white" strokeWidth={2.5} />
+                      <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{c.sub}</p>
+                    {c.toneLabel && c.toneChip && (
+                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset ${c.toneChip}`}>
+                        <span className="h-1 w-1 rounded-full bg-current" />
+                        {c.toneLabel}
+                      </span>
+                    )}
+                  </div>
+
+                  {typeof c.progress === "number" && (
+                    <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${c.gradient} transition-[width] duration-700`}
+                        style={{ width: `${Math.min(100, c.progress)}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ── Tabs + Filters ── */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

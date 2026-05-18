@@ -292,32 +292,98 @@ export default function AttendanceReports() {
       </div>
 
       {/* ── Summary Cards ── */}
-      {emps.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-          {[
-            { label: "Employees", value: total, icon: Users, gradient: "from-indigo-500 to-purple-600" },
-            { label: "Avg Present", value: avg((e) => e.presentDays), icon: CheckCircle2, gradient: "from-emerald-500 to-teal-600" },
-            { label: "Avg Late", value: avg((e) => e.lateDays), icon: AlertTriangle, gradient: "from-amber-500 to-orange-600" },
-            { label: "Avg Hours", value: fmtHours(avg((e) => e.totalHours)), icon: Clock, gradient: "from-sky-500 to-blue-600" },
-          ].map((c) => (
-            <div key={c.label} className={`${cardCls} group relative overflow-hidden p-5`}>
+      {emps.length > 0 && (() => {
+        const avgPresent = avg((e) => e.presentDays);
+        const avgLate = avg((e) => e.lateDays);
+        const avgHoursRaw = avg((e) => e.totalHours);
+        const tiles = [
+          {
+            label: "Employees",
+            value: String(total),
+            sub: total === 1 ? "in report" : `${total} in report`,
+            icon: Users,
+            gradient: "from-indigo-500 to-purple-600",
+            ringColor: "shadow-indigo-500/30",
+          },
+          {
+            label: "Avg Present",
+            value: String(avgPresent),
+            sub: "days per employee",
+            icon: CheckCircle2,
+            gradient: "from-emerald-500 to-teal-600",
+            ringColor: "shadow-emerald-500/30",
+            toneChip: avgPresent >= 20
+              ? "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25"
+              : avgPresent >= 12
+              ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25"
+              : "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/25",
+            toneLabel: avgPresent >= 20 ? "Strong" : avgPresent >= 12 ? "Average" : "Low",
+          },
+          {
+            label: "Avg Late",
+            value: String(avgLate),
+            sub: avgLate === 0 ? "All punctual" : "days per employee",
+            icon: AlertTriangle,
+            gradient: "from-amber-500 to-orange-600",
+            ringColor: "shadow-amber-500/30",
+            toneChip: avgLate > 0
+              ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25"
+              : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+            toneLabel: avgLate > 0 ? "Watch" : "On time",
+          },
+          {
+            label: "Avg Hours",
+            value: fmtHours(avgHoursRaw),
+            sub: "per employee",
+            icon: Clock,
+            gradient: "from-sky-500 to-blue-600",
+            ringColor: "shadow-sky-500/30",
+          },
+        ];
+        return (
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {tiles.map((c) => (
               <div
-                aria-hidden
-                className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${c.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`}
-              />
-              <div className="flex items-start justify-between">
-                <div className="min-w-0">
-                  <p className={labelCls}>{c.label}</p>
-                  <p className="mt-2.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
-                </div>
-                <div className={`rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                  <c.icon className="h-5 w-5 text-white" />
+                key={c.label}
+                className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+              >
+                <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${c.gradient}`} />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${c.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+                />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${c.gradient} opacity-[0.04] blur-2xl`}
+                />
+                <div className="relative p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className={labelCls}>{c.label}</p>
+                      <p className="mt-2.5 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+                    </div>
+                    <div
+                      className={`relative shrink-0 rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg ${c.ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                    >
+                      <c.icon className="h-5 w-5 text-white" strokeWidth={2.5} />
+                      <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{c.sub}</p>
+                    {c.toneLabel && c.toneChip && (
+                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset ${c.toneChip}`}>
+                        <span className="h-1 w-1 rounded-full bg-current" />
+                        {c.toneLabel}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ── Breakdown ── */}
       {loading ? (

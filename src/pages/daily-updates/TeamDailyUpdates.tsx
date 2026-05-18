@@ -315,32 +315,117 @@ export default function TeamDailyUpdates() {
       </div>
 
       {/* ── Summary tiles ── */}
-      {!loading && (
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            { label: "Total", value: updates.length, icon: Users, gradient: "from-indigo-500 to-purple-600" },
-            { label: "Reviewed", value: reviewedCount, icon: CheckCircle2, gradient: "from-emerald-500 to-teal-600" },
-            { label: "Pending Review", value: pendingCount, icon: Clock, gradient: "from-amber-500 to-orange-600" },
-            { label: "Blocked", value: updates.filter((u) => u.status === "blocked").length, icon: AlertTriangle, gradient: "from-rose-500 to-pink-600" },
-          ].map((s) => (
-            <div key={s.label} className={`${cardCls} group relative overflow-hidden p-4`}>
+      {!loading && (() => {
+        const totalUpdates = updates.length;
+        const reviewPct = totalUpdates > 0 ? Math.round((reviewedCount / totalUpdates) * 100) : 0;
+        const tiles = [
+          {
+            label: "Total",
+            value: totalUpdates,
+            sub: totalUpdates === 0 ? "No submissions" : `${totalUpdates} ${totalUpdates === 1 ? "submission" : "submissions"} today`,
+            icon: Users,
+            gradient: "from-indigo-500 to-purple-600",
+            ringColor: "shadow-indigo-500/30",
+          },
+          {
+            label: "Reviewed",
+            value: reviewedCount,
+            sub: totalUpdates > 0 ? `${reviewPct}% of team reviewed` : "Nothing to review",
+            icon: CheckCircle2,
+            gradient: "from-emerald-500 to-teal-600",
+            ringColor: "shadow-emerald-500/30",
+            progress: reviewPct,
+            toneChip: reviewPct >= 80
+              ? "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25"
+              : reviewPct >= 50
+              ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25"
+              : "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/25",
+            toneLabel: reviewPct >= 80 ? "On track" : reviewPct >= 50 ? "Catch up" : "Behind",
+          },
+          {
+            label: "Pending Review",
+            value: pendingCount,
+            sub: pendingCount === 0 ? "Inbox zero" : "Awaiting your review",
+            icon: Clock,
+            gradient: "from-amber-500 to-orange-600",
+            ringColor: "shadow-amber-500/30",
+            toneChip: pendingCount > 0
+              ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25"
+              : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+            toneLabel: pendingCount > 0 ? "Action needed" : "All clear",
+          },
+          {
+            label: "Blocked",
+            value: blockedCount,
+            sub: blockedCount === 0 ? "No blockers" : "Need attention",
+            icon: AlertTriangle,
+            gradient: "from-rose-500 to-pink-600",
+            ringColor: "shadow-rose-500/30",
+            toneChip: blockedCount > 0
+              ? "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/25"
+              : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+            toneLabel: blockedCount > 0 ? "Unblock soon" : "Healthy",
+          },
+        ];
+        return (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {tiles.map((s) => (
               <div
-                aria-hidden
-                className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${s.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`}
-              />
-              <div className="flex items-start justify-between">
-                <div className="min-w-0">
-                  <p className={labelCls}>{s.label}</p>
-                  <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
-                </div>
-                <div className={`rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                  <s.icon className="h-4 w-4 text-white" />
+                key={s.label}
+                className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+              >
+                {/* Top gradient stripe */}
+                <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${s.gradient}`} />
+
+                {/* Decorative halos */}
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${s.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+                />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${s.gradient} opacity-[0.04] blur-2xl`}
+                />
+
+                <div className="relative p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className={labelCls}>{s.label}</p>
+                      <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+                    </div>
+                    <div
+                      className={`relative shrink-0 rounded-xl bg-gradient-to-br ${s.gradient} p-2.5 shadow-lg ${s.ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                    >
+                      <s.icon className="h-4 w-4 text-white" strokeWidth={2.5} />
+                      <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{s.sub}</p>
+                    {s.toneLabel && s.toneChip && (
+                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset ${s.toneChip}`}>
+                        <span className="h-1 w-1 rounded-full bg-current" />
+                        {s.toneLabel}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Progress bar (Reviewed only) */}
+                  {typeof s.progress === "number" && (
+                    <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${s.gradient} transition-[width] duration-700`}
+                        style={{ width: `${Math.min(100, s.progress)}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        );
+      })()}
 
       {/* Filter Bar */}
       <div className={`${cardCls} p-3`}>

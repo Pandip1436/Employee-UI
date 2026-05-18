@@ -217,21 +217,44 @@ export default function HolidayCalendar() {
         {(["public", "restricted", "company"] as const).map((k) => {
           const v = typeStyle[k];
           const Icon = v.icon;
+          const count = countsByType[k] ?? 0;
+          const ringColor =
+            k === "public" ? "shadow-emerald-500/30" :
+            k === "restricted" ? "shadow-amber-500/30" :
+            "shadow-sky-500/30";
+          const sub =
+            count === 0 ? "None scheduled" :
+            count === 1 ? "1 holiday" :
+            `${count} holidays`;
           return (
-            <div key={k} className={`${cardCls} group relative overflow-hidden p-4`}>
+            <div
+              key={k}
+              className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+            >
+              <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${v.gradient}`} />
               <div
                 aria-hidden
-                className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${v.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`}
+                className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${v.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
               />
-              <div className="flex items-center justify-between">
-                <div className="min-w-0">
-                  <p className={`${labelCls} capitalize`}>{k} holidays</p>
-                  <p className="mt-1.5 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
-                    {countsByType[k] ?? 0}
-                  </p>
-                </div>
-                <div className={`rounded-xl bg-gradient-to-br ${v.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                  <Icon className="h-4 w-4 text-white" />
+              <div
+                aria-hidden
+                className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${v.gradient} opacity-[0.04] blur-2xl`}
+              />
+              <div className="relative p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className={`${labelCls} capitalize`}>{k} holidays</p>
+                    <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
+                      {count}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-gray-500 dark:text-gray-400">{sub}</p>
+                  </div>
+                  <div
+                    className={`relative shrink-0 rounded-xl bg-gradient-to-br ${v.gradient} p-2.5 shadow-lg ${ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                  >
+                    <Icon className="h-4 w-4 text-white" strokeWidth={2.5} />
+                    <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                  </div>
                 </div>
               </div>
             </div>

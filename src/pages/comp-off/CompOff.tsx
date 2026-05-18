@@ -221,20 +221,44 @@ export default function CompOff() {
       {/* ── Balance Tiles ── */}
       {balance && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {balanceTiles.map((c) => (
-            <div key={c.label} className={`${cardCls} group relative overflow-hidden p-4`}>
-              <div aria-hidden className={`pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br ${c.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`} />
-              <div className="relative flex items-center gap-3">
-                <div className={`rounded-lg bg-gradient-to-br ${c.gradient} p-2 shadow-sm ring-1 ring-white/10`}>
-                  <c.icon className="h-3.5 w-3.5 text-white" />
-                </div>
-                <div className="min-w-0">
-                  <p className={labelCls}>{c.label}</p>
-                  <p className="font-mono text-lg font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+          {balanceTiles.map((c) => {
+            const ringColor =
+              /emerald/.test(c.gradient) ? "shadow-emerald-500/30" :
+              /indigo/.test(c.gradient) ? "shadow-indigo-500/30" :
+              /sky/.test(c.gradient) ? "shadow-sky-500/30" :
+              /amber/.test(c.gradient) ? "shadow-amber-500/30" :
+              /orange/.test(c.gradient) ? "shadow-orange-500/30" :
+              /rose/.test(c.gradient) ? "shadow-rose-500/30" :
+              "shadow-gray-500/30";
+            return (
+              <div
+                key={c.label}
+                className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+              >
+                <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${c.gradient}`} />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${c.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+                />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${c.gradient} opacity-[0.04] blur-2xl`}
+                />
+                <div className="relative p-4">
+                  <div className="flex items-center gap-3">
+                    <div className={`relative shrink-0 rounded-lg bg-gradient-to-br ${c.gradient} p-2 shadow-lg ${ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}>
+                      <c.icon className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                      <span aria-hidden className="absolute inset-0 rounded-lg bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className={labelCls}>{c.label}</p>
+                      <p className="font-mono text-lg font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 

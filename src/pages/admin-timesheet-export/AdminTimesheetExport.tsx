@@ -388,30 +388,100 @@ export default function AdminTimesheetExport() {
       </div>
 
       {/* ── Summary KPIs ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          { label: "Total Records", value: String(data.length), icon: BarChart3, gradient: "from-indigo-500 to-purple-600" },
-          { label: "Employees", value: String(uniqueEmps), icon: Users, gradient: "from-sky-500 to-blue-600" },
-          { label: "Total Hours", value: fmtHours(totalHours), icon: Clock, gradient: "from-emerald-500 to-teal-600" },
-          { label: "Approved", value: String(approvedCount), icon: CheckCircle2, gradient: "from-amber-500 to-orange-600" },
-        ].map((c) => (
-          <div key={c.label} className={`${cardCls} group relative overflow-hidden p-4`}>
-            <div
-              aria-hidden
-              className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${c.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`}
-            />
-            <div className="flex items-start justify-between">
-              <div className="min-w-0">
-                <p className={labelCls}>{c.label}</p>
-                <p className="mt-2 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+      {(() => {
+        const approvalPct = data.length > 0 ? Math.round((approvedCount / data.length) * 100) : 0;
+        const tiles = [
+          {
+            label: "Total Records",
+            value: String(data.length),
+            sub: data.length === 0 ? "Nothing in range" : `${data.length} ${data.length === 1 ? "row" : "rows"} ready`,
+            icon: BarChart3,
+            gradient: "from-indigo-500 to-purple-600",
+            ringColor: "shadow-indigo-500/30",
+          },
+          {
+            label: "Employees",
+            value: String(uniqueEmps),
+            sub: uniqueEmps === 1 ? "1 contributor" : `${uniqueEmps} contributors`,
+            icon: Users,
+            gradient: "from-sky-500 to-blue-600",
+            ringColor: "shadow-sky-500/30",
+          },
+          {
+            label: "Total Hours",
+            value: fmtHours(totalHours),
+            sub: uniqueEmps > 0 ? `${fmtHours(totalHours / uniqueEmps)} avg per person` : "—",
+            icon: Clock,
+            gradient: "from-emerald-500 to-teal-600",
+            ringColor: "shadow-emerald-500/30",
+          },
+          {
+            label: "Approved",
+            value: String(approvedCount),
+            sub: data.length > 0 ? `${approvalPct}% of records` : "—",
+            icon: CheckCircle2,
+            gradient: "from-amber-500 to-orange-600",
+            ringColor: "shadow-amber-500/30",
+            progress: approvalPct,
+            toneChip:
+              approvalPct >= 80 ? "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25" :
+              approvalPct >= 50 ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25" :
+              "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/25",
+            toneLabel: data.length === 0 ? null : approvalPct >= 80 ? "Healthy" : approvalPct >= 50 ? "Catching up" : "Backlog",
+          },
+        ];
+        return (
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {tiles.map((c) => (
+              <div
+                key={c.label}
+                className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+              >
+                <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${c.gradient}`} />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${c.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+                />
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${c.gradient} opacity-[0.04] blur-2xl`}
+                />
+                <div className="relative p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className={labelCls}>{c.label}</p>
+                      <p className="mt-2 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+                    </div>
+                    <div
+                      className={`relative shrink-0 rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg ${c.ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                    >
+                      <c.icon className="h-4 w-4 text-white" strokeWidth={2.5} />
+                      <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between gap-2">
+                    <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{c.sub}</p>
+                    {c.toneLabel && c.toneChip && (
+                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset ${c.toneChip}`}>
+                        <span className="h-1 w-1 rounded-full bg-current" />
+                        {c.toneLabel}
+                      </span>
+                    )}
+                  </div>
+                  {typeof c.progress === "number" && (
+                    <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${c.gradient} transition-[width] duration-700`}
+                        style={{ width: `${Math.min(100, c.progress)}%` }}
+                      />
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className={`rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                <c.icon className="h-4 w-4 text-white" />
-              </div>
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        );
+      })()}
 
       {/* ── Preview ── */}
       {loading ? (

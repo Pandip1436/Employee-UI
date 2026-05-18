@@ -333,35 +333,55 @@ export default function Leaves() {
             const remaining = balance[type]?.remaining ?? 0;
             const pct = total > 0 ? (used / total) * 100 : 0;
 
+            const ringColor =
+              /sky/.test(config.gradient) ? "shadow-sky-500/30" :
+              /orange/.test(config.gradient) ? "shadow-orange-500/30" :
+              /purple/.test(config.gradient) ? "shadow-purple-500/30" :
+              /indigo/.test(config.gradient) ? "shadow-indigo-500/30" :
+              /rose/.test(config.gradient) ? "shadow-rose-500/30" :
+              /emerald/.test(config.gradient) ? "shadow-emerald-500/30" :
+              /amber/.test(config.gradient) ? "shadow-amber-500/30" :
+              "shadow-gray-500/30";
             return (
-              <div key={type} className={`${cardCls} group relative overflow-hidden p-5`}>
+              <div
+                key={type}
+                className={`${cardCls} group relative overflow-hidden !p-0 transition-all duration-300 hover:-translate-y-0.5`}
+              >
+                <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${config.gradient}`} />
                 <div
                   aria-hidden
-                  className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br ${config.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-30`}
+                  className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${config.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
                 />
-                <div className="flex items-start justify-between">
-                  <div className="min-w-0 space-y-1">
-                    <p className={labelCls}>{config.label}</p>
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{remaining}</span>
-                      <span className="font-mono text-sm tabular-nums text-gray-400 dark:text-gray-500">/ {total}</span>
+                <div
+                  aria-hidden
+                  className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${config.gradient} opacity-[0.04] blur-2xl`}
+                />
+                <div className="relative p-5">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 space-y-1">
+                      <p className={labelCls}>{config.label}</p>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{remaining}</span>
+                        <span className="font-mono text-sm tabular-nums text-gray-400 dark:text-gray-500">/ {total}</span>
+                      </div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400"><span className="font-mono tabular-nums">{used}</span> used this year</p>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400"><span className="font-mono tabular-nums">{used}</span> used this year</p>
+                    <div className={`relative shrink-0 rounded-xl bg-gradient-to-br ${config.gradient} p-2.5 shadow-lg ${ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}>
+                      <Icon className="h-5 w-5 text-white" strokeWidth={2.5} />
+                      <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                    </div>
                   </div>
-                  <div className={`rounded-xl bg-gradient-to-br ${config.gradient} p-2.5 shadow-lg shadow-black/[0.08] ring-1 ring-white/10`}>
-                    <Icon className="h-5 w-5 text-white" />
-                  </div>
-                </div>
-                <div className="mt-5">
-                  <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-gray-500 dark:text-gray-400">
-                    <span>Used</span>
-                    <span className="font-mono font-semibold tabular-nums text-gray-700 dark:text-gray-200">{Math.round(pct)}%</span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
-                    <div
-                      className={`h-full rounded-full bg-gradient-to-r ${config.gradient} transition-all duration-500`}
-                      style={{ width: `${pct}%` }}
-                    />
+                  <div className="mt-5">
+                    <div className="mb-1.5 flex items-center justify-between text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                      <span>Used</span>
+                      <span className="font-mono font-semibold tabular-nums text-gray-700 dark:text-gray-200">{Math.round(pct)}%</span>
+                    </div>
+                    <div className="h-1.5 overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                      <div
+                        className={`h-full rounded-full bg-gradient-to-r ${config.gradient} transition-all duration-500`}
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>

@@ -220,47 +220,70 @@ export default function AdminLeavePolicy() {
 
       {/* ━━━ Stats ━━━ */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <div className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-4 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
-          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br from-indigo-500/20 to-indigo-500/0 blur-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
-          <div className="relative flex items-start justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Leave types</p>
-              <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{stats.types}</p>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Configured policies</p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500/20 to-indigo-500/0 ring-1 ring-indigo-500/20 text-indigo-600 dark:text-indigo-400">
-              <CalendarDays className="h-4 w-4" strokeWidth={2.25} />
+        {[
+          {
+            label: "Leave types",
+            value: <>{stats.types}</>,
+            sub: "Configured policies",
+            icon: CalendarDays,
+            grad: "from-indigo-500 to-purple-600",
+            ring: "shadow-indigo-500/30",
+            span: "",
+          },
+          {
+            label: "Total days/year",
+            value: <>{stats.totalDays}</>,
+            sub: "Combined annual quota",
+            icon: TrendingUp,
+            grad: "from-emerald-500 to-teal-600",
+            ring: "shadow-emerald-500/30",
+            span: "",
+          },
+          {
+            label: "Carry-forward",
+            value: (
+              <>
+                {stats.carryEnabled}{" "}
+                <span className="font-mono text-base tabular-nums text-gray-400">/ {stats.types}</span>
+              </>
+            ),
+            sub: "Types that roll over",
+            icon: Repeat,
+            grad: "from-amber-500 to-orange-600",
+            ring: "shadow-amber-500/30",
+            span: "col-span-2 lg:col-span-1",
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className={`group relative overflow-hidden rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06] ${s.span}`}
+          >
+            <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${s.grad}`} />
+            <div
+              aria-hidden
+              className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${s.grad} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
+            />
+            <div
+              aria-hidden
+              className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${s.grad} opacity-[0.04] blur-2xl`}
+            />
+            <div className="relative p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">{s.label}</p>
+                  <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{s.value}</p>
+                  <p className="mt-0.5 truncate text-xs text-gray-500 dark:text-gray-400">{s.sub}</p>
+                </div>
+                <div
+                  className={`relative shrink-0 rounded-xl bg-gradient-to-br ${s.grad} p-2.5 shadow-lg ${s.ring} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                >
+                  <s.icon className="h-4 w-4 text-white" strokeWidth={2.5} />
+                  <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                </div>
+              </div>
             </div>
           </div>
-        </div>
-        <div className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-4 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg">
-          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br from-emerald-500/20 to-emerald-500/0 blur-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
-          <div className="relative flex items-start justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total days/year</p>
-              <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{stats.totalDays}</p>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Combined annual quota</p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/0 ring-1 ring-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-              <TrendingUp className="h-4 w-4" strokeWidth={2.25} />
-            </div>
-          </div>
-        </div>
-        <div className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-4 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg col-span-2 lg:col-span-1">
-          <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-500/0 blur-2xl opacity-60 group-hover:opacity-100 transition-opacity" />
-          <div className="relative flex items-start justify-between">
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Carry-forward</p>
-              <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">
-                {stats.carryEnabled} <span className="font-mono text-base tabular-nums text-gray-400">/ {stats.types}</span>
-              </p>
-              <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">Types that roll over</p>
-            </div>
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/0 ring-1 ring-amber-500/20 text-amber-600 dark:text-amber-400">
-              <Repeat className="h-4 w-4" strokeWidth={2.25} />
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
 
       {/* ━━━ Leave Type Cards ━━━ */}
@@ -271,22 +294,24 @@ export default function AdminLeavePolicy() {
           return (
             <div
               key={lt.key}
-              className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-5 sm:p-6 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-lg"
+              className="group relative overflow-hidden rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]"
             >
+              <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${lt.gradient}`} />
               <div
                 aria-hidden
-                className={`pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-gradient-to-br ${lt.gradient} opacity-10 blur-2xl transition-opacity duration-500 group-hover:opacity-30`}
+                className={`pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full bg-gradient-to-br ${lt.gradient} opacity-10 blur-2xl transition-all duration-500 group-hover:opacity-30 group-hover:scale-110`}
               />
               <div
                 aria-hidden
-                className={`pointer-events-none absolute inset-y-0 left-0 w-1 bg-gradient-to-b ${lt.gradient}`}
+                className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${lt.gradient} opacity-[0.04] blur-2xl`}
               />
 
-              <div className="relative">
+              <div className="relative p-5 sm:p-6">
                 {/* Header */}
                 <div className="mb-5 flex items-start gap-3">
-                  <div className={`flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br ${lt.gradient} text-white shadow-md ring-1 ${lt.ringColor}`}>
-                    <Icon className="h-5 w-5" strokeWidth={2.25} />
+                  <div className={`relative flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${lt.gradient} text-white shadow-lg ${lt.key === "casual" ? "shadow-indigo-500/30" : "shadow-rose-500/30"} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}>
+                    <Icon className="h-5 w-5" strokeWidth={2.5} />
+                    <span aria-hidden className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h3 className="text-base font-bold tracking-tight text-gray-900 dark:text-white">{lt.label}</h3>
