@@ -13,6 +13,9 @@ export const employeeProfileApi = {
       headers: { "Content-Type": "multipart/form-data" },
     }),
 
+  deletePhoto: () =>
+    api.delete<ApiResponse<EmployeeProfile>>("/employee-profile/me/photo"),
+
   uploadOfferLetter: (formData: FormData) =>
     api.post<ApiResponse<EmployeeProfile>>("/employee-profile/me/offer-letter", formData, {
       headers: { "Content-Type": "multipart/form-data" },

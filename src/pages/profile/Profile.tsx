@@ -90,6 +90,21 @@ export default function Profile() {
     } catch { /* interceptor */ }
   };
 
+  const handleDeletePhoto = async () => {
+    const ok = await confirm({
+      title: "Remove profile photo?",
+      description: "Your profile picture will revert to the default avatar. You can upload a new one anytime.",
+      confirmLabel: "Remove",
+      cancelLabel: "Keep",
+    });
+    if (!ok) return;
+    try {
+      const res = await employeeProfileApi.deletePhoto();
+      setProfile(res.data.data!);
+      toast.success("Profile photo removed");
+    } catch { /* interceptor */ }
+  };
+
   const handleOfferLetter = async (file: File) => {
     const fd = new FormData();
     fd.append("file", file);
@@ -374,13 +389,26 @@ export default function Profile() {
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
-                <button
-                  onClick={() => photoRef.current?.click()}
-                  className="absolute inset-0 flex items-center justify-center bg-gray-950/60 opacity-0 backdrop-blur-sm transition-opacity hover:opacity-100"
-                  aria-label="Change profile photo"
-                >
-                  <Camera className="h-6 w-6 text-white" />
-                </button>
+                <div className="absolute inset-0 flex items-center justify-center gap-2 bg-gray-950/60 opacity-0 backdrop-blur-sm transition-opacity hover:opacity-100">
+                  <button
+                    onClick={() => photoRef.current?.click()}
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-sm transition-all hover:bg-white/25 active:scale-95"
+                    aria-label={profile?.profilePhotoUrl ? "Change profile photo" : "Upload profile photo"}
+                    title={profile?.profilePhotoUrl ? "Change photo" : "Upload photo"}
+                  >
+                    <Camera className="h-4 w-4" />
+                  </button>
+                  {profile?.profilePhotoUrl && (
+                    <button
+                      onClick={handleDeletePhoto}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-rose-500/80 text-white ring-1 ring-white/25 backdrop-blur-sm transition-all hover:bg-rose-500 active:scale-95"
+                      aria-label="Remove profile photo"
+                      title="Remove photo"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
             {/* Online dot */}
