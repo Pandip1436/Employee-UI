@@ -1,88 +1,92 @@
+import { lazy, Suspense } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./components/ProtectedRoute";
-import PremiumLoader from "./components/PremiumLoader";
+import PremiumLoader, { PremiumPageLoader } from "./components/PremiumLoader";
 import MainLayout from "./layouts/MainLayout";
 import Login from "./pages/auth/Login";
-import Dashboard from "./pages/dashboard/Dashboard";
-import ManagerDashboard from "./pages/dashboard-manager/ManagerDashboard";
-import HrDashboard from "./pages/dashboard-hr/HrDashboard";
-import Projects from "./pages/projects/Projects";
-import Approvals from "./pages/approvals/Approvals";
-import Users from "./pages/users/Users";
-import Employees from "./pages/employees/Employees";
-import Attendance from "./pages/attendance/Attendance";
-import AttendanceCalendar from "./pages/attendance-calendar/AttendanceCalendar";
-import TeamAttendance from "./pages/team-attendance/TeamAttendance";
-import HolidayCalendar from "./pages/holiday-calendar/HolidayCalendar";
-import AttendanceReports from "./pages/attendance-reports/AttendanceReports";
-import Leaves from "./pages/leaves/Leaves";
-import LeaveApply from "./pages/leave-apply/LeaveApply";
-import LeaveApprovals from "./pages/leave-approvals/LeaveApprovals";
-import WFHRequests from "./pages/wfh-requests/WFHRequests";
-import WFHApprovals from "./pages/wfh/WFHApprovals";
-import CompOffApprovals from "./pages/comp-off/CompOffApprovals";
-import CompOff from "./pages/comp-off/CompOff";
-import Documents from "./pages/documents/Documents";
-import Profile from "./pages/profile/Profile";
-import Notifications from "./pages/notifications/Notifications";
+
+// Lazy-loaded pages — each becomes its own chunk fetched on first navigation.
+const Dashboard = lazy(() => import("./pages/dashboard/Dashboard"));
+const ManagerDashboard = lazy(() => import("./pages/dashboard-manager/ManagerDashboard"));
+const HrDashboard = lazy(() => import("./pages/dashboard-hr/HrDashboard"));
+const Projects = lazy(() => import("./pages/projects/Projects"));
+const Approvals = lazy(() => import("./pages/approvals/Approvals"));
+const Users = lazy(() => import("./pages/users/Users"));
+const Employees = lazy(() => import("./pages/employees/Employees"));
+const Attendance = lazy(() => import("./pages/attendance/Attendance"));
+const AttendanceCalendar = lazy(() => import("./pages/attendance-calendar/AttendanceCalendar"));
+const TeamAttendance = lazy(() => import("./pages/team-attendance/TeamAttendance"));
+const HolidayCalendar = lazy(() => import("./pages/holiday-calendar/HolidayCalendar"));
+const AttendanceReports = lazy(() => import("./pages/attendance-reports/AttendanceReports"));
+const Leaves = lazy(() => import("./pages/leaves/Leaves"));
+const LeaveApply = lazy(() => import("./pages/leave-apply/LeaveApply"));
+const LeaveApprovals = lazy(() => import("./pages/leave-approvals/LeaveApprovals"));
+const WFHRequests = lazy(() => import("./pages/wfh-requests/WFHRequests"));
+const WFHApprovals = lazy(() => import("./pages/wfh/WFHApprovals"));
+const CompOffApprovals = lazy(() => import("./pages/comp-off/CompOffApprovals"));
+const CompOff = lazy(() => import("./pages/comp-off/CompOff"));
+const Documents = lazy(() => import("./pages/documents/Documents"));
+const Profile = lazy(() => import("./pages/profile/Profile"));
+const Notifications = lazy(() => import("./pages/notifications/Notifications"));
 
 // Timesheet Module
-import TimesheetHome from "./pages/timesheet-home/TimesheetHome";
-import TimesheetWeekly from "./pages/timesheet-weekly/TimesheetWeekly";
-import TimesheetDaily from "./pages/timesheet-daily/TimesheetDaily";
-import TimesheetLogModal from "./pages/timesheet-home/TimesheetLogModal";
-import TimesheetHistory from "./pages/timesheet-history/TimesheetHistory";
-import TimesheetDetail from "./pages/timesheet-detail/TimesheetDetail";
-import TimesheetApprovals from "./pages/timesheet-approvals/TimesheetApprovals";
-import AdminTimesheetReports from "./pages/admin-timesheet-reports/AdminTimesheetReports";
-import AdminOvertimeReport from "./pages/admin-timesheet-overtime/AdminOvertimeReport";
-import AdminMissingTimesheet from "./pages/admin-timesheet-missing/AdminMissingTimesheet";
-import AdminTimesheetExport from "./pages/admin-timesheet-export/AdminTimesheetExport";
-import AdminTimesheetConfig from "./pages/admin-timesheet-config/AdminTimesheetConfig";
+const TimesheetHome = lazy(() => import("./pages/timesheet-home/TimesheetHome"));
+const TimesheetWeekly = lazy(() => import("./pages/timesheet-weekly/TimesheetWeekly"));
+const TimesheetDaily = lazy(() => import("./pages/timesheet-daily/TimesheetDaily"));
+const TimesheetLogModal = lazy(() => import("./pages/timesheet-home/TimesheetLogModal"));
+const TimesheetHistory = lazy(() => import("./pages/timesheet-history/TimesheetHistory"));
+const TimesheetDetail = lazy(() => import("./pages/timesheet-detail/TimesheetDetail"));
+const TimesheetApprovals = lazy(() => import("./pages/timesheet-approvals/TimesheetApprovals"));
+const AdminTimesheetReports = lazy(() => import("./pages/admin-timesheet-reports/AdminTimesheetReports"));
+const AdminOvertimeReport = lazy(() => import("./pages/admin-timesheet-overtime/AdminOvertimeReport"));
+const AdminMissingTimesheet = lazy(() => import("./pages/admin-timesheet-missing/AdminMissingTimesheet"));
+const AdminTimesheetExport = lazy(() => import("./pages/admin-timesheet-export/AdminTimesheetExport"));
+const AdminTimesheetConfig = lazy(() => import("./pages/admin-timesheet-config/AdminTimesheetConfig"));
 
 // Engagement Module
-import AnnouncementsFeed from "./pages/announcements/AnnouncementsFeed";
-import AnnouncementDetail from "./pages/announcement-detail/AnnouncementDetail";
-import AdminAnnouncements from "./pages/admin-announcements/AdminAnnouncements";
-import RecognitionWall from "./pages/recognition/RecognitionWall";
-import SendRecognition from "./pages/recognition-send/SendRecognition";
-import SurveysList from "./pages/surveys/SurveysList";
-import SurveyForm from "./pages/survey-form/SurveyForm";
-import SurveyResults from "./pages/survey-results/SurveyResults";
+const AnnouncementsFeed = lazy(() => import("./pages/announcements/AnnouncementsFeed"));
+const AnnouncementDetail = lazy(() => import("./pages/announcement-detail/AnnouncementDetail"));
+const AdminAnnouncements = lazy(() => import("./pages/admin-announcements/AdminAnnouncements"));
+const RecognitionWall = lazy(() => import("./pages/recognition/RecognitionWall"));
+const SendRecognition = lazy(() => import("./pages/recognition-send/SendRecognition"));
+const SurveysList = lazy(() => import("./pages/surveys/SurveysList"));
+const SurveyForm = lazy(() => import("./pages/survey-form/SurveyForm"));
+const SurveyResults = lazy(() => import("./pages/survey-results/SurveyResults"));
 
 // Admin Settings
-import AdminCompanySettings from "./pages/admin-company/AdminCompanySettings";
-import AdminOrgStructure from "./pages/admin-org-structure/AdminOrgStructure";
-import AdminRoles from "./pages/admin-roles/AdminRoles";
-import AdminLeavePolicy from "./pages/admin-leave-policy/AdminLeavePolicy";
-import AdminEmailTemplates from "./pages/admin-emails/AdminEmailTemplates";
-import AdminAuditLog from "./pages/admin-audit/AdminAuditLog";
+const AdminCompanySettings = lazy(() => import("./pages/admin-company/AdminCompanySettings"));
+const AdminOrgStructure = lazy(() => import("./pages/admin-org-structure/AdminOrgStructure"));
+const AdminRoles = lazy(() => import("./pages/admin-roles/AdminRoles"));
+const AdminLeavePolicy = lazy(() => import("./pages/admin-leave-policy/AdminLeavePolicy"));
+const AdminEmailTemplates = lazy(() => import("./pages/admin-emails/AdminEmailTemplates"));
+const AdminAuditLog = lazy(() => import("./pages/admin-audit/AdminAuditLog"));
 
 // Performance Module
-import MyGoals from "./pages/perf-goals/MyGoals";
-import TeamGoals from "./pages/perf-goals/TeamGoals";
-import GoalForm from "./pages/perf-goal-form/GoalForm";
-import SelfReview from "./pages/perf-self-review/SelfReview";
-import MyReviews from "./pages/perf-my-reviews/MyReviews";
-import ManagerReview from "./pages/perf-mgr-review/ManagerReview";
-import FeedbackPage from "./pages/perf-feedback/FeedbackPage";
-import PIPDetail from "./pages/perf-pip/PIPDetail";
-import Calibration from "./pages/perf-calibrate/Calibration";
-import ReviewCycles from "./pages/perf-cycles/ReviewCycles";
+const MyGoals = lazy(() => import("./pages/perf-goals/MyGoals"));
+const TeamGoals = lazy(() => import("./pages/perf-goals/TeamGoals"));
+const GoalForm = lazy(() => import("./pages/perf-goal-form/GoalForm"));
+const SelfReview = lazy(() => import("./pages/perf-self-review/SelfReview"));
+const MyReviews = lazy(() => import("./pages/perf-my-reviews/MyReviews"));
+const ManagerReview = lazy(() => import("./pages/perf-mgr-review/ManagerReview"));
+const FeedbackPage = lazy(() => import("./pages/perf-feedback/FeedbackPage"));
+const PIPDetail = lazy(() => import("./pages/perf-pip/PIPDetail"));
+const Calibration = lazy(() => import("./pages/perf-calibrate/Calibration"));
+const ReviewCycles = lazy(() => import("./pages/perf-cycles/ReviewCycles"));
 
 // Daily Updates Module
-import DailyUpdates from "./pages/daily-updates/DailyUpdates";
-import TeamDailyUpdates from "./pages/daily-updates/TeamDailyUpdates";
+const DailyUpdates = lazy(() => import("./pages/daily-updates/DailyUpdates"));
+const TeamDailyUpdates = lazy(() => import("./pages/daily-updates/TeamDailyUpdates"));
 
 // Learning Module
-import LearningHub from "./pages/learning-hub/LearningHub";
-import CourseDetail from "./pages/course-detail/CourseDetail";
-import MyCertifications from "./pages/learning-certs/MyCertifications";
+const LearningHub = lazy(() => import("./pages/learning-hub/LearningHub"));
+const CourseDetail = lazy(() => import("./pages/course-detail/CourseDetail"));
+const MyCertifications = lazy(() => import("./pages/learning-certs/MyCertifications"));
 
 export default function App() {
   return (
     <>
     <PremiumLoader />
+    <Suspense fallback={<PremiumPageLoader />}>
     <Routes>
       {/* Public */}
       <Route path="/login" element={<Login />} />
@@ -182,6 +186,7 @@ export default function App() {
 
       <Route path="*" element={<Navigate to="/dashboard" replace />} />
     </Routes>
+    </Suspense>
     </>
   );
 }

@@ -307,17 +307,405 @@ export default function Employees() {
   };
 
   /* ─── Profile view ─── */
-  const InfoRow = ({ icon: Icon, label, value, gradient = "from-indigo-500 to-purple-600" }: { icon: typeof Mail; label: string; value?: string | null; gradient?: string }) => (
-    <div className="flex items-center gap-3">
-      <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${gradient} shadow-sm ring-1 ring-white/10`}>
-        <Icon className="h-4 w-4 text-white" />
+  const InfoRow = ({
+    icon: Icon,
+    label,
+    value,
+    gradient = "from-indigo-500 to-purple-600",
+    href,
+    mono,
+  }: {
+    icon: typeof Mail;
+    label: string;
+    value?: string | null;
+    gradient?: string;
+    href?: string;
+    mono?: boolean;
+  }) => {
+    const display = value || "—";
+    const valueCls = `truncate text-sm font-semibold text-gray-900 dark:text-white ${mono ? "font-mono tabular-nums" : ""}`;
+    return (
+      <div className="group flex items-center gap-3 rounded-xl border border-transparent p-2 transition-all hover:border-gray-200/70 hover:bg-gray-50/60 dark:hover:border-gray-800/80 dark:hover:bg-gray-800/30">
+        <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br ${gradient} shadow-sm ring-1 ring-white/10 transition-transform group-hover:scale-105`}>
+          <Icon className="h-4 w-4 text-white" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className={labelCls}>{label}</p>
+          {value && href ? (
+            <a href={href} className={`${valueCls} hover:text-indigo-600 dark:hover:text-indigo-400`}>
+              {display}
+            </a>
+          ) : (
+            <p className={valueCls}>{display}</p>
+          )}
+        </div>
       </div>
-      <div className="min-w-0">
-        <p className={labelCls}>{label}</p>
-        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{value || "—"}</p>
+    );
+  };
+
+  const renderEditModal = () => {
+    if (!showModal) return null;
+    const fieldCls = (err?: string) =>
+      `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors dark:bg-gray-800 dark:text-white ${
+        err
+          ? "border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 dark:border-rose-500"
+          : "border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700"
+      }`;
+    const LabelText = ({ icon: Icon, color = "text-indigo-500 dark:text-indigo-400", children }: { icon?: typeof Mail; color?: string; children: React.ReactNode }) => (
+      <label className={`${labelCls} mb-1.5 flex items-center gap-1.5`}>
+        {Icon && <Icon className={`h-3 w-3 ${color}`} />}
+        {children}
+      </label>
+    );
+    const ErrText = ({ msg }: { msg?: string }) =>
+      msg ? <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-600 dark:text-rose-400"><span className="h-1 w-1 rounded-full bg-rose-500" />{msg}</p> : null;
+    return (
+      <div className="fixed inset-0 z-50 flex justify-end">
+        <div
+          className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm"
+          onClick={resetForm}
+        />
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="relative flex h-full w-full max-w-md animate-drawer-slide-right flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10 sm:max-w-xl sm:rounded-l-3xl"
+        >
+          {/* Left gradient stripe */}
+          <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-indigo-500 to-purple-600" />
+
+          {/* Header */}
+          <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 px-5 pt-6 pb-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:via-gray-900 dark:to-purple-500/10">
+            <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-indigo-400/25 blur-3xl" />
+            <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-purple-400/15 blur-3xl" />
+            <div className="relative flex items-start justify-between gap-3">
+              <div className="flex items-start gap-3.5">
+                <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-3 shadow-lg shadow-indigo-500/30 ring-1 ring-white/15">
+                  {editing ? <Pencil className="h-5 w-5 text-white" /> : <Plus className="h-5 w-5 text-white" />}
+                </div>
+                <div>
+                  <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                    <Sparkles className="h-3 w-3" />
+                    {editing ? "Update record" : "New entry"}
+                  </p>
+                  <h2 className="mt-0.5 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
+                    {editing ? "Edit Employee" : "New Employee"}
+                  </h2>
+                  <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
+                    {editing ? "Update personal and work details" : "Create a new employee record"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={resetForm}
+                aria-label="Close"
+                className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Scrollable body */}
+          <form
+            onSubmit={handleSubmit}
+            noValidate
+            id="employee-form"
+            className="premium-scroll flex-1 space-y-5 overflow-y-auto p-5 sm:p-6"
+          >
+            {/* ── Live Preview ── */}
+            <div className="relative overflow-hidden rounded-2xl border border-gray-200/70 bg-gradient-to-br from-gray-50 to-white p-4 ring-1 ring-black/[0.02] dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900/40 dark:ring-white/[0.02]">
+              <span aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-indigo-400/15 blur-2xl" />
+              <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent" />
+              <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
+                <Sparkles className="h-3 w-3" />
+                Live preview
+              </p>
+              <div className="flex items-start gap-3">
+                <Avatar name={formName || "?"} size="lg" />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                    {formName || <span className="text-gray-400 dark:text-gray-500">Employee name…</span>}
+                  </p>
+                  <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                    {formEmail || <span className="text-gray-400 dark:text-gray-500">name@company.com</span>}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                    <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-700/50 dark:text-gray-300 dark:ring-gray-500/20">
+                      <span className="h-1 w-1 rounded-full bg-gray-500" />
+                      Employee
+                    </span>
+                    {formEmpId && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
+                        <Shield className="h-2.5 w-2.5" />
+                        {formEmpId}
+                      </span>
+                    )}
+                    {formDept && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/25">
+                        <Building className="h-2.5 w-2.5" />
+                        {formDept}
+                      </span>
+                    )}
+                    {formDesignation && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-fuchsia-50 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-700 ring-1 ring-inset ring-fuchsia-500/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-300 dark:ring-fuchsia-400/25">
+                        <Award className="h-2.5 w-2.5" />
+                        {formDesignation}
+                      </span>
+                    )}
+                    {editing && (
+                      <span
+                        className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
+                          formActive
+                            ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/25"
+                            : "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/25"
+                        }`}
+                      >
+                        <span className={`h-1 w-1 rounded-full ${formActive ? "bg-emerald-500" : "bg-rose-500"}`} />
+                        {formActive ? "Active" : "Inactive"}
+                      </span>
+                    )}
+                  </div>
+                  {(formPhone || formDOJ) && (
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-gray-200/70 pt-2 text-[10px] text-gray-500 dark:border-gray-800/80 dark:text-gray-400">
+                      {formPhone && (
+                        <span className="inline-flex items-center gap-1">
+                          <Phone className="h-2.5 w-2.5" />
+                          <span className="font-mono tabular-nums">{formPhone}</span>
+                        </span>
+                      )}
+                      {formDOJ && (
+                        <span className="inline-flex items-center gap-1">
+                          <Calendar className="h-2.5 w-2.5" />
+                          Joins{" "}
+                          <span className="font-mono tabular-nums text-gray-700 dark:text-gray-300">
+                            {new Date(formDOJ).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                          </span>
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Identity */}
+            <div>
+              <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-600/70 dark:text-indigo-400/70">
+                <UserIcon className="h-3 w-3" />
+                Identity
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <LabelText icon={UserIcon}>Name</LabelText>
+                  <input value={formName} onChange={(e) => setFormName(e.target.value)} className={fieldCls(errors.name)} placeholder="Full name" />
+                  <ErrText msg={errors.name} />
+                </div>
+                <div>
+                  <LabelText icon={Shield} color="text-sky-500 dark:text-sky-400">Employee ID</LabelText>
+                  <input value={formEmpId} onChange={(e) => setFormEmpId(e.target.value)} placeholder="EMP-001" className={fieldCls(errors.empId)} />
+                  <ErrText msg={errors.empId} />
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Contact */}
+            <div>
+              <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-600/70 dark:text-emerald-400/70">
+                <Mail className="h-3 w-3" />
+                Contact
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <LabelText icon={Mail} color="text-emerald-500 dark:text-emerald-400">Email</LabelText>
+                  <input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className={fieldCls(errors.email)} placeholder="name@company.com" />
+                  <ErrText msg={errors.email} />
+                </div>
+                <div>
+                  <LabelText icon={Phone} color="text-amber-500 dark:text-amber-400">Phone</LabelText>
+                  <input inputMode="numeric" maxLength={10} value={formPhone} onChange={(e) => setFormPhone(e.target.value.replace(/\D/g, ""))} placeholder="10 digits" className={fieldCls(errors.phone)} />
+                  <ErrText msg={errors.phone} />
+                </div>
+              </div>
+              <div className="mt-3">
+                <LabelText icon={Building} color="text-rose-500 dark:text-rose-400">Address</LabelText>
+                <textarea rows={2} value={formAddress} onChange={(e) => setFormAddress(e.target.value)} placeholder="Full residential address" className={`${fieldCls(errors.address)} resize-y`} />
+                <ErrText msg={errors.address} />
+              </div>
+            </div>
+
+            {/* Section: Credentials */}
+            <div>
+              <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-purple-600/70 dark:text-purple-400/70">
+                <Shield className="h-3 w-3" />
+                Credentials
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <LabelText icon={UserIcon} color="text-purple-500 dark:text-purple-400">User ID</LabelText>
+                  <input value={formUserId} onChange={(e) => setFormUserId(e.target.value)} placeholder="login.id" className={fieldCls(errors.userId)} />
+                  <ErrText msg={errors.userId} />
+                </div>
+                <div>
+                  <LabelText icon={Shield} color="text-rose-500 dark:text-rose-400">{editing ? "Reset Password" : "Password"}</LabelText>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={formPassword}
+                      onChange={(e) => setFormPassword(e.target.value)}
+                      placeholder={editing ? "Leave blank to keep" : "Strong password"}
+                      className={`${fieldCls(errors.password)} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((s) => !s)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <PasswordStrength pw={formPassword} />
+                  <ErrText msg={errors.password} />
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Identification & Joining */}
+            <div>
+              <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-600/70 dark:text-sky-400/70">
+                <Shield className="h-3 w-3" />
+                Identification & Joining
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <LabelText icon={Shield} color="text-sky-500 dark:text-sky-400">Aadhaar</LabelText>
+                  <input inputMode="numeric" maxLength={12} value={formAadhaar} onChange={(e) => setFormAadhaar(e.target.value.replace(/\D/g, ""))} placeholder="12 digits" className={`${fieldCls(errors.aadhaar)} font-mono tabular-nums`} />
+                  <ErrText msg={errors.aadhaar} />
+                </div>
+                <div>
+                  <LabelText icon={Calendar} color="text-amber-500 dark:text-amber-400">Date of Joining</LabelText>
+                  <input type="date" value={formDOJ} onChange={(e) => setFormDOJ(e.target.value)} max={new Date().toISOString().slice(0, 10)} className={fieldCls(errors.doj)} />
+                  <ErrText msg={errors.doj} />
+                </div>
+              </div>
+            </div>
+
+            {/* Section: Work */}
+            <div>
+              <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-600/70 dark:text-indigo-400/70">
+                <Briefcase className="h-3 w-3" />
+                Work
+              </p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <LabelText icon={Shield} color="text-purple-500 dark:text-purple-400">Role</LabelText>
+                  <div className="flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gradient-to-r from-gray-50 to-white px-3.5 py-2.5 dark:border-gray-700/80 dark:from-gray-800/60 dark:to-gray-900">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-gray-500 to-gray-600">
+                      <UserIcon className="h-3 w-3 text-white" />
+                    </span>
+                    <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Employee</p>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-400">Â· Standard access</p>
+                  </div>
+                </div>
+                <div>
+                  <LabelText icon={Building} color="text-emerald-500 dark:text-emerald-400">Department</LabelText>
+                  <select value={formDept} onChange={(e) => setFormDept(e.target.value)} className={fieldCls()}>
+                    <option value="">— Select —</option>
+                    {(formDept && !departments.includes(formDept)) && (
+                      <option value={formDept}>{formDept}</option>
+                    )}
+                    {departments.map((d) => (
+                      <option key={d} value={d}>{d}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="mt-3">
+                <LabelText icon={Award} color="text-fuchsia-500 dark:text-fuchsia-400">Designation</LabelText>
+                <select value={formDesignation} onChange={(e) => setFormDesignation(e.target.value)} className={fieldCls()}>
+                  <option value="">— Select —</option>
+                  {(formDesignation && !designations.includes(formDesignation)) && (
+                    <option value={formDesignation}>{formDesignation}</option>
+                  )}
+                  {designations.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Account active toggle (edit only) */}
+            {editing && (
+              <label className="flex items-center gap-3 rounded-xl border border-gray-200/70 bg-gradient-to-r from-gray-50/60 to-white p-3 text-sm text-gray-900 dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900 dark:text-gray-300">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
+                  formActive
+                    ? "bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
+                    : "bg-gray-200 text-gray-500 ring-1 ring-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:ring-gray-600"
+                }`}>
+                  <Activity className="h-3.5 w-3.5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-semibold text-gray-900 dark:text-white">Account active</p>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                    {formActive ? "Can sign in to the portal" : "Sign-in disabled — read-only"}
+                  </p>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={formActive}
+                  onChange={(e) => setFormActive(e.target.checked)}
+                  className="sr-only"
+                />
+                <span
+                  aria-hidden
+                  className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
+                    formActive ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
+                      formActive ? "translate-x-5" : "translate-x-0.5"
+                    }`}
+                  />
+                </span>
+              </label>
+            )}
+          </form>
+
+          {/* Sticky footer */}
+          <div className="shrink-0 border-t border-gray-200/70 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 sm:px-6">
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="employee-form"
+                disabled={saving}
+                className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10 transition-all hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl hover:shadow-indigo-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
+              >
+                <span
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
+                />
+                <span className="relative inline-flex items-center justify-center gap-2">
+                  {saving
+                    ? (<><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving…</>)
+                    : editing
+                      ? (<><Pencil className="h-4 w-4" />Update Employee</>)
+                      : (<><Plus className="h-4 w-4" />Create Employee</>)}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   if (profileUser) {
     const p = empProfile;
@@ -378,17 +766,39 @@ export default function Employees() {
                 )}
               </div>
             </div>
-            {isAdmin && (
-              <button
-                onClick={() => openEdit(profileUser)}
-                className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
-              >
-                <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
-                  <Pencil className="h-3.5 w-3.5 text-white" />
-                </span>
-                Edit
-              </button>
-            )}
+            <div className="flex shrink-0 flex-col items-center gap-2 sm:flex-row">
+              {profileUser.email && (
+                <a
+                  href={`mailto:${profileUser.email}`}
+                  title={`Email ${profileUser.name}`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 active:scale-[0.97]"
+                >
+                  <Mail className="h-4 w-4" />
+                  <span className="hidden sm:inline">Email</span>
+                </a>
+              )}
+              {p?.phone && (
+                <a
+                  href={`tel:${p.phone}`}
+                  title={`Call ${profileUser.name}`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3.5 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/15 active:scale-[0.97]"
+                >
+                  <Phone className="h-4 w-4" />
+                  <span className="hidden sm:inline">Call</span>
+                </a>
+              )}
+              {isAdmin && (
+                <button
+                  onClick={() => openEdit(profileUser)}
+                  className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+                >
+                  <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
+                    <Pencil className="h-3.5 w-3.5 text-white" />
+                  </span>
+                  Edit
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -401,25 +811,66 @@ export default function Employees() {
           <>
             {/* Quick Stats */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {[
-                {
-                  label: "Status",
-                  value: profileUser.isActive ? "Active" : "Inactive",
-                  icon: Activity,
-                  gradient: profileUser.isActive ? "from-emerald-500 to-teal-600" : "from-rose-500 to-pink-600",
-                },
-                { label: "Department", value: profileUser.department || "—", icon: Building, gradient: "from-sky-500 to-indigo-600" },
-                { label: "Role", value: rc.label, icon: Shield, gradient: "from-purple-500 to-fuchsia-600" },
-                { label: "Joined", value: new Date(profileUser.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }), icon: Calendar, gradient: "from-amber-500 to-orange-600" },
-              ].map((s) => (
-                <div key={s.label} className={`${cardCls} p-4`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`rounded-lg bg-gradient-to-br ${s.gradient} p-2 shadow-sm ring-1 ring-white/10`}>
-                      <s.icon className="h-3.5 w-3.5 text-white" />
-                    </div>
+              {(() => {
+                const joinedDate = p?.joiningDate ? new Date(p.joiningDate) : new Date(profileUser.createdAt);
+                const tenureDays = Math.max(
+                  0,
+                  Math.floor((Date.now() - joinedDate.getTime()) / (1000 * 60 * 60 * 24)),
+                );
+                const tenureLabel =
+                  tenureDays < 30
+                    ? `${tenureDays}d at company`
+                    : tenureDays < 365
+                    ? `${Math.round(tenureDays / 30)}mo at company`
+                    : `${(tenureDays / 365).toFixed(1)}yr at company`;
+                return [
+                  {
+                    label: "Status",
+                    value: profileUser.isActive ? "Active" : "Inactive",
+                    sub: profileUser.isActive ? "Can sign in" : "Sign-in disabled",
+                    icon: Activity,
+                    gradient: profileUser.isActive ? "from-emerald-500 to-teal-600" : "from-rose-500 to-pink-600",
+                  },
+                  {
+                    label: "Department",
+                    value: profileUser.department || "—",
+                    sub: p?.designation || "No designation",
+                    icon: Building,
+                    gradient: "from-sky-500 to-indigo-600",
+                  },
+                  {
+                    label: "Role",
+                    value: rc.label,
+                    sub: p?.employeeId ? `ID: ${p.employeeId}` : "No ID",
+                    icon: Shield,
+                    gradient: "from-purple-500 to-fuchsia-600",
+                  },
+                  {
+                    label: "Joined",
+                    value: joinedDate.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }),
+                    sub: tenureLabel,
+                    icon: Calendar,
+                    gradient: "from-amber-500 to-orange-600",
+                  },
+                ];
+              })().map((s) => (
+                <div key={s.label} className={`${cardCls} group relative overflow-hidden p-4`}>
+                  <div
+                    aria-hidden
+                    className={`pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-gradient-to-br ${s.gradient} opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-25`}
+                  />
+                  <div className="relative flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className={labelCls}>{s.label}</p>
-                      <p className="truncate text-sm font-bold text-gray-900 dark:text-white">{s.value}</p>
+                      <p className="mt-1 truncate text-base font-bold tracking-tight text-gray-900 dark:text-white">
+                        {s.value}
+                      </p>
+                      <p className="mt-0.5 truncate text-[10px] text-gray-400 dark:text-gray-500">{s.sub}</p>
+                    </div>
+                    <div
+                      className={`shrink-0 rounded-lg bg-gradient-to-br ${s.gradient} p-2 shadow-md shadow-black/[0.08] ring-1 ring-white/10`}
+                    >
+                      <s.icon className="h-3.5 w-3.5 text-white" />
                     </div>
                   </div>
                 </div>
@@ -436,11 +887,11 @@ export default function Employees() {
                   <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Personal & Contact</h3>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  <InfoRow icon={Mail} label="Email" value={profileUser.email} gradient="from-indigo-500 to-purple-600" />
-                  <InfoRow icon={Phone} label="Phone" value={p?.phone} gradient="from-amber-500 to-orange-600" />
+                  <InfoRow icon={Mail} label="Email" value={profileUser.email} gradient="from-indigo-500 to-purple-600" href={profileUser.email ? `mailto:${profileUser.email}` : undefined} />
+                  <InfoRow icon={Phone} label="Phone" value={p?.phone} gradient="from-amber-500 to-orange-600" href={p?.phone ? `tel:${p.phone}` : undefined} mono />
                   <InfoRow icon={Calendar} label="Date of Birth" value={p?.dateOfBirth} gradient="from-rose-500 to-pink-600" />
                   <InfoRow icon={UserIcon} label="Gender" value={p?.gender} gradient="from-purple-500 to-fuchsia-600" />
-                  <InfoRow icon={Mail} label="Personal Email" value={p?.personalEmail} gradient="from-emerald-500 to-teal-600" />
+                  <InfoRow icon={Mail} label="Personal Email" value={p?.personalEmail} gradient="from-emerald-500 to-teal-600" href={p?.personalEmail ? `mailto:${p.personalEmail}` : undefined} />
                   <InfoRow icon={Activity} label="Blood Group" value={p?.bloodGroup} gradient="from-rose-500 to-pink-600" />
                 </div>
                 {p?.address && (
@@ -570,7 +1021,7 @@ export default function Employees() {
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{c.name}</p>
                           <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                            {c.issuer}{c.year ? ` · ${c.year}` : ""}
+                            {c.issuer}{c.year ? ` Â· ${c.year}` : ""}
                           </p>
                         </div>
                       </div>
@@ -615,6 +1066,7 @@ export default function Employees() {
             )}
           </>
         )}
+        {renderEditModal()}
       </div>
     );
   }
@@ -950,370 +1402,7 @@ export default function Employees() {
       )}
 
       {/* ── Edit / Create Drawer (premium) ── */}
-      {showModal && (() => {
-        const fieldCls = (err?: string) =>
-          `w-full rounded-lg border bg-white px-3 py-2.5 text-sm text-gray-900 outline-none transition-colors dark:bg-gray-800 dark:text-white ${
-            err
-              ? "border-rose-400 focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 dark:border-rose-500"
-              : "border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700"
-          }`;
-        const LabelText = ({ icon: Icon, color = "text-indigo-500 dark:text-indigo-400", children }: { icon?: typeof Mail; color?: string; children: React.ReactNode }) => (
-          <label className={`${labelCls} mb-1.5 flex items-center gap-1.5`}>
-            {Icon && <Icon className={`h-3 w-3 ${color}`} />}
-            {children}
-          </label>
-        );
-        const ErrText = ({ msg }: { msg?: string }) =>
-          msg ? <p className="mt-1 flex items-center gap-1 text-[11px] text-rose-600 dark:text-rose-400"><span className="h-1 w-1 rounded-full bg-rose-500" />{msg}</p> : null;
-        return (
-          <div className="fixed inset-0 z-50 flex justify-end">
-            <div
-              className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm"
-              onClick={resetForm}
-            />
-            <div
-              role="dialog"
-              aria-modal="true"
-              className="relative flex h-full w-full max-w-md animate-drawer-slide-right flex-col overflow-hidden border-l border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10 sm:max-w-xl sm:rounded-l-3xl"
-            >
-              {/* Left gradient stripe */}
-              <span aria-hidden className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-indigo-500 to-purple-600" />
-
-              {/* Header */}
-              <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-purple-50/40 px-5 pt-6 pb-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:via-gray-900 dark:to-purple-500/10">
-                <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-indigo-400/25 blur-3xl" />
-                <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-purple-400/15 blur-3xl" />
-                <div className="relative flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3.5">
-                    <div className="rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-3 shadow-lg shadow-indigo-500/30 ring-1 ring-white/15">
-                      {editing ? <Pencil className="h-5 w-5 text-white" /> : <Plus className="h-5 w-5 text-white" />}
-                    </div>
-                    <div>
-                      <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
-                        <Sparkles className="h-3 w-3" />
-                        {editing ? "Update record" : "New entry"}
-                      </p>
-                      <h2 className="mt-0.5 text-lg font-bold tracking-tight text-gray-900 dark:text-white">
-                        {editing ? "Edit Employee" : "New Employee"}
-                      </h2>
-                      <p className="mt-0.5 text-xs text-gray-500 dark:text-gray-400">
-                        {editing ? "Update personal and work details" : "Create a new employee record"}
-                      </p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={resetForm}
-                    aria-label="Close"
-                    className="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Scrollable body */}
-              <form
-                onSubmit={handleSubmit}
-                noValidate
-                id="employee-form"
-                className="premium-scroll flex-1 space-y-5 overflow-y-auto p-5 sm:p-6"
-              >
-                {/* ── Live Preview ── */}
-                <div className="relative overflow-hidden rounded-2xl border border-gray-200/70 bg-gradient-to-br from-gray-50 to-white p-4 ring-1 ring-black/[0.02] dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900/40 dark:ring-white/[0.02]">
-                  <span aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-indigo-400/15 blur-2xl" />
-                  <span aria-hidden className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-indigo-400/60 to-transparent" />
-                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
-                    <Sparkles className="h-3 w-3" />
-                    Live preview
-                  </p>
-                  <div className="flex items-start gap-3">
-                    <Avatar name={formName || "?"} size="lg" />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
-                        {formName || <span className="text-gray-400 dark:text-gray-500">Employee name…</span>}
-                      </p>
-                      <p className="truncate text-xs text-gray-500 dark:text-gray-400">
-                        {formEmail || <span className="text-gray-400 dark:text-gray-500">name@company.com</span>}
-                      </p>
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                        {/* Role pill (always Employee for this form) */}
-                        <span className="inline-flex items-center gap-1 rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-700/50 dark:text-gray-300 dark:ring-gray-500/20">
-                          <span className="h-1 w-1 rounded-full bg-gray-500" />
-                          Employee
-                        </span>
-                        {formEmpId && (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
-                            <Shield className="h-2.5 w-2.5" />
-                            {formEmpId}
-                          </span>
-                        )}
-                        {formDept && (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/25">
-                            <Building className="h-2.5 w-2.5" />
-                            {formDept}
-                          </span>
-                        )}
-                        {formDesignation && (
-                          <span className="inline-flex items-center gap-1 rounded-md bg-fuchsia-50 px-1.5 py-0.5 text-[10px] font-semibold text-fuchsia-700 ring-1 ring-inset ring-fuchsia-500/20 dark:bg-fuchsia-500/10 dark:text-fuchsia-300 dark:ring-fuchsia-400/25">
-                            <Award className="h-2.5 w-2.5" />
-                            {formDesignation}
-                          </span>
-                        )}
-                        {editing && (
-                          <span
-                            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${
-                              formActive
-                                ? "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-300 dark:ring-emerald-400/25"
-                                : "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/25"
-                            }`}
-                          >
-                            <span className={`h-1 w-1 rounded-full ${formActive ? "bg-emerald-500" : "bg-rose-500"}`} />
-                            {formActive ? "Active" : "Inactive"}
-                          </span>
-                        )}
-                      </div>
-                      {/* Footer line: phone + joining */}
-                      {(formPhone || formDOJ) && (
-                        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-gray-200/70 pt-2 text-[10px] text-gray-500 dark:border-gray-800/80 dark:text-gray-400">
-                          {formPhone && (
-                            <span className="inline-flex items-center gap-1">
-                              <Phone className="h-2.5 w-2.5" />
-                              <span className="font-mono tabular-nums">{formPhone}</span>
-                            </span>
-                          )}
-                          {formDOJ && (
-                            <span className="inline-flex items-center gap-1">
-                              <Calendar className="h-2.5 w-2.5" />
-                              Joins{" "}
-                              <span className="font-mono tabular-nums text-gray-700 dark:text-gray-300">
-                                {new Date(formDOJ).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                              </span>
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section: Identity */}
-                <div>
-                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-600/70 dark:text-indigo-400/70">
-                    <UserIcon className="h-3 w-3" />
-                    Identity
-                  </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <LabelText icon={UserIcon}>Name</LabelText>
-                      <input value={formName} onChange={(e) => setFormName(e.target.value)} className={fieldCls(errors.name)} placeholder="Full name" />
-                      <ErrText msg={errors.name} />
-                    </div>
-                    <div>
-                      <LabelText icon={Shield} color="text-sky-500 dark:text-sky-400">Employee ID</LabelText>
-                      <input value={formEmpId} onChange={(e) => setFormEmpId(e.target.value)} placeholder="EMP-001" className={fieldCls(errors.empId)} />
-                      <ErrText msg={errors.empId} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section: Contact */}
-                <div>
-                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-600/70 dark:text-emerald-400/70">
-                    <Mail className="h-3 w-3" />
-                    Contact
-                  </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <LabelText icon={Mail} color="text-emerald-500 dark:text-emerald-400">Email</LabelText>
-                      <input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className={fieldCls(errors.email)} placeholder="name@company.com" />
-                      <ErrText msg={errors.email} />
-                    </div>
-                    <div>
-                      <LabelText icon={Phone} color="text-amber-500 dark:text-amber-400">Phone</LabelText>
-                      <input inputMode="numeric" maxLength={10} value={formPhone} onChange={(e) => setFormPhone(e.target.value.replace(/\D/g, ""))} placeholder="10 digits" className={fieldCls(errors.phone)} />
-                      <ErrText msg={errors.phone} />
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <LabelText icon={Building} color="text-rose-500 dark:text-rose-400">Address</LabelText>
-                    <textarea rows={2} value={formAddress} onChange={(e) => setFormAddress(e.target.value)} placeholder="Full residential address" className={`${fieldCls(errors.address)} resize-y`} />
-                    <ErrText msg={errors.address} />
-                  </div>
-                </div>
-
-                {/* Section: Credentials */}
-                <div>
-                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-purple-600/70 dark:text-purple-400/70">
-                    <Shield className="h-3 w-3" />
-                    Credentials
-                  </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <LabelText icon={UserIcon} color="text-purple-500 dark:text-purple-400">User ID</LabelText>
-                      <input value={formUserId} onChange={(e) => setFormUserId(e.target.value)} placeholder="login.id" className={fieldCls(errors.userId)} />
-                      <ErrText msg={errors.userId} />
-                    </div>
-                    <div>
-                      <LabelText icon={Shield} color="text-rose-500 dark:text-rose-400">{editing ? "Reset Password" : "Password"}</LabelText>
-                      <div className="relative">
-                        <input
-                          type={showPassword ? "text" : "password"}
-                          value={formPassword}
-                          onChange={(e) => setFormPassword(e.target.value)}
-                          placeholder={editing ? "Leave blank to keep" : "Strong password"}
-                          className={`${fieldCls(errors.password)} pr-10`}
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPassword((s) => !s)}
-                          aria-label={showPassword ? "Hide password" : "Show password"}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                        >
-                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                      <PasswordStrength pw={formPassword} />
-                      <ErrText msg={errors.password} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section: Identity & Joining */}
-                <div>
-                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-sky-600/70 dark:text-sky-400/70">
-                    <Shield className="h-3 w-3" />
-                    Identification & Joining
-                  </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <LabelText icon={Shield} color="text-sky-500 dark:text-sky-400">Aadhaar</LabelText>
-                      <input inputMode="numeric" maxLength={12} value={formAadhaar} onChange={(e) => setFormAadhaar(e.target.value.replace(/\D/g, ""))} placeholder="12 digits" className={`${fieldCls(errors.aadhaar)} font-mono tabular-nums`} />
-                      <ErrText msg={errors.aadhaar} />
-                    </div>
-                    <div>
-                      <LabelText icon={Calendar} color="text-amber-500 dark:text-amber-400">Date of Joining</LabelText>
-                      <input type="date" value={formDOJ} onChange={(e) => setFormDOJ(e.target.value)} max={new Date().toISOString().slice(0, 10)} className={fieldCls(errors.doj)} />
-                      <ErrText msg={errors.doj} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Section: Work */}
-                <div>
-                  <p className="mb-3 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-indigo-600/70 dark:text-indigo-400/70">
-                    <Briefcase className="h-3 w-3" />
-                    Work
-                  </p>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <LabelText icon={Shield} color="text-purple-500 dark:text-purple-400">Role</LabelText>
-                      <div className="flex items-center gap-2 rounded-lg border border-gray-200/70 bg-gradient-to-r from-gray-50 to-white px-3.5 py-2.5 dark:border-gray-700/80 dark:from-gray-800/60 dark:to-gray-900">
-                        <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-gray-500 to-gray-600">
-                          <UserIcon className="h-3 w-3 text-white" />
-                        </span>
-                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-300">Employee</p>
-                        <p className="text-[11px] text-gray-500 dark:text-gray-400">· Standard access</p>
-                      </div>
-                    </div>
-                    <div>
-                      <LabelText icon={Building} color="text-emerald-500 dark:text-emerald-400">Department</LabelText>
-                      <select value={formDept} onChange={(e) => setFormDept(e.target.value)} className={fieldCls()}>
-                        <option value="">— Select —</option>
-                        {(formDept && !departments.includes(formDept)) && (
-                          <option value={formDept}>{formDept}</option>
-                        )}
-                        {departments.map((d) => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="mt-3">
-                    <LabelText icon={Award} color="text-fuchsia-500 dark:text-fuchsia-400">Designation</LabelText>
-                    <select value={formDesignation} onChange={(e) => setFormDesignation(e.target.value)} className={fieldCls()}>
-                      <option value="">— Select —</option>
-                      {(formDesignation && !designations.includes(formDesignation)) && (
-                        <option value={formDesignation}>{formDesignation}</option>
-                      )}
-                      {designations.map((d) => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                {/* Account active toggle (edit only) */}
-                {editing && (
-                  <label className="flex items-center gap-3 rounded-xl border border-gray-200/70 bg-gradient-to-r from-gray-50/60 to-white p-3 text-sm text-gray-900 dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900 dark:text-gray-300">
-                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-colors ${
-                      formActive
-                        ? "bg-emerald-500/15 text-emerald-600 ring-1 ring-emerald-500/30 dark:bg-emerald-500/15 dark:text-emerald-300"
-                        : "bg-gray-200 text-gray-500 ring-1 ring-gray-300 dark:bg-gray-700 dark:text-gray-400 dark:ring-gray-600"
-                    }`}>
-                      <Activity className="h-3.5 w-3.5" />
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-xs font-semibold text-gray-900 dark:text-white">Account active</p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                        {formActive ? "Can sign in to the portal" : "Sign-in disabled — read-only"}
-                      </p>
-                    </div>
-                    <input
-                      type="checkbox"
-                      checked={formActive}
-                      onChange={(e) => setFormActive(e.target.checked)}
-                      className="sr-only"
-                    />
-                    <span
-                      aria-hidden
-                      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
-                        formActive ? "bg-emerald-500" : "bg-gray-300 dark:bg-gray-600"
-                      }`}
-                    >
-                      <span
-                        className={`inline-block h-5 w-5 rounded-full bg-white shadow-md transition-transform ${
-                          formActive ? "translate-x-5" : "translate-x-0.5"
-                        }`}
-                      />
-                    </span>
-                  </label>
-                )}
-              </form>
-
-              {/* Sticky footer */}
-              <div className="shrink-0 border-t border-gray-200/70 bg-white/95 px-5 py-4 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 sm:px-6">
-                <div className="flex gap-3">
-                  <button
-                    type="button"
-                    onClick={resetForm}
-                    className="flex-1 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    form="employee-form"
-                    disabled={saving}
-                    className="group relative flex-1 overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 ring-1 ring-white/10 transition-all hover:from-indigo-700 hover:to-purple-700 hover:shadow-xl hover:shadow-indigo-500/35 disabled:cursor-not-allowed disabled:opacity-50 disabled:shadow-none"
-                  >
-                    <span
-                      aria-hidden
-                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-700 group-hover:translate-x-full"
-                    />
-                    <span className="relative inline-flex items-center justify-center gap-2">
-                      {saving
-                        ? (<><span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />Saving…</>)
-                        : editing
-                          ? (<><Pencil className="h-4 w-4" />Update Employee</>)
-                          : (<><Plus className="h-4 w-4" />Create Employee</>)}
-                    </span>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })()}
+      {renderEditModal()}
     </div>
   );
 }
