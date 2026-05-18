@@ -18,6 +18,7 @@ import { userApi } from "../../api/userApi";
 import { useAuth } from "../../context/AuthContext";
 import type { User } from "../../types";
 import toast from "react-hot-toast";
+import Drawer from "../../components/Drawer";
 
 // ── Type config ──
 const TYPE_CFG: Record<
@@ -137,6 +138,7 @@ export default function FeedbackPage() {
 
   // My Feedback state
   const [feedback, setFeedback] = useState<FeedbackData[]>([]);
+  const [selectedFeedback, setSelectedFeedback] = useState<FeedbackData | null>(null);
   const [loadingFeedback, setLoadingFeedback] = useState(false);
   const [search, setSearch] = useState("");
 
@@ -300,22 +302,11 @@ export default function FeedbackPage() {
       )}
 
       {/* ━━━ Section Label ━━━ */}
-      <div className="inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-gradient-to-br from-indigo-600 to-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/30">
-        {canGiveFeedback ? (
-          <>
-            <Send className="h-3.5 w-3.5" /> Give Feedback
-          </>
-        ) : (
-          <>
-            <MessageSquare className="h-3.5 w-3.5" /> My Feedback
-            {feedback.length > 0 && (
-              <span className="ml-1 rounded-full bg-white/25 px-1.5 py-0.5 text-[10px] font-bold">
-                {feedback.length}
-              </span>
-            )}
-          </>
-        )}
-      </div>
+      {canGiveFeedback && (
+        <div className="inline-flex items-center gap-2 rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-gradient-to-br from-indigo-600 to-indigo-700 px-4 py-2 text-sm font-semibold text-white shadow-md shadow-indigo-600/30">
+          <Send className="h-3.5 w-3.5" /> Give Feedback
+        </div>
+      )}
 
       {/* ━━━ Give Feedback (admins & managers only) ━━━ */}
       {canGiveFeedback && (
@@ -602,7 +593,16 @@ export default function FeedbackPage() {
                     return (
                       <div
                         key={fb._id}
-                        className={`${card} group p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-black/40 hover:border-indigo-300/60 dark:hover:border-indigo-600/40`}
+                        onClick={() => setSelectedFeedback(fb)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelectedFeedback(fb);
+                          }
+                        }}
+                        className={`${card} group cursor-pointer p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-gray-200/60 dark:hover:shadow-black/40 hover:border-indigo-300/60 dark:hover:border-indigo-600/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40`}
                       >
                         {/* Top row */}
                         <div className="flex items-start justify-between gap-2 mb-3">
@@ -687,6 +687,154 @@ export default function FeedbackPage() {
           )}
         </div>
       )}
+
+      {/* ━━━ Feedback Detail Drawer ━━━ */}
+      <Drawer
+        open={selectedFeedback !== null}
+        onClose={() => setSelectedFeedback(null)}
+        size="lg"
+        icon={<MessageSquare className="h-5 w-5 text-indigo-200" />}
+        subtitle={
+          <span className="inline-flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3" />
+            Feedback
+          </span>
+        }
+        title={
+          selectedFeedback
+            ? selectedFeedback.anonymous
+              ? "Anonymous feedback"
+              : `From ${selectedFeedback.fromUser?.name || "Unknown"}`
+            : "Feedback"
+        }
+      >
+        {selectedFeedback && (() => {
+          const cfg = TYPE_CFG[selectedFeedback.type] || TYPE_CFG.manager;
+          return (
+            <div className="space-y-5 p-5 sm:p-6">
+              {/* Header meta */}
+              <div className="flex items-center gap-3">
+                {selectedFeedback.anonymous ? (
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-gray-400 to-gray-600 ring-2 ring-white shadow-md dark:ring-gray-900">
+                    <EyeOff className="h-6 w-6 text-white" />
+                  </div>
+                ) : (
+                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-base font-bold text-white ring-2 ring-white shadow-md dark:ring-gray-900">
+                    {initials(selectedFeedback.fromUser?.name)}
+                  </div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-base font-bold text-gray-900 dark:text-white">
+                    {selectedFeedback.anonymous ? "Anonymous" : selectedFeedback.fromUser?.name || "Unknown"}
+                  </p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <span
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-semibold ring-1 ${cfg.bg} ${cfg.text} ${cfg.ring}`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${cfg.dot}`} />
+                      {cfg.label}
+                    </span>
+                    <span className="text-[11px] text-gray-500 dark:text-gray-400">
+                      {new Date(selectedFeedback.createdAt).toLocaleDateString(undefined, {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Rating */}
+              {typeof selectedFeedback.rating === "number" && selectedFeedback.rating > 0 && (
+                <div className="flex items-center gap-3 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 px-4 py-3 ring-1 ring-amber-500/20 dark:from-amber-500/10 dark:to-orange-500/5 dark:ring-amber-400/25">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-md ring-1 ring-white/15">
+                    <Star className="h-5 w-5 text-white" strokeWidth={2.5} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                      Rating
+                    </p>
+                    <div className="mt-1 flex items-center gap-2">
+                      <RatingStars value={selectedFeedback.rating} readonly size="md" />
+                      <span className="ml-auto font-mono text-base font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                        {selectedFeedback.rating.toFixed(1)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Strengths */}
+              {selectedFeedback.strengths && (
+                <div className="rounded-2xl border border-emerald-200/60 bg-emerald-50/60 p-4 dark:border-emerald-500/15 dark:bg-emerald-500/5">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 shadow-sm ring-1 ring-white/15">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                    </div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">
+                      Strengths
+                    </p>
+                  </div>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700 dark:text-gray-200">
+                    {selectedFeedback.strengths}
+                  </p>
+                </div>
+              )}
+
+              {/* Improvements */}
+              {selectedFeedback.improvements && (
+                <div className="rounded-2xl border border-amber-200/60 bg-amber-50/60 p-4 dark:border-amber-500/15 dark:bg-amber-500/5">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 shadow-sm ring-1 ring-white/15">
+                      <TrendingUp className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                    </div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-700 dark:text-amber-400">
+                      Areas to improve
+                    </p>
+                  </div>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700 dark:text-gray-200">
+                    {selectedFeedback.improvements}
+                  </p>
+                </div>
+              )}
+
+              {/* Comments */}
+              {selectedFeedback.comments && (
+                <div className="rounded-2xl border border-gray-200/70 bg-gray-50/60 p-4 dark:border-gray-800/80 dark:bg-gray-800/40">
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 shadow-sm ring-1 ring-white/15">
+                      <MessageSquare className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                    </div>
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Comments
+                    </p>
+                  </div>
+                  <p className="whitespace-pre-line text-sm leading-relaxed text-gray-700 dark:text-gray-200">
+                    {selectedFeedback.comments}
+                  </p>
+                </div>
+              )}
+
+              {/* Empty fallback */}
+              {!selectedFeedback.strengths && !selectedFeedback.improvements && !selectedFeedback.comments && (
+                <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-8 text-center dark:border-gray-800 dark:bg-gray-800/30">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">No written feedback was provided.</p>
+                </div>
+              )}
+
+              {/* Footer hint */}
+              <div className="flex items-center gap-2 rounded-xl bg-indigo-50/60 px-3 py-2 ring-1 ring-indigo-500/15 dark:bg-indigo-500/10 dark:ring-indigo-400/20">
+                <Shield className="h-3.5 w-3.5 shrink-0 text-indigo-500 dark:text-indigo-400" />
+                <p className="text-[11px] text-indigo-700 dark:text-indigo-300">
+                  This feedback is private — only you can see it.
+                </p>
+              </div>
+            </div>
+          );
+        })()}
+      </Drawer>
     </div>
   );
 }
