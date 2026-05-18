@@ -17,9 +17,16 @@ import {
   Trophy,
   ChevronLeft,
   ChevronRight,
+  Pencil,
+  Trash2,
+  Check,
+  X,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import { recognitionApi, type RecognitionData } from "../../api/recognitionApi";
 import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
+import Drawer from "../../components/Drawer";
 
 const BADGES: Record<
   string,
@@ -151,6 +158,103 @@ export default function RecognitionWall() {
   const [drafts, setDrafts] = useState<Record<string, string>>({});
   const [posting, setPosting] = useState<string | null>(null);
   const [badgeFilter, setBadgeFilter] = useState<string>("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [drawerDraft, setDrawerDraft] = useState("");
+  const [editing, setEditing] = useState(false);
+  const [editMessage, setEditMessage] = useState("");
+  const [editBadge, setEditBadge] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const confirm = useConfirm();
+  const isAdmin = user?.role === "admin";
+
+  const selectedPost = useMemo(
+    () => (selectedId ? posts.find((p) => p._id === selectedId) ?? null : null),
+    [posts, selectedId],
+  );
+  const selectedBadge = selectedPost
+    ? BADGES[selectedPost.badge] ?? BADGES["star-performer"]
+    : null;
+  const selectedLiked = selectedPost && user ? selectedPost.reactions.like.includes(user._id) : false;
+
+  const closeDrawer = () => {
+    setSelectedId(null);
+    setDrawerDraft("");
+    setEditing(false);
+  };
+
+  const startEdit = () => {
+    if (!selectedPost) return;
+    setEditMessage(selectedPost.message);
+    setEditBadge(selectedPost.badge);
+    setEditing(true);
+  };
+
+  const saveEdit = async () => {
+    if (!selectedPost) return;
+    const msg = editMessage.trim();
+    if (!msg) {
+      toast.error("Message cannot be empty.");
+      return;
+    }
+    setSavingEdit(true);
+    try {
+      await recognitionApi.update(selectedPost._id, { message: msg, badge: editBadge });
+      toast.success("Recognition updated.");
+      setEditing(false);
+      fetchPosts(page);
+    } catch {
+      /* interceptor */
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedPost) return;
+    const ok = await confirm({
+      title: "Delete recognition?",
+      description: (
+        <>
+          You're about to delete the recognition for{" "}
+          <span className="font-semibold text-gray-900 dark:text-white">
+            {selectedPost.toUser.name}
+          </span>
+          . This action cannot be undone.
+        </>
+      ),
+      confirmLabel: "Delete",
+      cancelLabel: "Keep",
+    });
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      await recognitionApi.delete(selectedPost._id);
+      toast.success("Recognition deleted.");
+      closeDrawer();
+      fetchPosts(page);
+    } catch {
+      /* interceptor */
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const handleDrawerComment = async () => {
+    if (!selectedPost) return;
+    const text = drawerDraft.trim();
+    if (!text) return;
+    setPosting(selectedPost._id);
+    try {
+      await recognitionApi.comment(selectedPost._id, text);
+      setDrawerDraft("");
+      fetchPosts(page);
+    } catch {
+      /* interceptor */
+    } finally {
+      setPosting(null);
+    }
+  };
 
   const fetchPosts = useCallback((p: number) => {
     setLoading(true);
@@ -244,13 +348,15 @@ export default function RecognitionWall() {
               all in one place.
             </p>
           </div>
-          <Link
-            to="/recognition/send"
-            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 px-5 py-3 text-sm font-bold text-gray-900 shadow-lg shadow-amber-500/30 transition-all hover:shadow-xl hover:shadow-amber-500/40 active:scale-[0.98]"
-          >
-            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-            <Send className="h-4 w-4" /> Give Recognition
-          </Link>
+          {user?.role === "admin" && (
+            <Link
+              to="/recognition/send"
+              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 px-5 py-3 text-sm font-bold text-gray-900 shadow-lg shadow-amber-500/30 transition-all hover:shadow-xl hover:shadow-amber-500/40 active:scale-[0.98]"
+            >
+              <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/40 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
+              <Send className="h-4 w-4" /> Give Recognition
+            </Link>
+          )}
         </div>
       </div>
 
@@ -313,7 +419,7 @@ export default function RecognitionWall() {
               ? "Be the first to celebrate a teammate!"
               : "Try a different badge filter."}
           </p>
-          {badgeFilter === "all" && (
+          {badgeFilter === "all" && user?.role === "admin" && (
             <Link
               to="/recognition/send"
               className="mt-4 inline-flex items-center gap-2 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-amber-500/30"
@@ -332,7 +438,16 @@ export default function RecognitionWall() {
             return (
               <div
                 key={post._id}
-                className="group relative overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-5 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-gray-200/60 dark:hover:shadow-black/40"
+                onClick={() => setSelectedId(post._id)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setSelectedId(post._id);
+                  }
+                }}
+                className="group relative cursor-pointer overflow-hidden rounded-2xl border border-gray-200/70 dark:border-gray-800/80 bg-white dark:bg-gray-900/80 p-5 backdrop-blur-sm transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-gray-200/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 dark:hover:shadow-black/40"
               >
                 {/* Gradient accent */}
                 <div
@@ -383,7 +498,7 @@ export default function RecognitionWall() {
                   {/* Actions */}
                   <div className="mt-4 flex items-center gap-2 border-t border-gray-200/70 dark:border-gray-800/60 pt-3">
                     <button
-                      onClick={() => handleLike(post._id)}
+                      onClick={(e) => { e.stopPropagation(); handleLike(post._id); }}
                       className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
                         liked
                           ? "bg-pink-50 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400 ring-1 ring-pink-500/20"
@@ -396,9 +511,10 @@ export default function RecognitionWall() {
                       <span className="tabular-nums">{post.reactions.like.length}</span>
                     </button>
                     <button
-                      onClick={() =>
-                        setOpenComments((o) => ({ ...o, [post._id]: !o[post._id] }))
-                      }
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setOpenComments((o) => ({ ...o, [post._id]: !o[post._id] }));
+                      }}
                       className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
                         commentsOpen
                           ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 ring-1 ring-indigo-500/20"
@@ -412,7 +528,10 @@ export default function RecognitionWall() {
 
                   {/* Comments */}
                   {commentsOpen && (
-                    <div className="mt-3 space-y-2 rounded-xl bg-gray-50/70 dark:bg-gray-800/30 p-3 ring-1 ring-gray-200/60 dark:ring-gray-800/60">
+                    <div
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-3 space-y-2 rounded-xl bg-gray-50/70 dark:bg-gray-800/30 p-3 ring-1 ring-gray-200/60 dark:ring-gray-800/60"
+                    >
                       {post.comments.length === 0 ? (
                         <p className="text-xs italic text-gray-400 dark:text-gray-500">No comments yet.</p>
                       ) : (
@@ -484,6 +603,233 @@ export default function RecognitionWall() {
           </button>
         </div>
       )}
+
+      {/* ━━━ Recognition Detail Drawer ━━━ */}
+      <Drawer
+        open={selectedId !== null}
+        onClose={closeDrawer}
+        size="xl"
+        icon={<Award className="h-5 w-5 text-amber-200" />}
+        subtitle={
+          <span className="inline-flex items-center gap-1.5">
+            <Sparkles className="h-3 w-3" />
+            Recognition
+          </span>
+        }
+        title={
+          selectedPost
+            ? `${selectedPost.fromUser.name} → ${selectedPost.toUser.name}`
+            : "Recognition"
+        }
+      >
+        {selectedPost && selectedBadge && (
+          <div className="space-y-5 p-5 sm:p-6">
+            {/* From → To header */}
+            <div className="flex items-center gap-3">
+              <div className="flex flex-col items-center gap-1">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-base font-bold text-white shadow-md ring-2 ring-white dark:ring-gray-900">
+                  {initials(selectedPost.fromUser.name)}
+                </div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  From
+                </p>
+                <p className="max-w-[120px] truncate text-xs font-semibold text-gray-900 dark:text-white">
+                  {selectedPost.fromUser.name}
+                </p>
+              </div>
+              <ArrowRight className="h-5 w-5 shrink-0 text-gray-300 dark:text-gray-600" />
+              <div className="flex flex-col items-center gap-1">
+                <div
+                  className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br ${selectedBadge.gradient} text-base font-bold text-white shadow-md ring-2 ring-white dark:ring-gray-900`}
+                >
+                  {initials(selectedPost.toUser.name)}
+                </div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  To
+                </p>
+                <p className="max-w-[120px] truncate text-xs font-semibold text-gray-900 dark:text-white">
+                  {selectedPost.toUser.name}
+                </p>
+              </div>
+              <div className="ml-auto text-right">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                  Posted
+                </p>
+                <p className="text-xs text-gray-600 dark:text-gray-300">{timeAgo(selectedPost.createdAt)}</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">
+                  {new Date(selectedPost.createdAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+
+            {/* Badge + Admin controls */}
+            <div className="flex items-center justify-between gap-3">
+              {editing ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {Object.entries(BADGES).map(([key, b]) => (
+                    <button
+                      key={key}
+                      onClick={() => setEditBadge(key)}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-wider transition-all ${
+                        editBadge === key
+                          ? `bg-gradient-to-br ${b.gradient} text-white shadow-md`
+                          : `${b.chip} ${b.text} ring-1 ${b.ring}`
+                      }`}
+                    >
+                      {b.icon}
+                      {b.label}
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-wider ring-1 ${selectedBadge.chip} ${selectedBadge.text} ${selectedBadge.ring}`}
+                >
+                  {selectedBadge.icon}
+                  {selectedBadge.label}
+                </div>
+              )}
+
+              {isAdmin && !editing && (
+                <div className="flex shrink-0 items-center gap-1.5">
+                  <button
+                    onClick={startEdit}
+                    title="Edit"
+                    className="inline-flex items-center gap-1 rounded-lg border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:border-indigo-300 hover:text-indigo-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-indigo-500/40 dark:hover:text-indigo-300"
+                  >
+                    <Pencil className="h-3 w-3" />
+                    Edit
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    title="Delete"
+                    className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-rose-600 shadow-sm transition-all hover:bg-rose-50 disabled:opacity-50 dark:border-rose-500/30 dark:bg-gray-800 dark:text-rose-400 dark:hover:bg-rose-500/10"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                    Delete
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Message */}
+            {editing ? (
+              <div className="space-y-2">
+                <textarea
+                  value={editMessage}
+                  onChange={(e) => setEditMessage(e.target.value)}
+                  rows={5}
+                  placeholder="Recognition message…"
+                  className="w-full resize-y rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm leading-relaxed text-gray-900 outline-none placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700/80 dark:bg-gray-900 dark:text-white"
+                />
+                <div className="flex items-center justify-end gap-2">
+                  <button
+                    onClick={() => setEditing(false)}
+                    disabled={savingEdit}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-gray-700 shadow-sm transition-all hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Cancel
+                  </button>
+                  <button
+                    onClick={saveEdit}
+                    disabled={savingEdit || !editMessage.trim()}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition-all hover:bg-indigo-700 disabled:opacity-50"
+                  >
+                    <Check className="h-3.5 w-3.5" />
+                    {savingEdit ? "Saving…" : "Save"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="relative rounded-2xl bg-gradient-to-br from-gray-50 to-gray-100/50 p-5 ring-1 ring-gray-200/60 dark:from-gray-800/40 dark:to-gray-800/20 dark:ring-gray-800/60">
+                <span className="absolute left-3 top-1 font-serif text-5xl leading-none text-gray-300 dark:text-gray-700">
+                  "
+                </span>
+                <p className="whitespace-pre-line pl-6 text-sm leading-relaxed text-gray-700 dark:text-gray-200">
+                  {selectedPost.message}
+                </p>
+              </div>
+            )}
+
+            {/* Like + comment count + like action */}
+            <div className="flex items-center gap-2 border-t border-gray-200/70 pt-3 dark:border-gray-800/60">
+              <button
+                onClick={() => handleLike(selectedPost._id)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold transition-all ${
+                  selectedLiked
+                    ? "bg-pink-50 text-pink-600 ring-1 ring-pink-500/20 dark:bg-pink-500/10 dark:text-pink-400"
+                    : "text-gray-500 hover:bg-gray-50 dark:text-gray-400 dark:hover:bg-gray-800/60"
+                }`}
+              >
+                <Heart className={`h-4 w-4 ${selectedLiked ? "scale-110 fill-current" : ""}`} />
+                <span className="tabular-nums">{selectedPost.reactions.like.length}</span>
+              </button>
+              <span className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-semibold text-gray-500 dark:text-gray-400">
+                <MessageCircle className="h-4 w-4" />
+                <span className="tabular-nums">{selectedPost.comments.length}</span>
+                <span className="text-xs font-normal">comments</span>
+              </span>
+            </div>
+
+            {/* Comments */}
+            <div className="space-y-3">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                Comments
+              </p>
+              {selectedPost.comments.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-gray-200 bg-gray-50/40 py-6 text-center text-xs italic text-gray-400 dark:border-gray-800 dark:bg-gray-800/30 dark:text-gray-500">
+                  No comments yet — be the first to chime in.
+                </p>
+              ) : (
+                <div className="space-y-2.5">
+                  {selectedPost.comments.map((c, i) => (
+                    <div
+                      key={i}
+                      className="flex items-start gap-2.5 rounded-xl bg-gray-50/70 p-3 ring-1 ring-gray-200/60 dark:bg-gray-800/30 dark:ring-gray-800/60"
+                    >
+                      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-indigo-100 text-[10px] font-bold text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-300">
+                        {initials(c.userId.name)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-semibold text-gray-900 dark:text-white">
+                          {c.userId.name}
+                        </p>
+                        <p className="mt-0.5 text-sm leading-relaxed text-gray-700 dark:text-gray-200">
+                          {c.text}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add comment */}
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="text"
+                  value={drawerDraft}
+                  onChange={(e) => setDrawerDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") handleDrawerComment();
+                  }}
+                  placeholder="Write a comment…"
+                  className="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none placeholder-gray-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700/80 dark:bg-gray-900 dark:text-white"
+                />
+                <button
+                  onClick={handleDrawerComment}
+                  disabled={posting === selectedPost._id || !drawerDraft.trim()}
+                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white transition-colors hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  <Send className="h-3.5 w-3.5" />
+                  Post
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </Drawer>
     </div>
   );
 }

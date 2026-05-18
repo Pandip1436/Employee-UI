@@ -15,6 +15,9 @@ export interface RecognitionData {
 export const recognitionApi = {
   getAll: (params?: Record<string, string | number>) => api.get<PaginatedResponse<RecognitionData>>("/recognition", { params }),
   create: (data: { toUser: string; message: string; badge: string }) => api.post<ApiResponse<RecognitionData>>("/recognition", data),
+  update: (id: string, data: { message?: string; badge?: string }) =>
+    api.patch<ApiResponse<RecognitionData>>(`/recognition/${id}`, data),
+  delete: (id: string) => api.delete<ApiResponse>(`/recognition/${id}`),
   react: (id: string) => api.post<ApiResponse>(`/recognition/${id}/react`),
   comment: (id: string, text: string) => api.post<ApiResponse>(`/recognition/${id}/comment`, { text }),
 };

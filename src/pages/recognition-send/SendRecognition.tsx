@@ -110,7 +110,7 @@ export default function SendRecognition() {
       .getAll({ limit: 500 })
       .then((r) => {
         const all = r.data.data ?? [];
-        setEmployees(all.filter((u) => u._id !== user?._id));
+        setEmployees(all.filter((u) => u.role === "employee" && u._id !== user?._id));
       })
       .catch(() => {});
   }, [user]);

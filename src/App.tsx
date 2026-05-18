@@ -131,7 +131,6 @@ export default function App() {
           <Route path="/announcements" element={<AnnouncementsFeed />} />
           <Route path="/announcements/:id" element={<AnnouncementDetail />} />
           <Route path="/recognition" element={<RecognitionWall />} />
-          <Route path="/recognition/send" element={<SendRecognition />} />
           <Route path="/surveys" element={<SurveysList />} />
           <Route path="/surveys/:id" element={<SurveyForm />} />
         </Route>
@@ -161,6 +160,7 @@ export default function App() {
       <Route element={<ProtectedRoute roles={["admin"]} />}>
         <Route element={<MainLayout />}>
           <Route path="/users" element={<Users />} />
+          <Route path="/recognition/send" element={<SendRecognition />} />
           <Route path="/dashboard/hr" element={<HrDashboard />} />
           <Route path="/admin/timesheet/reports/employee" element={<AdminTimesheetReports />} />
           <Route path="/admin/timesheet/reports/overtime" element={<AdminOvertimeReport />} />
