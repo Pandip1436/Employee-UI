@@ -77,7 +77,7 @@ export default function Dashboard() {
       const res = await attendanceApi.clockIn();
       const data = res.data.data!;
       setToday(data);
-      if (data.isLate) toast.error(`You're late by ${data.lateByMinutes} minutes!`, { duration: 5000 });
+      if (data.isLate && (data.lateByMinutes ?? 0) > 0) toast.error(`You're late by ${data.lateByMinutes} minutes!`, { duration: 5000 });
       else toast.success("Clocked in on time!");
       refreshKpis();
     } catch { /* interceptor */ } finally { setClocking(false); }
@@ -201,10 +201,10 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {today?.status === "late" && (
+            {today?.status === "late" && (today.lateByMinutes ?? 0) > 0 && (
               <div className="mt-3 flex w-fit items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
-                Late by {today.lateByMinutes ?? 0} min today
+                Late by {today.lateByMinutes} min today
               </div>
             )}
           </div>

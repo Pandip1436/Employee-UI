@@ -799,7 +799,7 @@ export default function TeamAttendance() {
                         </span>
                         {lateMin != null && lateMin > 0 && (
                           <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/30">
-                            +{lateMin}m
+                            +{fmtHours(lateMin / 60)}
                           </span>
                         )}
                       </div>
@@ -868,7 +868,7 @@ export default function TeamAttendance() {
                   </span>
                   {lateMin != null && lateMin > 0 && (
                     <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/30">
-                      Late +{lateMin}m
+                      Late +{fmtHours(lateMin / 60)}
                     </span>
                   )}
                 </div>

@@ -228,7 +228,7 @@ export default function Attendance() {
             {today?.status === "late" && (
               <div className="mt-4 flex w-fit items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
                 <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
-                Late — {today?.lateByMinutes ? `${today?.lateByMinutes} min` : "after office hours"}
+                Late — {today?.lateByMinutes ? fmtHours(today.lateByMinutes / 60) : "after office hours"}
               </div>
             )}
           </div>
@@ -395,7 +395,7 @@ export default function Attendance() {
                         Late
                       </span>
                       <span className="text-[11px] font-medium text-amber-700 dark:text-amber-300">
-                        +{today?.lateByMinutes ?? lateBy ?? 0} min after {formatHHMMTo12h(attendancePolicy?.officeStartTime ?? "09:00")}
+                        +{fmtHours((today?.lateByMinutes ?? lateBy ?? 0) / 60)} after {formatHHMMTo12h(attendancePolicy?.officeStartTime ?? "09:00")}
                       </span>
                     </>
                   ) : (
