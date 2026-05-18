@@ -1,14 +1,15 @@
 import { useState, useEffect, useRef, type FormEvent } from "react";
 import {
   User as UserIcon, Mail, Phone, MapPin, Building, Briefcase, Calendar, Heart, Shield,
-  CreditCard, FileText, Award, Clock, Plus, X, Pencil, Save, Camera, Upload, Trash2, ChevronRight,
-  Eye, Download, ExternalLink, Loader2, Sparkles, CheckCircle2, AlertCircle
+  CreditCard, FileText, Award, Clock, X, Pencil, Camera, Upload, Trash2, ChevronRight,
+  Eye, Download, ExternalLink, Loader2, Sparkles, CheckCircle2
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmContext";
 import { employeeProfileApi } from "../../api/employeeProfileApi";
 import type { EmployeeProfile, WorkHistoryEntry, CertificationEntry } from "../../types";
 import toast from "react-hot-toast";
+import ProfileEditDrawer from "./ProfileEditDrawer";
 
 const tabs = [
   { key: "personal", label: "Personal", icon: UserIcon },
@@ -257,13 +258,6 @@ export default function Profile() {
         : ""
     }`;
 
-  const ErrMsg = ({ name }: { name: string }) =>
-    errors[name] ? (
-      <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-        <AlertCircle className="h-3 w-3 shrink-0" /> {errors[name]}
-      </p>
-    ) : null;
-
   // Work history helpers
   const addWorkEntry = () => setForm((p) => ({
     ...p,
@@ -456,12 +450,12 @@ export default function Profile() {
             </div>
 
             <button
-              onClick={() => { if (editing) handleSave(); else setEditing(true); }}
+              onClick={() => { setForm(profile || {}); setErrors({}); setEditing(true); }}
               disabled={saving}
               className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-bold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/30 transition-all hover:shadow-xl active:scale-[0.99] disabled:opacity-60"
             >
               <span aria-hidden className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-indigo-500/20 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
-              {editing ? (saving ? <><Loader2 className="h-4 w-4 animate-spin" /> Saving…</> : <><Save className="h-4 w-4" /> Save</>) : <><Pencil className="h-4 w-4" /> Edit Profile</>}
+              <Pencil className="h-4 w-4" /> Edit Profile
             </button>
           </div>
         </div>
@@ -503,37 +497,13 @@ export default function Profile() {
         {activeTab === "personal" && (
           <div className="space-y-5">
             <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><UserIcon className="h-5 w-5 text-indigo-500" /> Personal Information</h3>
-            {editing ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelCls}>Date of Birth</label>
-                  <input
-                    type="date"
-                    value={form.dateOfBirth || ""}
-                    onChange={(e) => setField("dateOfBirth", e.target.value)}
-                    onBlur={(e) => validateField("dateOfBirth", e.target.value)}
-                    className={inputClsFor("dateOfBirth")}
-                  />
-                  <ErrMsg name="dateOfBirth" />
-                </div>
-                <div><label className={labelCls}>Gender</label>
-                  <select value={form.gender || ""} onChange={(e) => setField("gender", e.target.value)} className={inputCls}>
-                    <option value="">Select</option><option value="male">Male</option><option value="female">Female</option><option value="other">Other</option>
-                  </select></div>
-                <div><label className={labelCls}>Blood Group</label>
-                  <select value={form.bloodGroup || ""} onChange={(e) => setField("bloodGroup", e.target.value)} className={inputCls}>
-                    <option value="">Select</option>{["A+","A-","B+","B-","AB+","AB-","O+","O-"].map((b) => <option key={b} value={b}>{b}</option>)}
-                  </select></div>
-              </div>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <ReadField label="Full Name" value={user.name} icon={UserIcon} />
-                <ReadField label="Email" value={user.email} icon={Mail} />
-                <ReadField label="Date of Birth" value={profile?.dateOfBirth} icon={Calendar} />
-                <ReadField label="Gender" value={profile?.gender} icon={UserIcon} />
-                <ReadField label="Blood Group" value={profile?.bloodGroup} icon={Heart} />
-              </div>
-            )}
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <ReadField label="Full Name" value={user.name} icon={UserIcon} />
+              <ReadField label="Email" value={user.email} icon={Mail} />
+              <ReadField label="Date of Birth" value={profile?.dateOfBirth} icon={Calendar} />
+              <ReadField label="Gender" value={profile?.gender} icon={UserIcon} />
+              <ReadField label="Blood Group" value={profile?.bloodGroup} icon={Heart} />
+            </div>
           </div>
         )}
 
@@ -541,52 +511,11 @@ export default function Profile() {
         {activeTab === "contact" && (
           <div className="space-y-5">
             <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><Phone className="h-5 w-5 text-emerald-500" /> Contact Details</h3>
-            {editing ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelCls}>Personal Email</label>
-                  <input
-                    type="email"
-                    value={form.personalEmail || ""}
-                    onChange={(e) => setField("personalEmail", e.target.value)}
-                    onBlur={(e) => validateField("personalEmail", e.target.value)}
-                    className={inputClsFor("personalEmail")}
-                    placeholder="personal@email.com"
-                  />
-                  <ErrMsg name="personalEmail" />
-                </div>
-                <div>
-                  <label className={labelCls}>Phone</label>
-                  <input
-                    value={form.phone || ""}
-                    onChange={(e) => setField("phone", e.target.value)}
-                    onBlur={(e) => validateField("phone", e.target.value)}
-                    className={inputClsFor("phone")}
-                    placeholder="+91 9876543210"
-                    inputMode="tel"
-                  />
-                  <ErrMsg name="phone" />
-                </div>
-                <div className="sm:col-span-2">
-                  <label className={labelCls}>Address</label>
-                  <textarea
-                    rows={3}
-                    value={form.address || ""}
-                    onChange={(e) => setField("address", e.target.value)}
-                    onBlur={(e) => validateField("address", e.target.value)}
-                    className={inputClsFor("address")}
-                    placeholder="Full address"
-                  />
-                  <ErrMsg name="address" />
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <ReadField label="Personal Email" value={profile?.personalEmail} icon={Mail} />
-                <ReadField label="Phone" value={profile?.phone} icon={Phone} />
-                <ReadField label="Address" value={profile?.address} icon={MapPin} />
-              </div>
-            )}
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <ReadField label="Personal Email" value={profile?.personalEmail} icon={Mail} />
+              <ReadField label="Phone" value={profile?.phone} icon={Phone} />
+              <ReadField label="Address" value={profile?.address} icon={MapPin} />
+            </div>
           </div>
         )}
 
@@ -594,54 +523,12 @@ export default function Profile() {
         {activeTab === "work" && (
           <div className="space-y-5">
             <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><Briefcase className="h-5 w-5 text-amber-500" /> Work Information</h3>
-            {editing ? (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label className={labelCls}>Employee ID</label>
-                  <input
-                    value={form.employeeId || ""}
-                    onChange={(e) => setField("employeeId", e.target.value)}
-                    onBlur={(e) => validateField("employeeId", e.target.value)}
-                    className={inputClsFor("employeeId")}
-                    placeholder="EMP-001"
-                  />
-                  <ErrMsg name="employeeId" />
-                </div>
-                <div><label className={labelCls}>Department</label>
-                  <select value={user.department || ""} disabled className={`${inputCls} opacity-60`}>
-                    <option>{user.department || "Not assigned"}</option>
-                  </select></div>
-                <div>
-                  <label className={labelCls}>Designation</label>
-                  <input
-                    value={form.designation || ""}
-                    onChange={(e) => setField("designation", e.target.value)}
-                    onBlur={(e) => validateField("designation", e.target.value)}
-                    className={inputClsFor("designation")}
-                    placeholder="Software Engineer"
-                  />
-                  <ErrMsg name="designation" />
-                </div>
-                <div>
-                  <label className={labelCls}>Joining Date</label>
-                  <input
-                    type="date"
-                    value={form.joiningDate || ""}
-                    onChange={(e) => setField("joiningDate", e.target.value)}
-                    onBlur={(e) => validateField("joiningDate", e.target.value)}
-                    className={inputClsFor("joiningDate")}
-                  />
-                  <ErrMsg name="joiningDate" />
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <ReadField label="Employee ID" value={profile?.employeeId} icon={Shield} />
-                <ReadField label="Department" value={user.department} icon={Building} />
-                <ReadField label="Designation" value={profile?.designation} icon={Briefcase} />
-                <ReadField label="Joining Date" value={profile?.joiningDate} icon={Calendar} />
-              </div>
-            )}
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <ReadField label="Employee ID" value={profile?.employeeId} icon={Shield} />
+              <ReadField label="Department" value={user.department} icon={Building} />
+              <ReadField label="Designation" value={profile?.designation} icon={Briefcase} />
+              <ReadField label="Joining Date" value={profile?.joiningDate} icon={Calendar} />
+            </div>
           </div>
         )}
 
@@ -649,49 +536,11 @@ export default function Profile() {
         {activeTab === "emergency" && (
           <div className="space-y-5">
             <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><Heart className="h-5 w-5 text-rose-500" /> Emergency Contact</h3>
-            {editing ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <label className={labelCls}>Name</label>
-                  <input
-                    value={form.emergencyName || ""}
-                    onChange={(e) => setField("emergencyName", e.target.value)}
-                    onBlur={(e) => validateField("emergencyName", e.target.value)}
-                    className={inputClsFor("emergencyName")}
-                  />
-                  <ErrMsg name="emergencyName" />
-                </div>
-                <div>
-                  <label className={labelCls}>Relationship</label>
-                  <input
-                    value={form.emergencyRelation || ""}
-                    onChange={(e) => setField("emergencyRelation", e.target.value)}
-                    onBlur={(e) => validateField("emergencyRelation", e.target.value)}
-                    className={inputClsFor("emergencyRelation")}
-                    placeholder="Father / Spouse"
-                  />
-                  <ErrMsg name="emergencyRelation" />
-                </div>
-                <div>
-                  <label className={labelCls}>Phone</label>
-                  <input
-                    value={form.emergencyPhone || ""}
-                    onChange={(e) => setField("emergencyPhone", e.target.value)}
-                    onBlur={(e) => validateField("emergencyPhone", e.target.value)}
-                    className={inputClsFor("emergencyPhone")}
-                    placeholder="+91 9876543210"
-                    inputMode="tel"
-                  />
-                  <ErrMsg name="emergencyPhone" />
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <ReadField label="Name" value={profile?.emergencyName} icon={UserIcon} />
-                <ReadField label="Relationship" value={profile?.emergencyRelation} icon={Heart} />
-                <ReadField label="Phone" value={profile?.emergencyPhone} icon={Phone} />
-              </div>
-            )}
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <ReadField label="Name" value={profile?.emergencyName} icon={UserIcon} />
+              <ReadField label="Relationship" value={profile?.emergencyRelation} icon={Heart} />
+              <ReadField label="Phone" value={profile?.emergencyPhone} icon={Phone} />
+            </div>
           </div>
         )}
 
@@ -699,50 +548,11 @@ export default function Profile() {
         {activeTab === "bank" && (
           <div className="space-y-5">
             <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><CreditCard className="h-5 w-5 text-blue-500" /> Bank Details</h3>
-            {editing ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <label className={labelCls}>Account Number</label>
-                  <input
-                    value={form.bankAccountNumber || ""}
-                    onChange={(e) => setField("bankAccountNumber", e.target.value.replace(/\D/g, ""))}
-                    onBlur={(e) => validateField("bankAccountNumber", e.target.value)}
-                    className={inputClsFor("bankAccountNumber")}
-                    inputMode="numeric"
-                    placeholder="9-18 digits"
-                  />
-                  <ErrMsg name="bankAccountNumber" />
-                </div>
-                <div>
-                  <label className={labelCls}>IFSC Code</label>
-                  <input
-                    value={form.bankIfsc || ""}
-                    onChange={(e) => setField("bankIfsc", e.target.value.toUpperCase())}
-                    onBlur={(e) => validateField("bankIfsc", e.target.value)}
-                    className={inputClsFor("bankIfsc")}
-                    placeholder="ABCD0XXXXXX"
-                    maxLength={11}
-                  />
-                  <ErrMsg name="bankIfsc" />
-                </div>
-                <div>
-                  <label className={labelCls}>Bank Name</label>
-                  <input
-                    value={form.bankName || ""}
-                    onChange={(e) => setField("bankName", e.target.value)}
-                    onBlur={(e) => validateField("bankName", e.target.value)}
-                    className={inputClsFor("bankName")}
-                  />
-                  <ErrMsg name="bankName" />
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <ReadField label="Account Number" value={profile?.bankAccountNumber || profile?.bankAccountNumberMasked || "—"} icon={CreditCard} />
-                <ReadField label="IFSC Code" value={profile?.bankIfsc} icon={Building} />
-                <ReadField label="Bank Name" value={profile?.bankName} icon={Building} />
-              </div>
-            )}
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <ReadField label="Account Number" value={profile?.bankAccountNumber || profile?.bankAccountNumberMasked || "—"} icon={CreditCard} />
+              <ReadField label="IFSC Code" value={profile?.bankIfsc} icon={Building} />
+              <ReadField label="Bank Name" value={profile?.bankName} icon={Building} />
+            </div>
           </div>
         )}
 
@@ -750,52 +560,11 @@ export default function Profile() {
         {activeTab === "identity" && (
           <div className="space-y-5">
             <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><Shield className="h-5 w-5 text-purple-500" /> Identity Details</h3>
-            {editing ? (
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <label className={labelCls}>Aadhaar Number</label>
-                  <input
-                    value={form.aadhaarNumber || ""}
-                    onChange={(e) => setField("aadhaarNumber", e.target.value.replace(/[^\d\s]/g, ""))}
-                    onBlur={(e) => validateField("aadhaarNumber", e.target.value)}
-                    className={inputClsFor("aadhaarNumber")}
-                    placeholder="1234 5678 9012"
-                    inputMode="numeric"
-                    maxLength={14}
-                  />
-                  <ErrMsg name="aadhaarNumber" />
-                </div>
-                <div>
-                  <label className={labelCls}>PAN Number</label>
-                  <input
-                    value={form.panNumber || ""}
-                    onChange={(e) => setField("panNumber", e.target.value.toUpperCase().slice(0, 10))}
-                    onBlur={(e) => validateField("panNumber", e.target.value)}
-                    className={inputClsFor("panNumber")}
-                    placeholder="ABCDE1234F"
-                    maxLength={10}
-                  />
-                  <ErrMsg name="panNumber" />
-                </div>
-                <div>
-                  <label className={labelCls}>Passport Number</label>
-                  <input
-                    value={form.passportNumber || ""}
-                    onChange={(e) => setField("passportNumber", e.target.value.toUpperCase())}
-                    onBlur={(e) => validateField("passportNumber", e.target.value)}
-                    className={inputClsFor("passportNumber")}
-                    maxLength={9}
-                  />
-                  <ErrMsg name="passportNumber" />
-                </div>
-              </div>
-            ) : (
-              <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                <ReadField label="Aadhaar" value={profile?.aadhaarNumber || profile?.aadhaarNumberMasked || "—"} icon={Shield} />
-                <ReadField label="PAN" value={profile?.panNumber || profile?.panNumberMasked || "—"} icon={FileText} />
-                <ReadField label="Passport" value={profile?.passportNumber || profile?.passportNumberMasked || "—"} icon={FileText} />
-              </div>
-            )}
+            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              <ReadField label="Aadhaar" value={profile?.aadhaarNumber || profile?.aadhaarNumberMasked || "—"} icon={Shield} />
+              <ReadField label="PAN" value={profile?.panNumber || profile?.panNumberMasked || "—"} icon={FileText} />
+              <ReadField label="Passport" value={profile?.passportNumber || profile?.passportNumberMasked || "—"} icon={FileText} />
+            </div>
           </div>
         )}
 
@@ -883,42 +652,18 @@ export default function Profile() {
         {/* Work History */}
         {activeTab === "history" && (
           <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><Clock className="h-5 w-5 text-amber-500" /> Work History</h3>
-              {editing && (
-                <button onClick={addWorkEntry} className="flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                  <Plus className="h-3.5 w-3.5" /> Add
-                </button>
-              )}
-            </div>
-
-            {(form.workHistory || []).length === 0 ? (
+            <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><Clock className="h-5 w-5 text-amber-500" /> Work History</h3>
+            {(profile?.workHistory || []).length === 0 ? (
               <p className="py-8 text-center text-sm text-gray-400 dark:text-gray-500">No work history added.</p>
             ) : (
               <div className="space-y-4">
-                {(editing ? form.workHistory! : profile?.workHistory || []).map((w, i) => (
+                {(profile?.workHistory || []).map((w, i) => (
                   <div key={i} className="relative rounded-xl border border-gray-200 dark:border-gray-800 p-4 pl-6">
-                    {/* Timeline dot */}
                     <div className="absolute left-0 top-5 h-3 w-3 -translate-x-1/2 rounded-full border-2 border-indigo-500 bg-white dark:bg-gray-900" />
-                    {editing ? (
-                      <div className="space-y-3">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <input placeholder="Company" value={w.company} onChange={(e) => updateWorkEntry(i, "company", e.target.value)} className={inputCls} />
-                          <input placeholder="Role / Title" value={w.role} onChange={(e) => updateWorkEntry(i, "role", e.target.value)} className={inputCls} />
-                          <input type="date" value={w.from} onChange={(e) => updateWorkEntry(i, "from", e.target.value)} className={inputCls} />
-                          <input type="date" value={w.to} onChange={(e) => updateWorkEntry(i, "to", e.target.value)} className={inputCls} />
-                        </div>
-                        <textarea rows={2} placeholder="Description" value={w.description || ""} onChange={(e) => updateWorkEntry(i, "description", e.target.value)} className={inputCls} />
-                        <button onClick={() => removeWorkEntry(i)} className="flex items-center gap-1 text-xs text-rose-500 hover:text-rose-700"><Trash2 className="h-3.5 w-3.5" /> Remove</button>
-                      </div>
-                    ) : (
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-white">{w.role}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">{w.company}</p>
-                        <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{w.from} — {w.to || "Present"}</p>
-                        {w.description && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{w.description}</p>}
-                      </div>
-                    )}
+                    <p className="font-semibold text-gray-900 dark:text-white">{w.role}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">{w.company}</p>
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{w.from} — {w.to || "Present"}</p>
+                    {w.description && <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">{w.description}</p>}
                   </div>
                 ))}
               </div>
@@ -929,64 +674,35 @@ export default function Profile() {
         {/* Skills & Certs */}
         {activeTab === "skills" && (
           <div className="space-y-6">
-            {/* Skills */}
             <div>
               <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4"><Award className="h-5 w-5 text-emerald-500" /> Skills</h3>
-              {editing && (
-                <div className="flex gap-2 mb-3">
-                  <input value={skillInput} onChange={(e) => setSkillInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addSkill())} className={`flex-1 ${inputCls}`} placeholder="Type a skill and press Enter" />
-                  <button onClick={addSkill} className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-700">Add</button>
-                </div>
-              )}
               <div className="flex flex-wrap gap-2">
-                {(editing ? form.skills : profile?.skills || [])?.map((s, i) => (
+                {(profile?.skills || []).map((s, i) => (
                   <span key={i} className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-700 dark:text-indigo-400">
                     {s}
-                    {editing && (
-                      <button onClick={() => removeSkill(i)} className="hover:text-rose-500"><X className="h-3 w-3" /></button>
-                    )}
                   </span>
                 ))}
-                {((editing ? form.skills : profile?.skills) || []).length === 0 && (
+                {(profile?.skills || []).length === 0 && (
                   <p className="text-sm text-gray-400 dark:text-gray-500">No skills added.</p>
                 )}
               </div>
             </div>
 
-            {/* Certifications */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2"><Award className="h-5 w-5 text-purple-500" /> Certifications</h3>
-                {editing && (
-                  <button onClick={addCert} className="flex items-center gap-1 rounded-lg bg-indigo-50 dark:bg-indigo-500/10 px-3 py-1.5 text-xs font-medium text-indigo-600 dark:text-indigo-400">
-                    <Plus className="h-3.5 w-3.5" /> Add
-                  </button>
-                )}
-              </div>
-              {(editing ? form.certifications : profile?.certifications || [])?.length === 0 ? (
+              <h3 className="text-base font-bold text-gray-900 dark:text-white flex items-center gap-2 mb-4"><Award className="h-5 w-5 text-purple-500" /> Certifications</h3>
+              {(profile?.certifications || []).length === 0 ? (
                 <p className="text-sm text-gray-400 dark:text-gray-500">No certifications added.</p>
               ) : (
                 <div className="space-y-3">
-                  {(editing ? form.certifications! : profile?.certifications || []).map((c, i) => (
+                  {(profile?.certifications || []).map((c, i) => (
                     <div key={i} className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
-                      {editing ? (
-                        <div className="grid gap-3 sm:grid-cols-3">
-                          <input placeholder="Certification Name" value={c.name} onChange={(e) => updateCert(i, "name", e.target.value)} className={inputCls} />
-                          <input placeholder="Issuer" value={c.issuer || ""} onChange={(e) => updateCert(i, "issuer", e.target.value)} className={inputCls} />
-                          <div className="flex gap-2">
-                            <input placeholder="Year" value={c.year || ""} onChange={(e) => updateCert(i, "year", e.target.value)} className={inputCls} />
-                            <button onClick={() => removeCert(i)} className="shrink-0 rounded-lg p-2 text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10"><Trash2 className="h-4 w-4" /></button>
-                          </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-medium text-gray-900 dark:text-white">{c.name}</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">{c.issuer}{c.year ? ` — ${c.year}` : ""}</p>
                         </div>
-                      ) : (
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <p className="font-medium text-gray-900 dark:text-white">{c.name}</p>
-                            <p className="text-xs text-gray-500 dark:text-gray-400">{c.issuer}{c.year ? ` — ${c.year}` : ""}</p>
-                          </div>
-                          <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
-                        </div>
-                      )}
+                        <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -996,17 +712,30 @@ export default function Profile() {
         )}
       </div>
 
-      {/* Bottom save bar when editing */}
-      {editing && (
-        <div className="flex items-center justify-end gap-3">
-          <button onClick={() => { setEditing(false); setForm(profile || {}); }} className="rounded-lg border border-gray-300 dark:border-gray-600 px-5 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-            Cancel
-          </button>
-          <button onClick={() => handleSave()} disabled={saving} className="flex items-center gap-2 rounded-lg bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors">
-            {saving ? "Saving..." : <><Save className="h-4 w-4" /> Save Changes</>}
-          </button>
-        </div>
-      )}
+      <ProfileEditDrawer
+        open={editing}
+        onClose={() => { setEditing(false); setForm(profile || {}); setErrors({}); }}
+        saving={saving}
+        user={user}
+        form={form}
+        errors={errors}
+        inputCls={inputCls}
+        labelCls={labelCls}
+        inputClsFor={inputClsFor}
+        setField={setField}
+        validateField={validateField}
+        addWorkEntry={addWorkEntry}
+        updateWorkEntry={updateWorkEntry}
+        removeWorkEntry={removeWorkEntry}
+        addCert={addCert}
+        updateCert={updateCert}
+        removeCert={removeCert}
+        skillInput={skillInput}
+        setSkillInput={setSkillInput}
+        addSkill={addSkill}
+        removeSkill={removeSkill}
+        onSave={() => handleSave()}
+      />
 
       {preview && (
         <DocPreview
