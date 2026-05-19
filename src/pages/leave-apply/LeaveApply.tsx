@@ -94,8 +94,12 @@ export default function LeaveApply() {
   /* Reason character counter */
   const REASON_MAX = 500;
 
-  /* Quick-pick date helpers */
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
+  /* Quick-pick date helpers — format in local time, not UTC, otherwise
+     midnight-local for timezones east of UTC rolls back one day. */
+  const fmt = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
   const setRange = (start: Date, end: Date) => {
     setStartDate(fmt(start));
     setEndDate(fmt(end));

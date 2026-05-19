@@ -142,7 +142,12 @@ export default function CompOff() {
   }, [requests, statusFilter, query]);
 
   /* Quick-pick worked dates: yesterday, last Sat, last Sun */
-  const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
+  /* Format in local time, not UTC — otherwise midnight-local rolls back a day
+     for timezones east of UTC. */
+  const fmtIso = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
   const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
   const workedQuickPicks = useMemo(() => {
     const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);

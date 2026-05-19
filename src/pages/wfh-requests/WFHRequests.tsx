@@ -87,7 +87,12 @@ export default function WFHRequests() {
   }), [requests]);
 
   /* Quick-pick date helpers for Apply drawer */
-  const fmtIso = (d: Date) => d.toISOString().slice(0, 10);
+  /* Format in local time, not UTC — otherwise midnight-local rolls back a day
+     for timezones east of UTC. */
+  const fmtIso = (d: Date) => {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  };
   const todayIso = useMemo(() => fmtIso(new Date()), []);
   const quickPicks = useMemo(() => {
     const today = new Date(); today.setHours(0, 0, 0, 0);
