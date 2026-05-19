@@ -195,11 +195,25 @@ export default function ManagerDashboard() {
       border: "border-emerald-200 dark:border-emerald-500/20",
     },
     {
+      label: "On Leave Today",
+      value: stats?.todayOnLeave ?? 0,
+      icon: CalendarDays,
+      color: "text-indigo-600 dark:text-indigo-400",
+      border: "border-indigo-200 dark:border-indigo-500/20",
+    },
+    {
       label: "Absent Today",
       value: stats?.todayAbsent ?? 0,
       icon: UserX,
       color: "text-rose-600 dark:text-rose-400",
       border: "border-rose-200 dark:border-rose-500/20",
+    },
+    {
+      label: "Not Marked",
+      value: stats?.todayNotMarked ?? 0,
+      icon: XCircle,
+      color: "text-gray-600 dark:text-gray-300",
+      border: "border-gray-200 dark:border-gray-500/20",
     },
     {
       label: "Pending Leaves",
@@ -292,7 +306,7 @@ export default function ManagerDashboard() {
       </div>
 
       {/* ── Stat Cards ── */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
         {statCards.map((s) => (
           <div
             key={s.label}
