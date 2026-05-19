@@ -319,8 +319,14 @@ export default function TeamAttendance() {
   };
 
   const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
     const arr = (liveData?.employees || [])
-      .filter((e) => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.email.toLowerCase().includes(search.toLowerCase()))
+      .filter((e) =>
+        !q ||
+        e.name.toLowerCase().includes(q) ||
+        e.email.toLowerCase().includes(q) ||
+        (e.userId ?? "").toLowerCase().includes(q)
+      )
       .filter((e) => !deptFilter || e.department === deptFilter)
       .filter((e) => matchesTab(viewTab, e));
 
@@ -374,12 +380,13 @@ export default function TeamAttendance() {
 
   const handleExportCsv = () => {
     const rows = [
-      ["Name", "Email", "Department", "Status", "Clock In", "Clock Out", "Hours", "Late By (min)"],
+      ["Employee ID", "Name", "Email", "Department", "Status", "Clock In", "Clock Out", "Hours", "Late By (min)"],
       ...filtered.map((e) => [
+        e.userId || "",
         e.name,
         e.email,
         e.department || "",
-        liveStyles[e.liveStatus]?.label || e.liveStatus,
+        liveStyles[statusBadgeKey(e)]?.label || e.liveStatus,
         e.clockIn ? new Date(e.clockIn).toLocaleString() : "",
         e.clockOut ? new Date(e.clockOut).toLocaleString() : "",
         e.totalHours != null ? fmtHours(e.totalHours) : "",
@@ -793,7 +800,7 @@ export default function TeamAttendance() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search team members..."
+              placeholder="Search by name, ID, or email..."
               className={`${inputCls} w-full pl-9 ${search ? "pr-8" : ""}`}
             />
             {search && (
@@ -831,6 +838,7 @@ export default function TeamAttendance() {
               <tr>
                 {([
                   { key: "name" as SortKey,       label: "Employee" },
+                  { key: null,                    label: "Employee ID" },
                   { key: "department" as SortKey, label: "Dept" },
                   { key: null,                    label: "Active" },
                   { key: "status" as SortKey,     label: "Status" },
@@ -849,7 +857,7 @@ export default function TeamAttendance() {
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-4 py-16 text-center">
+                  <td colSpan={8} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-2">
                       <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
                         <Users className="h-5 w-5 text-gray-400" />
@@ -879,6 +887,13 @@ export default function TeamAttendance() {
                           )}
                         </div>
                       </div>
+                    </td>
+                    <td className={`px-4 ${rowPad}`}>
+                      {emp.userId ? (
+                        <span className="font-mono text-xs text-gray-700 dark:text-gray-300">{emp.userId}</span>
+                      ) : (
+                        <span className="text-gray-400 dark:text-gray-500">—</span>
+                      )}
                     </td>
                     <td className={`px-4 ${rowPad} text-gray-600 dark:text-gray-400`}>{emp.department || "—"}</td>
                     <td className={`px-4 ${rowPad}`}>
@@ -948,6 +963,9 @@ export default function TeamAttendance() {
                   <Avatar name={emp.name} size="lg" presence={active} />
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-gray-900 dark:text-white">{emp.name}</p>
+                    {emp.userId && (
+                      <p className="truncate font-mono text-[11px] text-gray-500 dark:text-gray-400">{emp.userId}</p>
+                    )}
                     <div className="mt-0.5 flex items-center gap-1.5">
                       <span className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-semibold ${aCfg.badge}`}>
                         <ActiveIcon

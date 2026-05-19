@@ -137,6 +137,7 @@ export type LiveStatus =
 
 export interface LiveEmployee {
   _id: string;
+  userId: string | null;
   name: string;
   email: string;
   department?: string;

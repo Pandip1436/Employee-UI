@@ -125,7 +125,11 @@ export default function AttendanceReports() {
   const filteredSortedEmps = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filtered = q
-      ? emps.filter((e: any) => (e.name || "").toLowerCase().includes(q) || (e.email || "").toLowerCase().includes(q))
+      ? emps.filter((e: any) =>
+          (e.name || "").toLowerCase().includes(q) ||
+          (e.email || "").toLowerCase().includes(q) ||
+          (e.userId || "").toLowerCase().includes(q)
+        )
       : [...emps];
     const dir = sortDir === "asc" ? 1 : -1;
     filtered.sort((a: any, b: any) => {
@@ -268,7 +272,7 @@ export default function AttendanceReports() {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Filter by name or email..."
+              placeholder="Filter by name, ID, or email..."
               className={`w-full ${inputCls} pl-9 ${search ? "pr-8" : ""}`}
             />
             {search && (
@@ -450,7 +454,11 @@ export default function AttendanceReports() {
                             <Avatar name={e.name} />
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-gray-900 dark:text-white">{e.name}</p>
-                              <p className="truncate text-xs text-gray-500 dark:text-gray-400">{e.department || "—"}</p>
+                              <p className="truncate text-xs text-gray-500 dark:text-gray-400">
+                                {e.userId ? <span className="font-mono">{e.userId}</span> : null}
+                                {e.userId && e.department ? " · " : null}
+                                {e.department || (!e.userId ? "—" : null)}
+                              </p>
                             </div>
                           </div>
                         </td>
