@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   Search, Users, UserCheck, UserX, Clock, AlertTriangle, CheckCircle2,
-  X, Filter, Calendar, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp,
+  X, Filter, Calendar, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp,
   ArrowDown, Download, LayoutList, Rows3, Circle, MinusCircle, Moon,
 } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
@@ -88,8 +88,10 @@ function inferActiveStatus(liveStatus: string): ActiveStatus {
 /** Resolve the active status to show. Prefers the user's own-set `userStatus`,
  *  but downgrades to "offline" when there's no attendance activity today. */
 function resolveActiveStatus(emp: LiveEmployee): ActiveStatus {
-  // Hard signal: never show "online" for someone who hasn't marked attendance.
-  if (emp.liveStatus === "not-marked") return "offline";
+  // Hard signal: never show "online" for someone who hasn't shown up today.
+  if (emp.liveStatus === "not-marked" || emp.liveStatus === "absent" || emp.liveStatus === "on-leave") {
+    return "offline";
+  }
   if (emp.userStatus) return emp.userStatus;
   return inferActiveStatus(emp.liveStatus);
 }
@@ -98,8 +100,9 @@ const liveStyles: Record<string, { bg: string; dot: string; label: string; pulse
   "clocked-in": { bg: "bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/20", dot: "bg-emerald-500", label: "Logged In", pulse: true },
   late: { bg: "bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/20", dot: "bg-amber-500", label: "Late Login", pulse: true },
   "clocked-out": { bg: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-400/20", dot: "bg-sky-500", label: "Logged Out", pulse: false },
-  "not-marked": { bg: "bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-600/20", dot: "bg-gray-400", label: "Not Marked", pulse: false },
+  "on-leave": { bg: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20", dot: "bg-indigo-500", label: "On Leave", pulse: false },
   absent: { bg: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20", dot: "bg-rose-500", label: "Absent", pulse: false },
+  "not-marked": { bg: "bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-600/20", dot: "bg-gray-400", label: "Not Marked", pulse: false },
 };
 
 const cardCls = "rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]";
@@ -212,7 +215,9 @@ const statusOrder: Record<string, number> = {
   "clocked-in": 0,
   late: 1,
   "clocked-out": 2,
-  "not-marked": 3,
+  "on-leave": 3,
+  absent: 4,
+  "not-marked": 5,
 };
 
 export default function TeamAttendance() {
@@ -258,11 +263,15 @@ export default function TeamAttendance() {
     return () => clearInterval(id);
   }, [dateFilter, isToday]);
 
-  const absentStatuses = ["not-marked"];
   const presentStatuses = ["clocked-in", "late", "clocked-out"];
+  const absentStatuses = ["absent"];
+  const onLeaveStatuses = ["on-leave"];
+  const notMarkedStatuses = ["not-marked"];
 
-  const absentCount = useMemo(() => (liveData?.employees || []).filter((e) => absentStatuses.includes(e.liveStatus)).length, [liveData]);
   const presentCount = useMemo(() => (liveData?.employees || []).filter((e) => presentStatuses.includes(e.liveStatus)).length, [liveData]);
+  const absentCount = useMemo(() => (liveData?.employees || []).filter((e) => absentStatuses.includes(e.liveStatus)).length, [liveData]);
+  const onLeaveCount = useMemo(() => (liveData?.employees || []).filter((e) => onLeaveStatuses.includes(e.liveStatus)).length, [liveData]);
+  const notMarkedCount = useMemo(() => (liveData?.employees || []).filter((e) => notMarkedStatuses.includes(e.liveStatus)).length, [liveData]);
 
   const officeStartMin = useMemo(
     () => parseHHMM(attendancePolicy?.officeStartTime ?? "09:00"),
@@ -310,10 +319,12 @@ export default function TeamAttendance() {
   const segments = useMemo(() => {
     if (!summary || total === 0) return [];
     return [
-      { key: "clocked-in", label: "In",      value: summary.clockedIn, color: "bg-emerald-500", lightColor: "bg-emerald-400" },
-      { key: "late",       label: "Late",    value: summary.late,      color: "bg-amber-500",   lightColor: "bg-amber-400" },
-      { key: "clocked-out",label: "Out",     value: summary.clockedOut,color: "bg-sky-500",     lightColor: "bg-sky-400" },
-      { key: "not-marked", label: "Absent",  value: summary.notMarked, color: "bg-rose-500",    lightColor: "bg-rose-400" },
+      { key: "clocked-in", label: "In",         value: summary.clockedIn, color: "bg-emerald-500", lightColor: "bg-emerald-400" },
+      { key: "late",       label: "Late",       value: summary.late,      color: "bg-amber-500",   lightColor: "bg-amber-400" },
+      { key: "clocked-out",label: "Out",        value: summary.clockedOut,color: "bg-sky-500",     lightColor: "bg-sky-400" },
+      { key: "on-leave",   label: "Leave",      value: summary.onLeave,   color: "bg-indigo-500",  lightColor: "bg-indigo-400" },
+      { key: "absent",     label: "Absent",     value: summary.absent,    color: "bg-rose-500",    lightColor: "bg-rose-400" },
+      { key: "not-marked", label: "Not Marked", value: summary.notMarked, color: "bg-gray-400",    lightColor: "bg-gray-300" },
     ];
   }, [summary, total]);
 
@@ -459,8 +470,8 @@ export default function TeamAttendance() {
 
       {/* ── Summary Tiles ── */}
       {summary && (() => {
-        const totalTeam = summary.clockedIn + summary.clockedOut + summary.late + summary.notMarked + absentCount;
-        const presentPct = totalTeam > 0 ? Math.round(((summary.clockedIn + summary.clockedOut + summary.late) / totalTeam) * 100) : 0;
+        const totalTeam = total;
+        const presentPct = totalTeam > 0 ? Math.round((presentCount / totalTeam) * 100) : 0;
         const tiles = [
           {
             label: "Logged In",
@@ -491,22 +502,50 @@ export default function TeamAttendance() {
           {
             label: "Logged Out",
             value: summary.clockedOut,
-            sub: summary.clockedOut === 0 ? "Still active" : "Shift complete",
+            sub: summary.clockedOut === 0
+              ? "Still active"
+              : summary.halfDay > 0
+                ? `Shift complete · ${summary.halfDay} half day`
+                : "Shift complete",
             icon: CheckCircle2,
             gradient: "from-sky-500 to-blue-600",
             ringColor: "shadow-sky-500/30",
           },
           {
+            label: "Half Day",
+            value: summary.halfDay,
+            sub: summary.halfDay === 0 ? "No half days" : `${summary.halfDay} short shift (incl. in Logged Out)`,
+            icon: Clock,
+            gradient: "from-orange-500 to-amber-600",
+            ringColor: "shadow-orange-500/30",
+            toneChip: summary.halfDay > 0
+              ? "bg-orange-50 text-orange-700 ring-orange-500/20 dark:bg-orange-500/10 dark:text-orange-400 dark:ring-orange-400/25"
+              : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+            toneLabel: summary.halfDay > 0 ? "Partial" : "—",
+          },
+          {
+            label: "On Leave",
+            value: onLeaveCount,
+            sub: onLeaveCount === 0 ? "No approved leaves" : `${onLeaveCount} on approved leave`,
+            icon: CalendarIcon,
+            gradient: "from-indigo-500 to-violet-600",
+            ringColor: "shadow-indigo-500/30",
+            toneChip: onLeaveCount > 0
+              ? "bg-indigo-50 text-indigo-700 ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/25"
+              : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
+            toneLabel: onLeaveCount > 0 ? "Approved" : "—",
+          },
+          {
             label: "Not Marked",
-            value: summary.notMarked,
-            sub: summary.notMarked === 0 ? "Everyone checked in" : "Pending check-in",
+            value: notMarkedCount,
+            sub: notMarkedCount === 0 ? "Everyone accounted for" : "Pending check-in",
             icon: Clock,
             gradient: "from-gray-500 to-gray-600",
             ringColor: "shadow-gray-500/30",
-            toneChip: summary.notMarked > 0
+            toneChip: notMarkedCount > 0
               ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25"
               : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
-            toneLabel: summary.notMarked > 0 ? "Awaiting" : "Complete",
+            toneLabel: notMarkedCount > 0 ? "Awaiting" : "Complete",
           },
           {
             label: "Absent",
@@ -522,7 +561,7 @@ export default function TeamAttendance() {
           },
         ];
         return (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-7">
             {tiles.map((c) => (
               <div
                 key={c.label}

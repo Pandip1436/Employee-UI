@@ -127,7 +127,13 @@ export interface AttendanceRecord {
   createdAt: string;
 }
 
-export type LiveStatus = "clocked-in" | "clocked-out" | "not-marked" | "late";
+export type LiveStatus =
+  | "clocked-in"
+  | "clocked-out"
+  | "late"
+  | "absent"
+  | "on-leave"
+  | "not-marked";
 
 export interface LiveEmployee {
   _id: string;
@@ -149,6 +155,9 @@ export interface LiveStatusData {
     clockedIn: number;
     late: number;
     clockedOut: number;
+    halfDay: number;
+    absent: number;
+    onLeave: number;
     notMarked: number;
   };
   employees: LiveEmployee[];
