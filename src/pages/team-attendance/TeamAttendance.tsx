@@ -673,35 +673,78 @@ export default function TeamAttendance() {
       })()}
 
       {/* ── Tabs + Filters ── */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-white/60 p-1 ring-1 ring-black/[0.02] backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-900/60 dark:ring-white/[0.03]">
-          {([
-            { key: "all" as ViewTab, label: "All", count: total },
-            { key: "present" as ViewTab, label: "Present", count: presentCount },
-            { key: "absent" as ViewTab, label: "Absent", count: absentCount },
-          ]).map((t) => (
-            <button
-              key={t.key}
-              onClick={() => setViewTab(t.key)}
-              className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-[13px] font-semibold transition-all ${
-                viewTab === t.key
-                  ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
-                  : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white"
-              }`}
-            >
-              <span>{t.label}</span>
-              <span
-                className={`inline-flex min-w-[20px] items-center justify-center rounded-md px-1.5 py-0 text-[10px] font-bold ${
+      <div className="space-y-3">
+        {/* Row 1: tabs on the left, view controls + export on the right */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex gap-1 rounded-xl border border-gray-200/70 bg-white/60 p-1 ring-1 ring-black/[0.02] backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-900/60 dark:ring-white/[0.03]">
+            {([
+              { key: "all" as ViewTab, label: "All", count: total },
+              { key: "present" as ViewTab, label: "Present", count: presentCount },
+              { key: "absent" as ViewTab, label: "Absent", count: absentCount },
+            ]).map((t) => (
+              <button
+                key={t.key}
+                onClick={() => setViewTab(t.key)}
+                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3.5 py-2 text-[13px] font-semibold transition-all ${
                   viewTab === t.key
-                    ? "bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-300"
-                    : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                    ? "bg-gradient-to-r from-indigo-500/10 via-indigo-500/5 to-transparent text-indigo-700 ring-1 ring-indigo-500/20 shadow-sm dark:from-indigo-400/15 dark:via-indigo-400/5 dark:text-indigo-300 dark:ring-indigo-400/25"
+                    : "text-gray-600 hover:bg-gray-100/80 hover:text-gray-900 dark:text-gray-400 dark:hover:bg-gray-800/60 dark:hover:text-white"
                 }`}
               >
-                {t.count}
-              </span>
+                <span>{t.label}</span>
+                <span
+                  className={`inline-flex min-w-[20px] items-center justify-center rounded-md px-1.5 py-0 text-[10px] font-bold ${
+                    viewTab === t.key
+                      ? "bg-indigo-500/15 text-indigo-700 dark:bg-indigo-400/20 dark:text-indigo-300"
+                      : "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400"
+                  }`}
+                >
+                  {t.count}
+                </span>
+              </button>
+            ))}
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Density toggle */}
+            <div className="hidden items-center gap-0.5 rounded-lg border border-gray-300 bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800 md:inline-flex">
+              <button
+                onClick={() => setDensity("comfy")}
+                title="Comfortable rows"
+                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                  density === "comfy"
+                    ? "bg-indigo-500/15 text-indigo-600 ring-1 ring-indigo-500/30 dark:bg-indigo-400/20 dark:text-indigo-300"
+                    : "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                }`}
+              >
+                <LayoutList className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => setDensity("compact")}
+                title="Compact rows"
+                className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
+                  density === "compact"
+                    ? "bg-indigo-500/15 text-indigo-600 ring-1 ring-indigo-500/30 dark:bg-indigo-400/20 dark:text-indigo-300"
+                    : "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
+                }`}
+              >
+                <Rows3 className="h-3.5 w-3.5" />
+              </button>
+            </div>
+
+            {/* Export CSV */}
+            <button
+              onClick={handleExportCsv}
+              disabled={filtered.length === 0}
+              title="Export current view as CSV"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300 dark:disabled:hover:bg-gray-800 dark:disabled:hover:text-gray-300"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export
             </button>
-          ))}
+          </div>
         </div>
+
+        {/* Row 2: date nav · search · department filter */}
         <div className="grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:items-center">
           {/* Date navigator: ◄  date  ► + Today shortcut */}
           <div className="flex w-full gap-2 sm:w-auto">
@@ -777,42 +820,6 @@ export default function TeamAttendance() {
             </select>
           </div>
 
-          {/* Density toggle */}
-          <div className="hidden items-center gap-0.5 rounded-lg border border-gray-300 bg-white p-0.5 dark:border-gray-700 dark:bg-gray-800 md:inline-flex">
-            <button
-              onClick={() => setDensity("comfy")}
-              title="Comfortable rows"
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
-                density === "comfy"
-                  ? "bg-indigo-500/15 text-indigo-600 ring-1 ring-indigo-500/30 dark:bg-indigo-400/20 dark:text-indigo-300"
-                  : "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-              }`}
-            >
-              <LayoutList className="h-3.5 w-3.5" />
-            </button>
-            <button
-              onClick={() => setDensity("compact")}
-              title="Compact rows"
-              className={`inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors ${
-                density === "compact"
-                  ? "bg-indigo-500/15 text-indigo-600 ring-1 ring-indigo-500/30 dark:bg-indigo-400/20 dark:text-indigo-300"
-                  : "text-gray-500 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-700"
-              }`}
-            >
-              <Rows3 className="h-3.5 w-3.5" />
-            </button>
-          </div>
-
-          {/* Export CSV */}
-          <button
-            onClick={handleExportCsv}
-            disabled={filtered.length === 0}
-            title="Export current view as CSV"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300 dark:disabled:hover:bg-gray-800 dark:disabled:hover:text-gray-300"
-          >
-            <Download className="h-3.5 w-3.5" />
-            Export
-          </button>
         </div>
       </div>
 

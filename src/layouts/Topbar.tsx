@@ -509,9 +509,9 @@ export default function Topbar({ onMenuClick }: Props) {
                   className={`absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full ${statusInfo.dot} ring-2 ring-white dark:ring-gray-950 ${status === "online" ? "animate-status-pulse" : ""}`}
                 />
               </div>
-              <div className="hidden text-left sm:block">
-                <p className="text-[13px] font-semibold leading-tight text-gray-900 dark:text-white">{user?.name}</p>
-                <p className={`text-[11px] capitalize leading-tight ${statusInfo.text}`}>
+              <div className="hidden min-w-0 text-left sm:block">
+                <p className="max-w-[140px] truncate text-[13px] font-semibold leading-tight text-gray-900 dark:text-white xl:max-w-[200px]">{user?.name}</p>
+                <p className={`truncate text-[11px] capitalize leading-tight ${statusInfo.text}`}>
                   {statusInfo.label}
                 </p>
               </div>
