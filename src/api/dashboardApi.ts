@@ -16,6 +16,8 @@ export interface ManagerStats {
   totalEmployees: number;
   todayPresent: number;
   todayAbsent: number;
+  todayOnLeave: number;
+  todayNotMarked: number;
 }
 
 export interface HrStats {
@@ -26,6 +28,8 @@ export interface HrStats {
   leaveStats: { _id: string; totalDays: number; count: number }[];
   todayPresent: number;
   todayAbsent: number;
+  todayOnLeave: number;
+  todayNotMarked: number;
   attritionRate: number;
 }
 
