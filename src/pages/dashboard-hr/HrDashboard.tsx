@@ -24,6 +24,7 @@ function getGreeting(): string {
 
 type Anniversary = { _id: string; name: string; email: string; department?: string; years: number; eventDate: string };
 
+const ATTENDANCE_COLORS = ["#10b981", "#ef4444"];
 const LEAVE_COLORS: Record<string, string> = {
   Personal: "#6366f1",
   Sick: "#f59e0b",
@@ -86,17 +87,12 @@ export default function HrDashboard() {
       count: l.count,
     }));
 
-  // Attendance rate excludes employees on approved leave from the denominator —
-  // they aren't "expected in" today, so counting them as missing would skew the rate.
-  const attendanceExpected = (stats?.todayPresent ?? 0) + (stats?.todayAbsent ?? 0) + (stats?.todayNotMarked ?? 0);
-  const attendanceTotal = attendanceExpected + (stats?.todayOnLeave ?? 0);
-  const attendanceRate = attendanceExpected > 0 ? Math.round((stats!.todayPresent / attendanceExpected) * 100) : 0;
+  const attendanceTotal = (stats?.todayPresent ?? 0) + (stats?.todayAbsent ?? 0);
+  const attendanceRate = attendanceTotal > 0 ? Math.round((stats!.todayPresent / attendanceTotal) * 100) : 0;
   const attendancePie = stats ? [
     { name: "Present", value: stats.todayPresent },
-    { name: "On Leave", value: stats.todayOnLeave },
     { name: "Absent", value: stats.todayAbsent },
-    { name: "Not Marked", value: stats.todayNotMarked },
-  ].filter((s) => s.value > 0) : [];
+  ] : [];
 
   const pendingCount = pending.leaves.length + pending.timesheets.length;
 
@@ -127,7 +123,7 @@ export default function HrDashboard() {
     {
       label: "Attendance Today",
       value: `${attendanceRate}%`,
-      sub: `${stats.todayPresent} present · ${stats.todayOnLeave} leave · ${stats.todayAbsent} absent · ${stats.todayNotMarked} not marked`,
+      sub: `${stats.todayPresent} present · ${stats.todayAbsent} absent`,
       icon: UserCheck,
       gradient: "from-emerald-500 to-teal-600",
       ringColor: "shadow-emerald-500/30",
@@ -223,25 +219,11 @@ export default function HrDashboard() {
                     <span className="text-emerald-200/90">Present</span>
                     <span className="font-mono font-semibold tabular-nums text-emerald-50">{stats.todayPresent}</span>
                   </span>
-                  {stats.todayOnLeave > 0 && (
-                    <span className="inline-flex items-center gap-2 rounded-lg bg-indigo-500/15 px-3 py-1.5 text-xs ring-1 ring-indigo-400/30 backdrop-blur-sm">
-                      <Calendar className="h-3.5 w-3.5 text-indigo-200" />
-                      <span className="text-indigo-200/90">On Leave</span>
-                      <span className="font-mono font-semibold tabular-nums text-indigo-50">{stats.todayOnLeave}</span>
-                    </span>
-                  )}
                   <span className="inline-flex items-center gap-2 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs ring-1 ring-rose-400/30 backdrop-blur-sm">
                     <UserX className="h-3.5 w-3.5 text-rose-200" />
                     <span className="text-rose-200/90">Absent</span>
                     <span className="font-mono font-semibold tabular-nums text-rose-50">{stats.todayAbsent}</span>
                   </span>
-                  {stats.todayNotMarked > 0 && (
-                    <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                      <Clock className="h-3.5 w-3.5 text-indigo-200/80" />
-                      <span className="text-indigo-200/70">Not Marked</span>
-                      <span className="font-mono font-semibold tabular-nums text-indigo-100">{stats.todayNotMarked}</span>
-                    </span>
-                  )}
                   {pendingCount > 0 && (
                     <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
                       <AlertCircle className="h-3.5 w-3.5 text-amber-200" />
@@ -410,15 +392,9 @@ export default function HrDashboard() {
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie data={attendancePie} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
-                    {attendancePie.map((entry) => {
-                      const colorByName: Record<string, string> = {
-                        "Present": "#10b981",
-                        "On Leave": "#6366f1",
-                        "Absent": "#ef4444",
-                        "Not Marked": "#94a3b8",
-                      };
-                      return <Cell key={entry.name} fill={colorByName[entry.name] || "#94a3b8"} />;
-                    })}
+                    {attendancePie.map((_, idx) => (
+                      <Cell key={idx} fill={ATTENDANCE_COLORS[idx]} />
+                    ))}
                   </Pie>
                   <Tooltip contentStyle={{ backgroundColor: "#1f2937", border: "none", borderRadius: "12px", color: "#f3f4f6" }} />
                 </PieChart>
@@ -431,22 +407,14 @@ export default function HrDashboard() {
           ) : (
             <EmptyState label="No attendance data" />
           )}
-          <div className="mt-3 grid grid-cols-2 gap-2 text-center sm:grid-cols-4">
+          <div className="mt-3 grid grid-cols-2 gap-2 text-center">
             <div className="rounded-lg bg-emerald-50 dark:bg-emerald-500/10 p-2">
               <p className="font-mono text-lg font-bold tabular-nums text-emerald-600 dark:text-emerald-400">{stats?.todayPresent ?? 0}</p>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-400">Present</p>
             </div>
-            <div className="rounded-lg bg-indigo-50 dark:bg-indigo-500/10 p-2">
-              <p className="font-mono text-lg font-bold tabular-nums text-indigo-600 dark:text-indigo-400">{stats?.todayOnLeave ?? 0}</p>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-700 dark:text-indigo-400">On Leave</p>
-            </div>
             <div className="rounded-lg bg-rose-50 dark:bg-rose-500/10 p-2">
               <p className="font-mono text-lg font-bold tabular-nums text-rose-600 dark:text-rose-400">{stats?.todayAbsent ?? 0}</p>
               <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-700 dark:text-rose-400">Absent</p>
-            </div>
-            <div className="rounded-lg bg-gray-100 dark:bg-gray-500/10 p-2">
-              <p className="font-mono text-lg font-bold tabular-nums text-gray-600 dark:text-gray-300">{stats?.todayNotMarked ?? 0}</p>
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-400">Not Marked</p>
             </div>
           </div>
         </div>

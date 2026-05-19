@@ -81,9 +81,6 @@ function inferActiveStatus(liveStatus: string): ActiveStatus {
     case "clocked-in":
     case "late":        return "online";
     case "clocked-out": return "away";
-    case "absent":
-    case "on-leave":
-    case "not-marked":
     default:            return "offline";
   }
 }
@@ -91,8 +88,8 @@ function inferActiveStatus(liveStatus: string): ActiveStatus {
 /** Resolve the active status to show. Prefers the user's own-set `userStatus`,
  *  but downgrades to "offline" when there's no attendance activity today. */
 function resolveActiveStatus(emp: LiveEmployee): ActiveStatus {
-  // Hard signal: never show "online" for someone who isn't actively working.
-  if (emp.liveStatus === "not-marked" || emp.liveStatus === "absent" || emp.liveStatus === "on-leave") return "offline";
+  // Hard signal: never show "online" for someone who hasn't marked attendance.
+  if (emp.liveStatus === "not-marked") return "offline";
   if (emp.userStatus) return emp.userStatus;
   return inferActiveStatus(emp.liveStatus);
 }
@@ -103,7 +100,6 @@ const liveStyles: Record<string, { bg: string; dot: string; label: string; pulse
   "clocked-out": { bg: "bg-sky-50 text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-400/20", dot: "bg-sky-500", label: "Logged Out", pulse: false },
   "not-marked": { bg: "bg-gray-100 text-gray-500 ring-1 ring-inset ring-gray-400/20 dark:bg-gray-800 dark:text-gray-400 dark:ring-gray-600/20", dot: "bg-gray-400", label: "Not Marked", pulse: false },
   absent: { bg: "bg-rose-50 text-rose-700 ring-1 ring-inset ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-400/20", dot: "bg-rose-500", label: "Absent", pulse: false },
-  "on-leave": { bg: "bg-indigo-50 text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20", dot: "bg-indigo-500", label: "On Leave", pulse: false },
 };
 
 const cardCls = "rounded-2xl border border-gray-200/70 bg-white/80 shadow-sm ring-1 ring-black/[0.02] backdrop-blur-sm transition-all hover:shadow-md hover:ring-black/[0.04] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]";
@@ -216,9 +212,7 @@ const statusOrder: Record<string, number> = {
   "clocked-in": 0,
   late: 1,
   "clocked-out": 2,
-  "on-leave": 3,
-  absent: 4,
-  "not-marked": 5,
+  "not-marked": 3,
 };
 
 export default function TeamAttendance() {
@@ -264,18 +258,11 @@ export default function TeamAttendance() {
     return () => clearInterval(id);
   }, [dateFilter, isToday]);
 
-  // "Absent" means the system has classified them as absent (cron or short-shift).
-  // Not Marked = no record yet (still possible to clock in). On Leave = approved leave.
-  // These three are distinct and must not be conflated.
-  const absentStatuses = ["absent"];
+  const absentStatuses = ["not-marked"];
   const presentStatuses = ["clocked-in", "late", "clocked-out"];
-  const notMarkedStatuses = ["not-marked"];
-  const onLeaveStatuses = ["on-leave"];
 
   const absentCount = useMemo(() => (liveData?.employees || []).filter((e) => absentStatuses.includes(e.liveStatus)).length, [liveData]);
   const presentCount = useMemo(() => (liveData?.employees || []).filter((e) => presentStatuses.includes(e.liveStatus)).length, [liveData]);
-  const notMarkedCount = useMemo(() => (liveData?.employees || []).filter((e) => notMarkedStatuses.includes(e.liveStatus)).length, [liveData]);
-  const onLeaveCount = useMemo(() => (liveData?.employees || []).filter((e) => onLeaveStatuses.includes(e.liveStatus)).length, [liveData]);
 
   const officeStartMin = useMemo(
     () => parseHHMM(attendancePolicy?.officeStartTime ?? "09:00"),
@@ -295,8 +282,7 @@ export default function TeamAttendance() {
       .filter((e) => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.email.toLowerCase().includes(search.toLowerCase()))
       .filter((e) => !deptFilter || e.department === deptFilter)
       .filter((e) => {
-        // "Absent" tab now means anyone not present: explicit absent + on-leave + not-marked.
-        if (viewTab === "absent") return !presentStatuses.includes(e.liveStatus);
+        if (viewTab === "absent") return absentStatuses.includes(e.liveStatus);
         if (viewTab === "present") return presentStatuses.includes(e.liveStatus);
         return true;
       });
@@ -320,17 +306,14 @@ export default function TeamAttendance() {
   const total = liveData?.employees.length ?? 0;
   const summary = liveData?.summary;
 
-  // Status segments for the stacked bar (in the hero). Each maps to a distinct
-  // liveStatus bucket — no overlapping or duplicated counts.
+  // Status segments for the stacked bar (in the hero)
   const segments = useMemo(() => {
     if (!summary || total === 0) return [];
     return [
-      { key: "clocked-in",  label: "In",         value: summary.clockedIn,         color: "bg-emerald-500", lightColor: "bg-emerald-400" },
-      { key: "late",        label: "Late",       value: summary.late,              color: "bg-amber-500",   lightColor: "bg-amber-400" },
-      { key: "clocked-out", label: "Out",        value: summary.clockedOut,        color: "bg-sky-500",     lightColor: "bg-sky-400" },
-      { key: "on-leave",    label: "On Leave",   value: summary.onLeave ?? 0,      color: "bg-indigo-500",  lightColor: "bg-indigo-400" },
-      { key: "absent",      label: "Absent",     value: summary.absent ?? 0,       color: "bg-rose-500",    lightColor: "bg-rose-400" },
-      { key: "not-marked",  label: "Not Marked", value: summary.notMarked,         color: "bg-gray-400",    lightColor: "bg-gray-300" },
+      { key: "clocked-in", label: "In",      value: summary.clockedIn, color: "bg-emerald-500", lightColor: "bg-emerald-400" },
+      { key: "late",       label: "Late",    value: summary.late,      color: "bg-amber-500",   lightColor: "bg-amber-400" },
+      { key: "clocked-out",label: "Out",     value: summary.clockedOut,color: "bg-sky-500",     lightColor: "bg-sky-400" },
+      { key: "not-marked", label: "Absent",  value: summary.notMarked, color: "bg-rose-500",    lightColor: "bg-rose-400" },
     ];
   }, [summary, total]);
 
@@ -466,8 +449,8 @@ export default function TeamAttendance() {
                 <p className="font-mono text-xl font-bold tabular-nums tracking-tight">{total}</p>
               </div>
               <div className="rounded-xl bg-rose-500/15 px-4 py-2.5 text-center ring-1 ring-rose-400/30 backdrop-blur-sm">
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-200/90">Not Present</p>
-                <p className="font-mono text-xl font-bold tabular-nums tracking-tight text-rose-100">{absentCount + notMarkedCount + onLeaveCount}</p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-rose-200/90">Absent</p>
+                <p className="font-mono text-xl font-bold tabular-nums tracking-tight text-rose-100">{absentCount}</p>
               </div>
             </div>
           </div>
@@ -476,8 +459,7 @@ export default function TeamAttendance() {
 
       {/* ── Summary Tiles ── */}
       {summary && (() => {
-        // totalTeam = sum of disjoint buckets — equals total roster size.
-        const totalTeam = total;
+        const totalTeam = summary.clockedIn + summary.clockedOut + summary.late + summary.notMarked + absentCount;
         const presentPct = totalTeam > 0 ? Math.round(((summary.clockedIn + summary.clockedOut + summary.late) / totalTeam) * 100) : 0;
         const tiles = [
           {
@@ -515,33 +497,21 @@ export default function TeamAttendance() {
             ringColor: "shadow-sky-500/30",
           },
           {
-            label: "On Leave",
-            value: onLeaveCount,
-            sub: onLeaveCount === 0 ? "None today" : `${onLeaveCount} on leave`,
-            icon: Calendar,
-            gradient: "from-indigo-500 to-violet-600",
-            ringColor: "shadow-indigo-500/30",
-            toneChip: onLeaveCount > 0
-              ? "bg-indigo-50 text-indigo-700 ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/25"
-              : "bg-gray-50 text-gray-600 ring-gray-500/20 dark:bg-gray-500/10 dark:text-gray-400 dark:ring-gray-400/25",
-            toneLabel: onLeaveCount > 0 ? "Approved" : "None",
-          },
-          {
             label: "Not Marked",
-            value: notMarkedCount,
-            sub: notMarkedCount === 0 ? "All marked" : "Pending check-in",
+            value: summary.notMarked,
+            sub: summary.notMarked === 0 ? "Everyone checked in" : "Pending check-in",
             icon: Clock,
             gradient: "from-gray-500 to-gray-600",
             ringColor: "shadow-gray-500/30",
-            toneChip: notMarkedCount > 0
+            toneChip: summary.notMarked > 0
               ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400 dark:ring-amber-400/25"
               : "bg-emerald-50 text-emerald-700 ring-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-400/25",
-            toneLabel: notMarkedCount > 0 ? "Awaiting" : "Complete",
+            toneLabel: summary.notMarked > 0 ? "Awaiting" : "Complete",
           },
           {
             label: "Absent",
             value: absentCount,
-            sub: absentCount === 0 ? "Full attendance" : `${absentCount} out`,
+            sub: absentCount === 0 ? "Full attendance" : `${absentCount} ${absentCount === 1 ? "member" : "members"} out`,
             icon: UserX,
             gradient: "from-rose-500 to-pink-600",
             ringColor: "shadow-rose-500/30",
@@ -552,7 +522,7 @@ export default function TeamAttendance() {
           },
         ];
         return (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-3 2xl:grid-cols-6">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
             {tiles.map((c) => (
               <div
                 key={c.label}
@@ -611,12 +581,12 @@ export default function TeamAttendance() {
       })()}
 
       {/* ── Tabs + Filters ── */}
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex shrink-0 gap-1 self-start rounded-xl border border-gray-200/70 bg-white/60 p-1 ring-1 ring-black/[0.02] backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-900/60 dark:ring-white/[0.03]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex gap-1 overflow-x-auto rounded-xl border border-gray-200/70 bg-white/60 p-1 ring-1 ring-black/[0.02] backdrop-blur-sm dark:border-gray-800/80 dark:bg-gray-900/60 dark:ring-white/[0.03]">
           {([
             { key: "all" as ViewTab, label: "All", count: total },
             { key: "present" as ViewTab, label: "Present", count: presentCount },
-            { key: "absent" as ViewTab, label: "Not Present", count: total - presentCount },
+            { key: "absent" as ViewTab, label: "Absent", count: absentCount },
           ]).map((t) => (
             <button
               key={t.key}

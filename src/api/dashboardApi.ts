@@ -15,9 +15,7 @@ export interface ManagerStats {
   pendingTimesheets: number;
   totalEmployees: number;
   todayPresent: number;
-  todayOnLeave: number;
   todayAbsent: number;
-  todayNotMarked: number;
 }
 
 export interface HrStats {
@@ -27,9 +25,7 @@ export interface HrStats {
   newJoinersThisMonth: { _id: string; name: string; email: string; department?: string; createdAt: string }[];
   leaveStats: { _id: string; totalDays: number; count: number }[];
   todayPresent: number;
-  todayOnLeave: number;
   todayAbsent: number;
-  todayNotMarked: number;
   attritionRate: number;
 }
 
