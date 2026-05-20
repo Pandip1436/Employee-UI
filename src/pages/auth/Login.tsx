@@ -58,7 +58,7 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 transition-colors">
+    <div className="min-h-screen overflow-x-hidden bg-gray-50 dark:bg-gray-950 transition-colors">
       {/* Premium animation keyframes (scoped via .lp- class names) */}
       <style>{`
         @keyframes lp-blob-a {
@@ -247,7 +247,7 @@ export default function Login() {
         </div>
 
         {/* ━━━━━━━━━━ Right: form ━━━━━━━━━━ */}
-        <div className="relative flex items-center justify-center px-5 py-10 sm:px-10">
+        <div className="relative flex items-center justify-center overflow-hidden px-4 py-6 sm:px-10 sm:py-10">
           {/* Subtle background accents on small screens (mobile-only) */}
           <div aria-hidden className="pointer-events-none absolute inset-0 lg:hidden">
             <div className="absolute -right-20 -top-20 h-64 w-64 rounded-full bg-indigo-400/10 blur-3xl" />
@@ -256,7 +256,7 @@ export default function Login() {
 
           <div className="relative w-full max-w-md">
             {/* Mobile logo header */}
-            <div className="lp-fadeup mb-8 flex items-center justify-center gap-3 lg:hidden">
+            <div className="lp-fadeup mb-6 flex items-center justify-center gap-3 sm:mb-8 lg:hidden">
               <div className="lp-halo flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
                 <img src={logoSrc} alt={companyName} className="h-6 w-6 object-contain" />
               </div>
@@ -271,10 +271,10 @@ export default function Login() {
               className="lp-card-glow pointer-events-none absolute -inset-4 -z-10 rounded-3xl bg-gradient-to-br from-indigo-500/20 via-fuchsia-500/10 to-sky-500/20 blur-3xl"
             />
 
-            <div className="lp-fadeup rounded-2xl border border-gray-200/70 bg-white/80 p-8 shadow-xl shadow-gray-200/50 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/80 dark:shadow-black/30" style={{ animationDelay: "100ms" }}>
+            <div className="lp-fadeup rounded-2xl border border-gray-200/70 bg-white/80 p-6 shadow-xl shadow-gray-200/50 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/80 dark:shadow-black/30 sm:p-8" style={{ animationDelay: "100ms" }}>
               {/* Heading */}
-              <div className="mb-7">
-                <h2 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">
+              <div className="mb-6 sm:mb-7">
+                <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
                   Welcome back
                 </h2>
                 <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
@@ -389,12 +389,12 @@ export default function Login() {
             </div>
 
             {/* Trust strip */}
-            <div className="mt-5 flex items-center justify-center gap-4 text-[11px] text-gray-400 dark:text-gray-500">
+            <div className="mt-5 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-[11px] text-gray-400 dark:text-gray-500">
               <span className="inline-flex items-center gap-1.5">
                 <ShieldCheck className="h-3.5 w-3.5 text-emerald-500" />
                 Secure sign-in
               </span>
-              <span className="h-3 w-px bg-gray-200 dark:bg-gray-800" />
+              <span className="hidden h-3 w-px bg-gray-200 dark:bg-gray-800 sm:inline-block" />
               <span>SOC-grade infrastructure</span>
             </div>
           </div>
