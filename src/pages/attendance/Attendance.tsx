@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { LogIn, LogOut, Clock, Calendar, Timer, X, Users, AlertTriangle, CheckCircle2, UserX, Power, Loader2, Flame, Sparkles } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
+import { leaveApi } from "../../api/leaveApi";
 import { useAuth } from "../../context/AuthContext";
 import { useCompany } from "../../context/CompanyContext";
 import type { AttendanceRecord, Pagination, User, LiveStatusData, LiveEmployee } from "../../types";
@@ -127,18 +128,30 @@ export default function Attendance() {
   useEffect(() => {
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-    attendanceApi.getMyHistory({ month, limit: 200 }).then((r) => {
-      const recs = r.data.data || [];
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0); // last day of month
+
+    Promise.all([
+      attendanceApi.getMyHistory({ month, limit: 200 }),
+      leaveApi.getMyLeaves({ limit: 200 }),
+    ]).then(([histRes, leaveRes]) => {
+      const recs = histRes.data.data || [];
+      const leaves = (leaveRes.data.data || []).filter((l) => l.status === "approved");
+
       // Start of current work week (Monday 00:00 local)
       const weekStart = new Date(now);
       const dow = now.getDay(); // 0=Sun..6=Sat
       const diffToMon = dow === 0 ? -6 : 1 - dow;
       weekStart.setDate(now.getDate() + diffToMon);
       weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59, 999);
 
       let week = 0, month_ = 0;
       const counts = { present: 0, late: 0, halfDay: 0, absent: 0, onLeave: 0 };
       const dayMap: (string | undefined)[] = [undefined, undefined, undefined, undefined, undefined, undefined, undefined]; // Mon..Sun
+      const leaveDaysAlreadyCounted = new Set<string>(); // ISO date strings of records with status="on-leave"
 
       for (const rec of recs) {
         const h = rec.totalHours || 0;
@@ -153,7 +166,33 @@ export default function Attendance() {
         else if (rec.status === "late")     counts.late++;
         else if (rec.status === "half-day") counts.halfDay++;
         else if (rec.status === "absent")   counts.absent++;
-        else if (rec.status === "on-leave") counts.onLeave++;
+        else if (rec.status === "on-leave") {
+          counts.onLeave++;
+          leaveDaysAlreadyCounted.add(recDate.toISOString().slice(0, 10));
+        }
+      }
+
+      // Overlay approved leaves on top of attendance records — covers days where
+      // the auto-mark cron didn't create an on-leave row (early in the day, or
+      // leaves approved after the cron ran). Skip dates already counted as on-leave
+      // via attendance records to avoid double-counting.
+      const isoKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      for (const lv of leaves) {
+        const lStart = new Date(lv.startDate);
+        const lEnd = new Date(lv.endDate);
+        // Walk each day in the leave range
+        for (let d = new Date(lStart); d <= lEnd; d.setDate(d.getDate() + 1)) {
+          if (d < monthStart || d > monthEnd) continue; // only count days within this month
+          const key = isoKey(d);
+          if (leaveDaysAlreadyCounted.has(key)) continue;
+          counts.onLeave++;
+          leaveDaysAlreadyCounted.add(key);
+          // Reflect in the weekly day strip too
+          if (d >= weekStart && d <= weekEnd) {
+            const idx = (d.getDay() + 6) % 7;
+            if (!dayMap[idx]) dayMap[idx] = "on-leave";
+          }
+        }
       }
 
       setWeeklyHours(Math.round(week * 100) / 100);
