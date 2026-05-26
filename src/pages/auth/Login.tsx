@@ -79,6 +79,16 @@ export default function Login() {
     return () => clearInterval(id);
   }, []);
 
+  // Replay any "session ended" / "signed in elsewhere" message that the axios
+  // interceptor stashed before redirecting here. Shown once, then cleared.
+  useEffect(() => {
+    const msg = sessionStorage.getItem("postLogoutMessage");
+    if (msg) {
+      sessionStorage.removeItem("postLogoutMessage");
+      toast.error(msg);
+    }
+  }, []);
+
   const greeting = getGreeting(now);
   const timeStr = now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
   const dayStr  = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });

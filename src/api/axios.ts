@@ -38,7 +38,11 @@ api.interceptors.response.use(
       sessionStorage.removeItem("token");
       sessionStorage.removeItem("user");
       if (window.location.pathname !== "/login") {
+        // A hard redirect wipes any in-flight toast — stash the reason so the
+        // login page can replay it as soon as it mounts.
+        try { sessionStorage.setItem("postLogoutMessage", message); } catch { /* ignore */ }
         window.location.href = "/login";
+        return Promise.reject(error);
       }
     }
 
