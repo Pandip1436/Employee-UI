@@ -194,7 +194,7 @@ export default function NotificationBell() {
         <div
           role="dialog"
           aria-label="Notifications"
-          className="absolute right-0 top-full z-50 mt-2 w-[22rem] origin-top-right animate-in fade-in-0 zoom-in-95 overflow-hidden rounded-2xl border border-gray-200/70 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl duration-150 dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10 sm:w-[26rem]"
+          className="fixed inset-x-2 top-15 z-50 origin-top-right animate-in fade-in-0 zoom-in-95 overflow-hidden rounded-2xl border border-gray-200/70 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl duration-150 dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:w-104"
         >
           {/* Premium header */}
           <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50/80 via-white to-fuchsia-50/40 px-4 py-3.5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:via-gray-900 dark:to-fuchsia-500/10">
