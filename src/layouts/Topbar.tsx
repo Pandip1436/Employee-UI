@@ -332,7 +332,7 @@ export default function Topbar({ onMenuClick }: Props) {
               {greeting}
             </p>
             <p className="max-w-[200px] truncate text-[14px] font-semibold tracking-tight text-gray-900 dark:text-white xl:max-w-[260px]">
-              {displayName}<span className="text-indigo-500 dark:text-indigo-400">.</span>
+              {displayName}
             </p>
           </div>
           {/* Vertical divider */}

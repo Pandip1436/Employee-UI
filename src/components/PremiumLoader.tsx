@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { loaderBus } from "../utils/loaderBus";
+import { useCompany } from "../context/CompanyContext";
+import { useTheme } from "../context/ThemeContext";
 
 export default function PremiumLoader() {
   const [active, setActive] = useState(0);
@@ -53,17 +55,41 @@ export default function PremiumLoader() {
 
 /* Full-page premium spinner for Suspense / initial loads */
 export function PremiumPageLoader({ label = "Loading" }: { label?: string }) {
+  const { companyName, logo } = useCompany();
+  const { dark } = useTheme();
+  const fallback = dark ? "/logodarkmode.png" : "/logo.png";
+  const logoSrc = logo ? (/^(https?:|\/)/.test(logo) ? logo : `/${logo}`) : fallback;
+
   return (
-    <div className="flex min-h-[60vh] flex-col items-center mt-35 justify-center gap-4">
-      <div className="relative h-14 w-14">
-        <div className="absolute inset-0 rounded-full border-4 border-indigo-500/10" />
-        <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-indigo-500 border-r-fuchsia-500" />
-        <div className="absolute inset-2 rounded-full bg-gradient-to-br from-indigo-500/20 to-fuchsia-500/20 blur-md" />
+    <div className="flex min-h-[60vh] flex-col items-center mt-35 justify-center gap-5">
+      <div className="relative h-24 w-24">
+        {/* Outer glow */}
+        <div aria-hidden className="absolute -inset-3 rounded-full bg-gradient-to-br from-indigo-500/25 via-fuchsia-500/20 to-amber-400/15 blur-2xl animate-pulse" />
+        {/* Static track */}
+        <div aria-hidden className="absolute inset-0 rounded-full border-2 border-indigo-500/10 dark:border-indigo-400/15" />
+        {/* Spinning gradient ring */}
+        <div aria-hidden className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-indigo-500 border-r-fuchsia-500" style={{ animationDuration: "1.4s" }} />
+        {/* Counter-spinning faint ring for depth */}
+        <div aria-hidden className="absolute inset-1.5 animate-spin rounded-full border border-transparent border-b-amber-400/60" style={{ animationDuration: "2.6s", animationDirection: "reverse" }} />
+        {/* Logo well */}
+        <div className="absolute inset-2.5 flex items-center justify-center rounded-full bg-white shadow-lg ring-1 ring-black/5 dark:bg-gray-900 dark:ring-white/10">
+          <img
+            src={logoSrc}
+            alt={`${companyName} logo`}
+            className="h-12 w-12 object-contain"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).src = fallback; }}
+          />
+        </div>
       </div>
-      <p className="text-sm font-medium tracking-wide text-gray-500 dark:text-gray-400">
-        {label}
-        <span className="inline-block animate-pulse">…</span>
-      </p>
+      <div className="flex flex-col items-center gap-0.5">
+        <p className="text-sm font-semibold tracking-tight text-gray-900 dark:text-white">
+          {companyName}
+        </p>
+        <p className="text-xs font-medium tracking-wide text-gray-500 dark:text-gray-400">
+          {label}
+          <span className="inline-block animate-pulse">…</span>
+        </p>
+      </div>
     </div>
   );
 }
