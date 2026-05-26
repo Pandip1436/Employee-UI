@@ -614,7 +614,7 @@ export default function TeamAttendance() {
           },
         ];
         return (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-7">
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 md:grid-cols-4 xl:grid-cols-7">
             {tiles.map((c) => {
               const isActive = viewTab === c.tab;
               return (
@@ -639,24 +639,24 @@ export default function TeamAttendance() {
                   className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${c.gradient} opacity-[0.04] blur-2xl`}
                 />
 
-                <div className="relative p-4">
-                  <div className="flex items-start justify-between gap-3">
+                <div className="relative p-3">
+                  <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className={labelCls}>{c.label}</p>
-                      <p className="mt-2 font-mono text-3xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
+                      <p className="mt-1.5 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{c.value}</p>
                     </div>
                     <div
-                      className={`relative shrink-0 rounded-xl bg-gradient-to-br ${c.gradient} p-2.5 shadow-lg ${c.ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
+                      className={`relative shrink-0 rounded-lg bg-gradient-to-br ${c.gradient} p-2 shadow-md ${c.ringColor} ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}
                     >
-                      <c.icon className="h-4 w-4 text-white" strokeWidth={2.5} />
-                      <span aria-hidden className="absolute inset-0 rounded-xl bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
+                      <c.icon className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                      <span aria-hidden className="absolute inset-0 rounded-lg bg-white/10 opacity-0 transition-opacity group-hover:opacity-100" />
                     </div>
                   </div>
 
-                  <div className="mt-3 flex items-center justify-between gap-2">
-                    <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{c.sub}</p>
+                  <div className="mt-2 flex items-center justify-between gap-2">
+                    <p className="truncate text-[10px] text-gray-500 dark:text-gray-400">{c.sub}</p>
                     {c.toneLabel && c.toneChip && (
-                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold ring-1 ring-inset ${c.toneChip}`}>
+                      <span className={`inline-flex shrink-0 items-center gap-1 rounded-md px-1 py-0.5 text-[9px] font-bold ring-1 ring-inset ${c.toneChip}`}>
                         <span className="h-1 w-1 rounded-full bg-current" />
                         {c.toneLabel}
                       </span>
@@ -664,7 +664,7 @@ export default function TeamAttendance() {
                   </div>
 
                   {typeof c.progress === "number" && (
-                    <div className="mt-3 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                    <div className="mt-2 h-1 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
                       <div
                         className={`h-full rounded-full bg-gradient-to-r ${c.gradient} transition-[width] duration-700`}
                         style={{ width: `${Math.min(100, c.progress)}%` }}
