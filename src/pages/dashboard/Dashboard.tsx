@@ -14,7 +14,8 @@ import { dashboardApi, type EmployeeKpis } from "../../api/dashboardApi";
 import { reportApi } from "../../api/reportApi";
 import { leaveApi } from "../../api/leaveApi";
 import { attendanceApi } from "../../api/attendanceApi";
-import type { AttendanceRecord } from "../../types";
+import { holidayApi } from "../../api/holidayApi";
+import type { AttendanceRecord, Holiday } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import TimerWidget from "../../components/TimerWidget";
 import type { WeeklySummary, LeaveBalance } from "../../types";
@@ -36,6 +37,7 @@ export default function Dashboard() {
   const [weekly, setWeekly] = useState<WeeklySummary | null>(null);
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
   const [attendanceWeek, setAttendanceWeek] = useState<AttendanceRecord[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [today, setToday] = useState<AttendanceRecord | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [clocking, setClocking] = useState(false);
@@ -53,6 +55,11 @@ export default function Dashboard() {
     const now = new Date();
     const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     attendanceApi.getMyHistory({ month, limit: 200 }).then((r) => setAttendanceWeek(r.data.data || [])).catch(() => {});
+    // Fetch current + next year so a December dashboard still surfaces January holidays.
+    const year = now.getFullYear();
+    Promise.all([holidayApi.getAll(year), holidayApi.getAll(year + 1)])
+      .then(([a, b]) => setHolidays([...(a.data.data || []), ...(b.data.data || [])]))
+      .catch(() => {});
   }, [isAdmin]);
 
   useEffect(() => {
@@ -115,6 +122,15 @@ export default function Dashboard() {
     });
   })();
   void weekly;
+
+  const upcomingHolidays = (() => {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    return holidays
+      .filter((h) => new Date(h.date).getTime() >= todayStart.getTime())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 4);
+  })();
 
   const leaveData = leaveBalance ? [
     { name: "Personal", used: leaveBalance.casual.used, remaining: leaveBalance.casual.remaining },
@@ -448,6 +464,90 @@ export default function Dashboard() {
             </div>
           );
         })()}
+      </div>
+
+      {/* ── Upcoming Holidays ── */}
+      <div className={`${card} relative overflow-hidden`}>
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-rose-400/15 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-16 -left-12 h-32 w-32 rounded-full bg-orange-400/10 blur-3xl" />
+        <div className="relative mb-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-rose-50 p-2 ring-1 ring-rose-500/10 dark:bg-rose-500/10 dark:ring-rose-400/20">
+              <PartyPopper className="h-4 w-4 text-rose-600 dark:text-rose-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Upcoming Holidays</h3>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Plan ahead — your next breaks</p>
+            </div>
+          </div>
+          <Link
+            to="/attendance/holidays"
+            className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-semibold text-rose-600 transition-colors hover:bg-rose-50 dark:text-rose-400 dark:hover:bg-rose-500/10"
+          >
+            View all <ArrowRight className="h-3 w-3" />
+          </Link>
+        </div>
+
+        {upcomingHolidays.length === 0 ? (
+          <div className="relative flex flex-col items-center justify-center gap-2 py-8 text-center">
+            <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
+              <PartyPopper className="h-5 w-5 text-gray-400" />
+            </div>
+            <p className="text-xs text-gray-500 dark:text-gray-400">No holidays coming up</p>
+          </div>
+        ) : (
+          <div className="relative grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {upcomingHolidays.map((h) => {
+              const d = new Date(h.date);
+              const todayStart = new Date();
+              todayStart.setHours(0, 0, 0, 0);
+              const dStart = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+              const daysAway = Math.round((dStart.getTime() - todayStart.getTime()) / 86_400_000);
+              const typeChip =
+                h.type === "public"
+                  ? "bg-rose-50 text-rose-700 ring-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300 dark:ring-rose-400/25"
+                  : h.type === "restricted"
+                  ? "bg-amber-50 text-amber-700 ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25"
+                  : "bg-indigo-50 text-indigo-700 ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/25";
+              const awayLabel =
+                daysAway === 0 ? "Today" :
+                daysAway === 1 ? "Tomorrow" :
+                daysAway < 7   ? `${daysAway} days` :
+                daysAway < 14  ? "Next week" :
+                `${daysAway} days`;
+              return (
+                <div
+                  key={h._id}
+                  className="group relative overflow-hidden rounded-2xl border border-gray-200/70 bg-gradient-to-br from-rose-50/50 via-white to-orange-50/30 p-4 transition-all hover:-translate-y-0.5 hover:shadow-md dark:border-gray-800/70 dark:from-rose-500/[0.06] dark:via-gray-900 dark:to-orange-500/[0.04]"
+                >
+                  <span aria-hidden className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-rose-400 via-pink-500 to-orange-500" />
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-gray-500 dark:text-gray-400">
+                        {d.toLocaleDateString(undefined, { weekday: "short" })}
+                      </p>
+                      <p className="mt-0.5 font-mono text-3xl font-bold tabular-nums leading-none text-gray-900 dark:text-white">
+                        {d.getDate()}
+                      </p>
+                      <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wider text-rose-600 dark:text-rose-400">
+                        {d.toLocaleDateString(undefined, { month: "short" })}
+                      </p>
+                    </div>
+                    <span className={`inline-flex shrink-0 rounded-md px-1.5 py-0.5 text-[10px] font-bold capitalize ring-1 ring-inset ${typeChip}`}>
+                      {h.type}
+                    </span>
+                  </div>
+                  <p className="mt-3 truncate text-sm font-semibold text-gray-900 dark:text-white" title={h.name}>
+                    {h.name}
+                  </p>
+                  <p className="mt-1 text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                    {awayLabel}{daysAway >= 2 ? " away" : ""}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* ── Quick Actions ── */}
