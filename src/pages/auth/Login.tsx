@@ -2,15 +2,49 @@ import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Eye, EyeOff, Loader2, ArrowRight, ShieldCheck,
-  Lock, User,
+  Lock, User, Clock, CalendarDays, FileBarChart, FolderKanban,
+  AlertCircle,
 } from "lucide-react";
 
-const HERO_IMAGES = [
-  "/login-hero-1.png",
-  "/login-hero-2.png",
-  "/login-hero-3.png",
+interface HeroSlide {
+  src: string;
+  title: string;
+  tagline: string;
+}
+
+const HERO_SLIDES: HeroSlide[] = [
+  {
+    src: "/login-hero-1.png",
+    title: "Your workday, in focus",
+    tagline: "Clock in, log hours, and stay aligned with your team from a single workspace.",
+  },
+  {
+    src: "/login-hero-2.png",
+    title: "Built for hybrid teams",
+    tagline: "Attendance, leaves, and timesheets — synchronized across every location and timezone.",
+  },
+  {
+    src: "/login-hero-3.png",
+    title: "Insights at a glance",
+    tagline: "Real-time dashboards keep managers informed and employees in flow.",
+  },
 ];
 const HERO_INTERVAL_MS = 5000;
+
+const FEATURE_PILLS = [
+  { icon: Clock,        label: "Time tracking" },
+  { icon: CalendarDays, label: "Leaves & holidays" },
+  { icon: FileBarChart, label: "Live reports" },
+  { icon: FolderKanban, label: "Projects" },
+];
+
+function getGreeting(date: Date): string {
+  const h = date.getHours();
+  if (h >= 5 && h < 12) return "Good morning";
+  if (h >= 12 && h < 18) return "Good afternoon";
+  if (h >= 18 && h < 22) return "Good evening";
+  return "Working late";
+}
 
 import { useAuth } from "../../context/AuthContext";
 import { useCompany } from "../../context/CompanyContext";
@@ -27,15 +61,27 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [heroIndex, setHeroIndex] = useState(0);
   const [heroPaused, setHeroPaused] = useState(false);
+  const [capsLock, setCapsLock] = useState(false);
+  const [now, setNow] = useState<Date>(() => new Date());
 
   useEffect(() => {
     if (heroPaused) return;
     const id = setInterval(
-      () => setHeroIndex((i) => (i + 1) % HERO_IMAGES.length),
+      () => setHeroIndex((i) => (i + 1) % HERO_SLIDES.length),
       HERO_INTERVAL_MS
     );
     return () => clearInterval(id);
   }, [heroPaused]);
+
+  // Live clock for the hero footer + form greeting — ticks once a minute.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const greeting = getGreeting(now);
+  const timeStr = now.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" });
+  const dayStr  = now.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 
   const logoSrc = logo
     ? /^(https?:|\/)/.test(logo)
@@ -181,20 +227,29 @@ export default function Login() {
             ))}
           </div>
 
-          {/* Top: logo + brand */}
-          <div className="lp-fadeup relative flex items-center gap-3" style={{ animationDelay: "60ms" }}>
-            <div className="lp-halo flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 ring-1 ring-white/15 backdrop-blur-sm">
-              <img src={logoSrc} alt={companyName} className="h-7 w-7 object-contain" />
+          {/* Top: logo + brand + live clock */}
+          <div className="lp-fadeup relative flex items-start justify-between gap-3" style={{ animationDelay: "60ms" }}>
+            <div className="flex items-center gap-3">
+              <div className="lp-halo relative flex h-12 w-12 items-center justify-center rounded-2xl bg-white/10 p-2 ring-1 ring-white/15 backdrop-blur-sm">
+                <img src={logoSrc} alt={companyName} className="h-full w-full object-contain" />
+                {/* Rotating gradient ring */}
+                <span aria-hidden className="pointer-events-none absolute -inset-px rounded-2xl bg-gradient-to-br from-indigo-400/60 via-fuchsia-400/40 to-sky-400/60 opacity-50 blur-md" />
+              </div>
+              <div>
+                <p className="text-sm font-bold tracking-tight">{companyName}</p>
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-indigo-200/70">
+                  Workspace
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-sm font-bold tracking-tight">{companyName}</p>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-indigo-200/70">
-                Workspace
-              </p>
+            {/* Live clock chip */}
+            <div className="hidden flex-col items-end leading-tight md:flex">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-200/70">{dayStr}</p>
+              <p className="font-mono text-base font-bold tabular-nums tracking-tight">{timeStr}</p>
             </div>
           </div>
 
-          {/* Middle: image carousel — fills available space */}
+          {/* Middle: image carousel + rotating tagline */}
           <div
             className="lp-fadeup relative flex w-full flex-1 flex-col items-stretch py-4"
             style={{ animationDelay: "180ms" }}
@@ -202,10 +257,10 @@ export default function Login() {
             onMouseLeave={() => setHeroPaused(false)}
           >
             <div className="relative min-h-0 w-full flex-1">
-              {HERO_IMAGES.map((src, i) => (
+              {HERO_SLIDES.map((slide, i) => (
                 <img
-                  key={src}
-                  src={src}
+                  key={slide.src}
+                  src={slide.src}
                   alt=""
                   loading={i === 0 ? "eager" : "lazy"}
                   draggable={false}
@@ -215,11 +270,20 @@ export default function Login() {
                   }`}
                 />
               ))}
+              {/* Tagline overlay — fades + slides with the carousel */}
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-2xl bg-gradient-to-t from-black/70 via-black/30 to-transparent p-5">
+                <p key={`title-${heroIndex}`} className="lp-fadeup text-xl font-bold tracking-tight text-white drop-shadow sm:text-2xl">
+                  {HERO_SLIDES[heroIndex].title}
+                </p>
+                <p key={`tag-${heroIndex}`} className="lp-fadeup mt-1 max-w-md text-sm text-indigo-100/90" style={{ animationDelay: "120ms" }}>
+                  {HERO_SLIDES[heroIndex].tagline}
+                </p>
+              </div>
             </div>
 
             {/* Dot indicators */}
             <div className="mt-5 flex shrink-0 items-center justify-center gap-2">
-              {HERO_IMAGES.map((_, i) => (
+              {HERO_SLIDES.map((_, i) => (
                 <button
                   key={i}
                   type="button"
@@ -232,6 +296,19 @@ export default function Login() {
                       : "w-1.5 bg-white/30 hover:bg-white/55"
                   }`}
                 />
+              ))}
+            </div>
+
+            {/* Feature pills */}
+            <div className="lp-fadein mt-5 flex shrink-0 flex-wrap items-center justify-center gap-1.5" style={{ animationDelay: "650ms" }}>
+              {FEATURE_PILLS.map((f) => (
+                <span
+                  key={f.label}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-white/8 px-2.5 py-1 text-[11px] font-semibold text-indigo-100/90 ring-1 ring-white/15 backdrop-blur-sm"
+                >
+                  <f.icon className="h-3 w-3 text-indigo-300" />
+                  {f.label}
+                </span>
               ))}
             </div>
           </div>
@@ -274,8 +351,12 @@ export default function Login() {
             <div className="lp-fadeup rounded-2xl border border-gray-200/70 bg-white/80 p-6 shadow-xl shadow-gray-200/50 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/80 dark:shadow-black/30 sm:p-8" style={{ animationDelay: "100ms" }}>
               {/* Heading */}
               <div className="mb-6 sm:mb-7">
-                <h2 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
-                  Welcome back
+                <p className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-300/80">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]" />
+                  {greeting}
+                </p>
+                <h2 className="mt-1.5 text-xl font-bold tracking-tight text-gray-900 dark:text-white sm:text-2xl">
+                  Welcome back<span className="text-indigo-500 dark:text-indigo-400">.</span>
                 </h2>
                 <p className="mt-1.5 text-sm text-gray-500 dark:text-gray-400">
                   Sign in with your user ID and password to continue.
@@ -311,9 +392,15 @@ export default function Login() {
                 <div className="lp-fadeup" style={{ animationDelay: "340ms" }}>
                   <label
                     htmlFor="password"
-                    className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
+                    className="mb-1.5 flex items-center justify-between text-[11px] font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400"
                   >
-                    Password
+                    <span>Password</span>
+                    {capsLock && (
+                      <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold normal-case tracking-normal text-amber-700 ring-1 ring-amber-500/30 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/30">
+                        <AlertCircle className="h-3 w-3" />
+                        Caps Lock is on
+                      </span>
+                    )}
                   </label>
                   <div className="group relative">
                     <Lock className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400 transition-colors group-focus-within:text-indigo-500" />
@@ -324,6 +411,9 @@ export default function Login() {
                       autoComplete="current-password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onKeyDown={(e) => setCapsLock(e.getModifierState && e.getModifierState("CapsLock"))}
+                      onKeyUp={(e) => setCapsLock(e.getModifierState && e.getModifierState("CapsLock"))}
+                      onBlur={() => setCapsLock(false)}
                       placeholder="Enter your password"
                       className="w-full rounded-xl border border-gray-200 bg-white pl-10 pr-11 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none transition-all focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 dark:border-gray-700 dark:bg-gray-900 dark:text-white dark:placeholder-gray-500"
                     />
