@@ -432,141 +432,198 @@ export default function Projects() {
         </div>
       )}
 
-      {/* ── Detail Modal ── */}
-      {(detailProject || detailLoading) && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center px-4"
-          onClick={(e) => { if (e.target === e.currentTarget) setDetailProject(null); }}
-        >
-          <div className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-sm" />
-          <div className="relative w-full max-w-lg animate-modal-enter overflow-hidden rounded-2xl border border-gray-200/80 bg-white/95 shadow-2xl ring-1 ring-black/5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/95 dark:ring-white/10">
-            {/* Header */}
-            <div className="relative overflow-hidden border-b border-gray-200/70 bg-gradient-to-br from-indigo-50 to-white p-5 dark:border-gray-800/80 dark:from-indigo-500/10 dark:to-gray-900">
-              <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-indigo-400/20 blur-2xl" />
-              <div className="relative flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 p-2.5 shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
-                    <FolderKanban className="h-5 w-5 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-base font-bold text-gray-900 dark:text-white">Project Details</h2>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Overview & team</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setDetailProject(null)}
-                  aria-label="Close"
-                  className="rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-800 dark:hover:text-gray-300"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
+      {/* ── Detail Drawer (premium right-side panel) ── */}
+      {(detailProject || detailLoading) && (() => {
+        const cfg = detailProject ? statusConfig[detailProject.status] || statusConfig.active : statusConfig.active;
+        const members = (detailProject?.assignedUsers || []).filter((u): u is User => typeof u === "object");
+        const createdAt = detailProject ? new Date(detailProject.createdAt) : null;
+        const daysActive = createdAt ? Math.max(0, Math.floor((Date.now() - createdAt.getTime()) / 86400000)) : 0;
+        return (
+          <div className="fixed inset-0 z-50 flex justify-end">
+            {/* Backdrop */}
+            <div
+              className="absolute inset-0 animate-backdrop-fade bg-gray-950/60 backdrop-blur-md"
+              onClick={() => setDetailProject(null)}
+            />
+            {/* Drawer panel */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              className="relative flex h-full w-full max-w-md animate-drawer-slide-right flex-col overflow-hidden border-l border-gray-200/80 bg-white shadow-2xl ring-1 ring-black/5 dark:border-gray-800/80 dark:bg-gray-900 dark:ring-white/10 sm:max-w-xl sm:rounded-l-3xl"
+            >
+              {/* Edge glow on the drawer's left seam */}
+              <div aria-hidden className={`pointer-events-none absolute inset-y-0 left-0 w-px bg-gradient-to-b ${cfg.gradient} opacity-60`} />
 
-            {/* Body */}
-            <div className="max-h-[70vh] overflow-y-auto p-5">
               {detailLoading ? (
-                <div className="flex flex-col items-center gap-3 py-12 text-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600 dark:border-gray-700 dark:border-t-indigo-400" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Loading project...</p>
+                <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
+                  <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600 dark:border-gray-700 dark:border-t-indigo-400" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Loading project…</p>
                 </div>
               ) : detailProject ? (
-                <div className="space-y-5">
-                  {/* Name & Status */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">{detailProject.name}</h3>
-                      <p className="mt-0.5 text-sm text-gray-500 dark:text-gray-400">{detailProject.client}</p>
+                <>
+                  {/* ── Hero header (compact) ── */}
+                  <div className={`relative shrink-0 overflow-hidden bg-gradient-to-br ${cfg.gradient} px-5 pb-4 pt-4 text-white sm:px-6 sm:pb-5 sm:pt-5`}>
+                    {/* Decorative blobs */}
+                    <div aria-hidden className="pointer-events-none absolute inset-0">
+                      <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/15 blur-3xl" />
+                      <div className="absolute -bottom-10 -left-10 h-32 w-32 rounded-full bg-white/10 blur-3xl" />
                     </div>
-                    {(() => {
-                      const cfg = statusConfig[detailProject.status] || statusConfig.active;
-                      return (
-                        <span className={clsx("inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-[11px] font-semibold", cfg.badge)}>
-                          <span className={clsx("h-1.5 w-1.5 rounded-full", cfg.dot)} />
-                          {cfg.label}
-                        </span>
-                      );
-                    })()}
-                  </div>
+                    {/* Dot pattern */}
+                    <div
+                      aria-hidden
+                      className="pointer-events-none absolute inset-0 opacity-[0.10]"
+                      style={{
+                        backgroundImage:
+                          "radial-gradient(circle at 1px 1px, rgba(255,255,255,0.7) 1px, transparent 0)",
+                        backgroundSize: "20px 20px",
+                        maskImage: "radial-gradient(ellipse at top right, black 30%, transparent 75%)",
+                      }}
+                    />
 
-                  {/* Description */}
-                  {detailProject.description && (
-                    <div className="rounded-xl border border-gray-200/70 bg-gray-50/60 p-3 dark:border-gray-800/80 dark:bg-gray-800/40">
-                      <p className={labelCls}>Description</p>
-                      <p className="mt-1.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">{detailProject.description}</p>
-                    </div>
-                  )}
+                    {/* Close button */}
+                    <button
+                      onClick={() => setDetailProject(null)}
+                      aria-label="Close"
+                      className="absolute right-2.5 top-2.5 rounded-md bg-white/10 p-1 text-white/90 ring-1 ring-white/15 backdrop-blur-sm transition-all hover:bg-white/20 hover:text-white"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
 
-                  {/* Members */}
-                  {detailProject.assignedUsers && detailProject.assignedUsers.length > 0 && (
-                    <div>
-                      <p className={`${labelCls} mb-2`}>
-                        Members ({detailProject.assignedUsers.length})
-                      </p>
-                      <div className="space-y-1.5">
-                        {detailProject.assignedUsers.map((u) => {
-                          const user = typeof u === "object" ? u : null;
-                          if (!user) return null;
-                          return (
-                            <div
-                              key={user._id}
-                              className="flex items-center gap-3 rounded-lg border border-gray-200/70 bg-gray-50/60 px-3 py-2 dark:border-gray-800/80 dark:bg-gray-800/40"
-                            >
-                              <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(user.name || "?")} text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-                                {(user.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                              </div>
-                              <div className="min-w-0">
-                                <p className="truncate text-sm font-medium text-gray-900 dark:text-white">{user.name}</p>
-                                <p className="truncate text-xs text-gray-500 dark:text-gray-400">{user.email}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
+                    {/* Identity + status pill on one row */}
+                    <div className="relative flex items-start gap-3 pr-8">
+                      <div className="shrink-0 rounded-xl bg-white/15 p-2 ring-1 ring-white/20 backdrop-blur-sm">
+                        <FolderKanban className="h-5 w-5 text-white" strokeWidth={2.2} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-white/70">Project</p>
+                        <h2 className="mt-0.5 truncate text-lg font-bold tracking-tight sm:text-xl">
+                          {detailProject.name}
+                        </h2>
+                        <div className="mt-1 flex items-center gap-2">
+                          <p className="flex min-w-0 items-center gap-1 truncate text-xs text-white/85">
+                            <Building className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{detailProject.client || "No client"}</span>
+                          </p>
+                          <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-white/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white ring-1 ring-white/25 backdrop-blur-sm">
+                            <span className={clsx("h-1 w-1 rounded-full", cfg.dot, detailProject.status === "active" && "animate-pulse")} />
+                            {cfg.label}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  )}
 
-                  {/* Meta */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="rounded-lg border border-gray-200/70 bg-gray-50/60 px-3 py-2 dark:border-gray-800/80 dark:bg-gray-800/40">
-                      <p className={labelCls}>Created By</p>
-                      <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-white">
-                        <UserCircle className="h-3.5 w-3.5 text-gray-400" />
-                        {typeof detailProject.createdBy === "object" ? detailProject.createdBy.name : "—"}
-                      </p>
-                    </div>
-                    <div className="rounded-lg border border-gray-200/70 bg-gray-50/60 px-3 py-2 dark:border-gray-800/80 dark:bg-gray-800/40">
-                      <p className={labelCls}>Created</p>
-                      <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-gray-900 dark:text-white">
-                        <CalendarDays className="h-3.5 w-3.5 text-gray-400" />
-                        {new Date(detailProject.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                      </p>
+                    {/* Stats strip (compact) */}
+                    <div className="relative mt-3 grid grid-cols-3 gap-1.5">
+                      {[
+                        { label: "Members", value: members.length, icon: Users },
+                        { label: "Status", value: cfg.label, icon: Tag },
+                        { label: "Days", value: daysActive, icon: CalendarDays },
+                      ].map((s) => (
+                        <div key={s.label} className="rounded-lg bg-white/10 px-2.5 py-1.5 ring-1 ring-white/15 backdrop-blur-sm">
+                          <p className="flex items-center gap-1 text-[9px] font-semibold uppercase tracking-wider text-white/70">
+                            <s.icon className="h-2.5 w-2.5" /> {s.label}
+                          </p>
+                          <p className="font-mono text-sm font-bold tabular-nums tracking-tight text-white">{s.value}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
-                </div>
+
+                  {/* ── Body — fills remaining drawer height, scrolls ── */}
+                  <div className="sidebar-scroll flex-1 overflow-y-auto px-6 py-5 sm:px-8 sm:py-6">
+                    <div className="space-y-5">
+                      {/* Description */}
+                      {detailProject.description && (
+                        <div className="group rounded-2xl border border-gray-200/70 bg-gradient-to-br from-gray-50/80 to-white p-4 transition-all hover:border-indigo-300/50 hover:shadow-sm dark:border-gray-800/80 dark:from-gray-800/40 dark:to-gray-900 dark:hover:border-indigo-500/40">
+                          <p className={`${labelCls} flex items-center gap-1.5`}>
+                            <FileText className="h-3 w-3" /> Description
+                          </p>
+                          <p className="mt-2 text-sm leading-relaxed text-gray-700 dark:text-gray-300">{detailProject.description}</p>
+                        </div>
+                      )}
+
+                      {/* Members */}
+                      {members.length > 0 && (
+                        <div>
+                          <div className="mb-2.5 flex items-center justify-between">
+                            <p className={`${labelCls} flex items-center gap-1.5`}>
+                              <Users className="h-3 w-3" /> Members
+                            </p>
+                            <span className="rounded-md bg-indigo-50 px-1.5 py-0.5 text-[10px] font-bold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/20">
+                              {members.length}
+                            </span>
+                          </div>
+                          <div className="space-y-2">
+                            {members.map((user) => (
+                              <div
+                                key={user._id}
+                                className="group flex items-center gap-3 rounded-xl border border-gray-200/70 bg-white px-3 py-2 transition-all hover:-translate-y-0.5 hover:border-indigo-300/60 hover:shadow-md dark:border-gray-800/80 dark:bg-gray-800/40 dark:hover:border-indigo-500/40"
+                              >
+                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(user.name || "?")} text-xs font-bold text-white shadow-sm ring-2 ring-white transition-transform group-hover:scale-110 dark:ring-gray-900`}>
+                                  {(user.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
+                                </div>
+                                <div className="min-w-0">
+                                  <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{user.name}</p>
+                                  <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{user.email}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Meta — refined info rows */}
+                      <div className="space-y-2.5">
+                        <div className="flex items-center gap-3 rounded-xl border border-gray-200/70 bg-white px-3 py-2.5 dark:border-gray-800/80 dark:bg-gray-800/40">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-indigo-50 text-indigo-600 ring-1 ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/20">
+                            <UserCircle className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className={labelCls}>Created by</p>
+                            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                              {typeof detailProject.createdBy === "object" ? detailProject.createdBy.name : "—"}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 rounded-xl border border-gray-200/70 bg-white px-3 py-2.5 dark:border-gray-800/80 dark:bg-gray-800/40">
+                          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-violet-50 text-violet-600 ring-1 ring-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300 dark:ring-violet-400/20">
+                            <CalendarDays className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className={labelCls}>Created</p>
+                            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                              {createdAt?.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Footer — sticky bottom action bar ── */}
+                  <div className="flex shrink-0 items-center justify-end gap-2 border-t border-gray-200/70 bg-gradient-to-br from-gray-50/80 to-white px-5 py-4 dark:border-gray-800/80 dark:from-gray-900 dark:to-gray-950">
+                    {canEdit && (
+                      <button
+                        onClick={() => { openEdit(detailProject); setDetailProject(null); }}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-all hover:-translate-y-0.5 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 hover:shadow dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300"
+                      >
+                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setDetailProject(null)}
+                      className="group relative inline-flex items-center gap-1.5 overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-5 py-2 text-sm font-bold text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10 transition-all hover:-translate-y-0.5 hover:shadow-xl hover:shadow-indigo-500/40"
+                    >
+                      <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-white/30 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
+                      <span className="relative">Close</span>
+                    </button>
+                  </div>
+                </>
               ) : null}
             </div>
-
-            {/* Footer */}
-            <div className="flex justify-end gap-2 border-t border-gray-200/70 p-4 dark:border-gray-800/80">
-              {canEdit && detailProject && (
-                <button
-                  onClick={() => { openEdit(detailProject); setDetailProject(null); }}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Edit
-                </button>
-              )}
-              <button
-                onClick={() => setDetailProject(null)}
-                className="rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10 transition-all hover:shadow-xl"
-              >
-                Close
-              </button>
-            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── Create/Edit Drawer (premium) ── */}
       {showModal && (() => {
