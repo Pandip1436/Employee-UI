@@ -54,7 +54,7 @@ export default function PremiumLoader() {
 /* Full-page premium spinner for Suspense / initial loads */
 export function PremiumPageLoader({ label = "Loading" }: { label?: string }) {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+    <div className="flex min-h-[60vh] flex-col items-center mt-35 justify-center gap-4">
       <div className="relative h-14 w-14">
         <div className="absolute inset-0 rounded-full border-4 border-indigo-500/10" />
         <div className="absolute inset-0 animate-spin rounded-full border-4 border-transparent border-t-indigo-500 border-r-fuchsia-500" />

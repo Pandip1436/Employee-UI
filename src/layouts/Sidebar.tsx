@@ -154,7 +154,7 @@ export default function Sidebar({ open, onClose }: Props) {
         </div>
 
         {/* ── Navigation ── */}
-        <nav className="relative flex-1 overflow-y-auto overflow-x-hidden px-3 py-5">
+        <nav className="sidebar-scroll relative flex-1 overflow-y-auto overflow-x-hidden px-3 py-5">
           {sections.map((section) => (
             <div key={section} className="mb-5 last:mb-0">
               <p className="mb-2 px-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-gray-500">
