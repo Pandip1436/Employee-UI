@@ -34,21 +34,29 @@ function pushRecent(id: string) {
   localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, RECENT_MAX)));
 }
 
+// Format a Date as YYYY-MM-DD using local time. toISOString() returns UTC,
+// which rolls back a day for users east of UTC (e.g. IST is +5:30, so today
+// 00:00 IST = yesterday 18:30 UTC) — that made "Yesterday" jump back two days.
+function ymdLocal(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function shiftDate(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00`);
   d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  return ymdLocal(d);
 }
 
 function todayIso() {
-  return new Date().toISOString().slice(0, 10);
+  return ymdLocal(new Date());
 }
 
 function lastWorkdayIso() {
   const d = new Date();
   // Walk back to the most recent Mon–Fri (excluding today)
   do { d.setDate(d.getDate() - 1); } while (d.getDay() === 0 || d.getDay() === 6);
-  return d.toISOString().slice(0, 10);
+  return ymdLocal(d);
 }
 
 const activityIcons: Record<string, typeof Code2> = {

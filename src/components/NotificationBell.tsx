@@ -124,7 +124,18 @@ export default function NotificationBell() {
   const toggle = () => {
     const next = !open;
     setOpen(next);
-    if (next) loadList();
+    if (next) {
+      loadList();
+      // Clear the unread badge as soon as the user opens the bell — they've
+      // now seen the notifications. Server-side mark-all-read is fire-and-forget
+      // so the badge stays at 0 on the next poll/refresh.
+      if (unread > 0) {
+        setUnread(0);
+        notificationApi.markAllRead().catch(() => {
+          // If the server call fails, the next poll will resync the real count.
+        });
+      }
+    }
   };
 
   const handleItemClick = async (n: Notification) => {
