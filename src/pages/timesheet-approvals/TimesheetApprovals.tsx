@@ -3,13 +3,18 @@ import { useState, useEffect } from "react";
 import {
   Clock, ChevronLeft, ChevronRight, CheckCircle2, XCircle, FileText, X,
   Users, Eye, MessageSquare, AlertTriangle, Sparkles, Inbox, Briefcase,
-  FolderKanban, CalendarDays, Search,
+  FolderKanban, CalendarDays, Search, Plane, PartyPopper, Lock,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import { projectApi } from "../../api/projectApi";
-import type { WeeklyTimesheetData, Pagination, User, Project } from "../../types";
+import { leaveApi } from "../../api/leaveApi";
+import { holidayApi } from "../../api/holidayApi";
+import type { WeeklyTimesheetData, Pagination, User, Project, LeaveRequest, Holiday } from "../../types";
 import { fmtHours } from "../../utils/format";
+
+const LEAVE_DAY_HOURS: number = 9;
+const HOLIDAY_DAY_HOURS: number = 9;
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -116,6 +121,51 @@ export default function TimesheetApprovals() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [allLeaves, setAllLeaves] = useState<LeaveRequest[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+
+  // Compute leave + holiday overlay for a specific employee's week.
+  const overlayFor = (userId: User | string, weekStart: string | Date) => {
+    const uid = typeof userId === "object" && userId !== null ? (userId as User)._id : String(userId);
+    const start = new Date(weekStart);
+    start.setHours(0, 0, 0, 0);
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+    const userLeaves = allLeaves.filter((l) => {
+      const lUid = typeof l.userId === "object" && l.userId !== null ? (l.userId as User)._id : String(l.userId);
+      return lUid === uid;
+    });
+    const leaveDayInfo = days.map((d) => {
+      const dMs = d.getTime();
+      const match = userLeaves.find((l) => {
+        if (l.status !== "approved") return false;
+        const s = new Date(l.startDate);
+        const e = new Date(l.endDate);
+        const sMs = new Date(s.getFullYear(), s.getMonth(), s.getDate()).getTime();
+        const eMs = new Date(e.getFullYear(), e.getMonth(), e.getDate()).getTime();
+        return dMs >= sMs && dMs <= eMs;
+      });
+      return match ? { type: match.type as string } : null;
+    });
+    const holidayDayInfo = days.map((d) => {
+      const ymd = d.toLocaleDateString("en-CA");
+      const match = holidays.find((h) => new Date(h.date).toLocaleDateString("en-CA") === ymd);
+      return match ? { name: match.name } : null;
+    });
+    const leaveDayHours = leaveDayInfo.map((i) => (i ? LEAVE_DAY_HOURS : 0));
+    const holidayDayHours = holidayDayInfo.map((i) => (i ? HOLIDAY_DAY_HOURS : 0));
+    return {
+      leaveDayHours,
+      holidayDayHours,
+      leaveDayInfo,
+      holidayDayInfo,
+      leaveTotal: leaveDayHours.reduce((s, h) => s + h, 0),
+      holidayTotal: holidayDayHours.reduce((s, h) => s + h, 0),
+    };
+  };
 
   const fetchApprovals = () => {
     setLoading(true);
@@ -132,6 +182,14 @@ export default function TimesheetApprovals() {
 
   useEffect(() => { setPage(1); }, [tab]);
   useEffect(() => { fetchApprovals(); }, [page, tab]);
+
+  useEffect(() => {
+    leaveApi.getAll({ status: "approved", limit: 1000 }).then((r) => setAllLeaves(r.data.data || [])).catch(() => {});
+    const year = new Date().getFullYear();
+    Promise.all([holidayApi.getAll(year - 1), holidayApi.getAll(year), holidayApi.getAll(year + 1)])
+      .then(([a, b, c]) => setHolidays([...(a.data.data || []), ...(b.data.data || []), ...(c.data.data || [])]))
+      .catch(() => {});
+  }, []);
 
   const handleApprove = (id: string) => {
     setActionLoading(id);
@@ -210,6 +268,9 @@ export default function TimesheetApprovals() {
   // Aggregate metrics for the visible (filtered) page
   const visibleHours = filteredTimesheets.reduce((s, ts) => s + (ts.totalHours || 0), 0);
   const visibleEntries = filteredTimesheets.reduce((s, ts) => s + ts.entries.length, 0);
+  const visibleLeaveHours = filteredTimesheets.reduce((s, ts) => s + overlayFor(ts.userId, ts.weekStart).leaveTotal, 0);
+  const visibleHolidayHours = filteredTimesheets.reduce((s, ts) => s + overlayFor(ts.userId, ts.weekStart).holidayTotal, 0);
+  const visibleCombined = visibleHours + visibleLeaveHours + visibleHolidayHours;
 
   return (
     <div className="space-y-6">
@@ -248,11 +309,25 @@ export default function TimesheetApprovals() {
                     <span className="opacity-80">{tabs.find((t) => t.key === tab)?.label}</span>
                     <span className="font-mono font-semibold tabular-nums">{pendingTotal}</span>
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm" title={`${fmtHours(visibleHours)} work + ${fmtHours(visibleLeaveHours)} leave + ${fmtHours(visibleHolidayHours)} holiday`}>
                     <Clock className="h-3.5 w-3.5 text-indigo-200" />
                     <span className="text-indigo-200/80">Total hours</span>
-                    <span className="font-mono font-semibold tabular-nums">{fmtHours(visibleHours)}</span>
+                    <span className="font-mono font-semibold tabular-nums">{fmtHours(visibleCombined)}</span>
                   </span>
+                  {visibleLeaveHours > 0 && (
+                    <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
+                      <Plane className="h-3.5 w-3.5 text-sky-200" />
+                      <span className="text-sky-100/90">Leave</span>
+                      <span className="font-mono font-semibold tabular-nums text-sky-50">{fmtHours(visibleLeaveHours)}</span>
+                    </span>
+                  )}
+                  {visibleHolidayHours > 0 && (
+                    <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
+                      <PartyPopper className="h-3.5 w-3.5 text-amber-200" />
+                      <span className="text-amber-100/90">Holiday</span>
+                      <span className="font-mono font-semibold tabular-nums text-amber-50">{fmtHours(visibleHolidayHours)}</span>
+                    </span>
+                  )}
                   <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
                     <Briefcase className="h-3.5 w-3.5 text-indigo-200" />
                     <span className="text-indigo-200/80">Entries</span>
@@ -363,6 +438,8 @@ export default function TimesheetApprovals() {
             const userEmail = getUserEmail(ts.userId);
             const sConfig = tsStatusConfig[ts.status] || tsStatusConfig.submitted;
             const start = new Date(ts.weekStart);
+            const overlay = overlayFor(ts.userId, ts.weekStart);
+            const combinedTotal = ts.totalHours + overlay.leaveTotal + overlay.holidayTotal;
 
             return (
               <div key={ts._id} className={`${cardCls} p-5`}>
@@ -399,10 +476,27 @@ export default function TimesheetApprovals() {
                           <CalendarDays className="h-3 w-3" />
                           {formatDate(ts.weekStart)} — {formatDate(weekEndFrom(ts.weekStart))}
                         </span>
-                        <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
+                        <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-bold tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20" title="Work + Leave + Holiday">
                           <Clock className="h-3 w-3" />
-                          <span className="font-mono tabular-nums">{fmtHours(ts.totalHours)}</span>
+                          <span className="font-mono tabular-nums">{fmtHours(combinedTotal)}</span>
                         </span>
+                        {overlay.leaveTotal > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
+                            <Plane className="h-3 w-3" />
+                            <span className="font-mono tabular-nums">{fmtHours(overlay.leaveTotal)}</span>
+                          </span>
+                        )}
+                        {overlay.holidayTotal > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25">
+                            <PartyPopper className="h-3 w-3" />
+                            <span className="font-mono tabular-nums">{fmtHours(overlay.holidayTotal)}</span>
+                          </span>
+                        )}
+                        {(overlay.leaveTotal > 0 || overlay.holidayTotal > 0) && (
+                          <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                            ({fmtHours(ts.totalHours)} work)
+                          </span>
+                        )}
                         <span className="text-xs text-gray-400 dark:text-gray-500">
                           <span className="font-mono tabular-nums">{ts.entries.length}</span> {ts.entries.length === 1 ? "row" : "rows"}
                         </span>
@@ -536,11 +630,20 @@ export default function TimesheetApprovals() {
         const projectCount = previewSheet
           ? new Set(previewSheet.entries.map((e) => typeof e.projectId === "object" ? (e.projectId as Project)._id : e.projectId)).size
           : 0;
+        const previewOverlay = previewSheet
+          ? overlayFor(previewSheet.userId, previewSheet.weekStart)
+          : { leaveDayHours: [0,0,0,0,0,0,0], holidayDayHours: [0,0,0,0,0,0,0], leaveDayInfo: [], holidayDayInfo: [], leaveTotal: 0, holidayTotal: 0 };
+        const previewCombined = previewSheet ? previewSheet.totalHours + previewOverlay.leaveTotal + previewOverlay.holidayTotal : 0;
+        const previewLeaveTypes = Array.from(new Set(previewOverlay.leaveDayInfo.flatMap((i) => (i ? [i.type] : []))));
+        const previewHolidayNames = Array.from(new Set(previewOverlay.holidayDayInfo.flatMap((i) => (i ? [i.name] : []))));
         const daysWorked = previewSheet
           ? (() => {
               let count = 0;
               for (let i = 0; i < 7; i++) {
-                if (previewSheet.entries.some((e) => (e.hours?.[i] || 0) > 0)) count++;
+                const hasWork = previewSheet.entries.some((e) => (e.hours?.[i] || 0) > 0);
+                const hasLeave = previewOverlay.leaveDayHours[i] > 0;
+                const hasHoliday = previewOverlay.holidayDayHours[i] > 0;
+                if (hasWork || hasLeave || hasHoliday) count++;
               }
               return count;
             })()
@@ -602,8 +705,20 @@ export default function TimesheetApprovals() {
                         </span>
                         <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/25">
                           <Clock className="h-3 w-3" />
-                          <span className="font-mono tabular-nums">{fmtHours(previewSheet.totalHours)}</span>
+                          <span className="font-mono tabular-nums">{fmtHours(previewCombined)}</span>
                         </span>
+                        {previewOverlay.leaveTotal > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
+                            <Plane className="h-3 w-3" />
+                            <span className="font-mono tabular-nums">{fmtHours(previewOverlay.leaveTotal)}</span> leave
+                          </span>
+                        )}
+                        {previewOverlay.holidayTotal > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25">
+                            <PartyPopper className="h-3 w-3" />
+                            <span className="font-mono tabular-nums">{fmtHours(previewOverlay.holidayTotal)}</span> holiday
+                          </span>
+                        )}
                         <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
                           <Briefcase className="h-3 w-3" />
                           <span className="font-mono tabular-nums">{projectCount}</span>
@@ -634,7 +749,7 @@ export default function TimesheetApprovals() {
                   <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-indigo-600 dark:border-gray-700 dark:border-t-indigo-400" />
                   <p className="text-sm text-gray-500 dark:text-gray-400">Loading details...</p>
                 </div>
-              ) : previewSheet && previewSheet.entries.length === 0 ? (
+              ) : previewSheet && previewSheet.entries.length === 0 && previewOverlay.leaveTotal === 0 && previewOverlay.holidayTotal === 0 ? (
                 <p className="py-12 text-center text-sm text-gray-500 dark:text-gray-400">No entries in this timesheet.</p>
               ) : previewSheet ? (
                 <div className="overflow-x-auto">
@@ -651,6 +766,70 @@ export default function TimesheetApprovals() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                      {previewOverlay.leaveTotal > 0 && (
+                        <tr className="bg-sky-50/40 dark:bg-sky-500/[0.05]">
+                          <td className="py-2.5 pr-3">
+                            <div className="flex items-center gap-2">
+                              <div className="rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 p-1.5 shadow-sm ring-1 ring-white/15">
+                                <Plane className="h-3 w-3 text-white" />
+                              </div>
+                              <span className="text-sm font-semibold text-sky-700 dark:text-sky-300">Leave</span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 pr-3 text-sm capitalize text-sky-700 dark:text-sky-300">
+                            {previewLeaveTypes.join(", ") || "Time off"}
+                          </td>
+                          <td className="py-2.5 pr-3 text-sm text-sky-700 dark:text-sky-300">Time off</td>
+                          {DAY_LABELS.map((_, di) => {
+                            const hrs = previewOverlay.leaveDayHours[di];
+                            return (
+                              <td key={di} className="px-2 py-2.5 text-center font-mono tabular-nums">
+                                {hrs > 0 ? (
+                                  <span className="inline-flex items-center gap-0.5 rounded-md bg-sky-100/80 px-1.5 py-0.5 text-xs font-bold text-sky-700 ring-1 ring-sky-500/20 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-400/25">
+                                    <Lock className="h-2 w-2" />
+                                    {hrs}
+                                  </span>
+                                ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                              </td>
+                            );
+                          })}
+                          <td className="py-2.5 pl-2 text-right font-mono font-bold tabular-nums tracking-tight text-sky-700 dark:text-sky-300">
+                            {previewOverlay.leaveTotal}h
+                          </td>
+                        </tr>
+                      )}
+                      {previewOverlay.holidayTotal > 0 && (
+                        <tr className="bg-amber-50/40 dark:bg-amber-500/[0.05]">
+                          <td className="py-2.5 pr-3">
+                            <div className="flex items-center gap-2">
+                              <div className="rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 p-1.5 shadow-sm ring-1 ring-white/15">
+                                <PartyPopper className="h-3 w-3 text-white" />
+                              </div>
+                              <span className="text-sm font-semibold text-amber-700 dark:text-amber-300">Holiday</span>
+                            </div>
+                          </td>
+                          <td className="py-2.5 pr-3 text-sm text-amber-700 dark:text-amber-300 truncate" title={previewHolidayNames.join(", ")}>
+                            {previewHolidayNames.join(", ") || "Holiday"}
+                          </td>
+                          <td className="py-2.5 pr-3 text-sm text-amber-700 dark:text-amber-300">Day off</td>
+                          {DAY_LABELS.map((_, di) => {
+                            const hrs = previewOverlay.holidayDayHours[di];
+                            return (
+                              <td key={di} className="px-2 py-2.5 text-center font-mono tabular-nums">
+                                {hrs > 0 ? (
+                                  <span className="inline-flex items-center gap-0.5 rounded-md bg-amber-100/80 px-1.5 py-0.5 text-xs font-bold text-amber-700 ring-1 ring-amber-500/20 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/25">
+                                    <Lock className="h-2 w-2" />
+                                    {hrs}
+                                  </span>
+                                ) : <span className="text-gray-300 dark:text-gray-600">—</span>}
+                              </td>
+                            );
+                          })}
+                          <td className="py-2.5 pl-2 text-right font-mono font-bold tabular-nums tracking-tight text-amber-700 dark:text-amber-300">
+                            {previewOverlay.holidayTotal}h
+                          </td>
+                        </tr>
+                      )}
                       {previewSheet.entries.map((entry, idx) => {
                         const rowTotal = (entry.hours || []).reduce((s, h) => s + h, 0);
                         return (
@@ -685,7 +864,9 @@ export default function TimesheetApprovals() {
                       <tr className="border-t-2 border-gray-200/70 bg-gradient-to-r from-indigo-50/40 via-transparent to-transparent dark:border-gray-800/80 dark:from-indigo-500/5">
                         <td colSpan={3} className={`py-2.5 pr-3 text-right ${labelCls} text-gray-600 dark:text-gray-300`}>Totals</td>
                         {DAY_LABELS.map((_, di) => {
-                          const dayTotal = previewSheet.entries.reduce((s, e) => s + (e.hours?.[di] || 0), 0);
+                          const dayTotal = previewSheet.entries.reduce((s, e) => s + (e.hours?.[di] || 0), 0)
+                            + previewOverlay.leaveDayHours[di]
+                            + previewOverlay.holidayDayHours[di];
                           return (
                             <td key={di} className="px-2 py-2.5 text-center font-mono text-sm font-bold tabular-nums text-gray-900 dark:text-white">
                               {dayTotal || "—"}
@@ -694,7 +875,7 @@ export default function TimesheetApprovals() {
                         })}
                         <td className="py-2.5 pl-2 text-right">
                           <span className="inline-flex items-center rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 px-2.5 py-0.5 font-mono text-sm font-bold tabular-nums text-white shadow-sm ring-1 ring-white/10">
-                            {fmtHours(previewSheet.totalHours)}
+                            {fmtHours(previewCombined)}
                           </span>
                         </td>
                       </tr>

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import {
   Search, Users, UserCheck, UserX, Clock, AlertTriangle, CheckCircle2,
   X, Filter, Calendar, CalendarDays as CalendarIcon, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp,
-  ArrowDown, Download, LayoutList, Rows3, Circle, MinusCircle, Moon,
+  ArrowDown, LayoutList, Rows3, Circle, MinusCircle, Moon,
 } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import type { LiveStatusData, LiveEmployee } from "../../types";
@@ -378,35 +378,6 @@ export default function TeamAttendance() {
       : <ArrowDown className="ml-1 inline h-3 w-3 text-indigo-500 dark:text-indigo-400" />;
   };
 
-  const handleExportCsv = () => {
-    const rows = [
-      ["Employee ID", "Name", "Email", "Department", "Status", "Clock In", "Clock Out", "Hours", "Late By (min)"],
-      ...filtered.map((e) => [
-        e.userId || "",
-        e.name,
-        e.email,
-        e.department || "",
-        liveStyles[statusBadgeKey(e)]?.label || e.liveStatus,
-        e.clockIn ? new Date(e.clockIn).toLocaleString() : "",
-        e.clockOut ? new Date(e.clockOut).toLocaleString() : "",
-        e.totalHours != null ? fmtHours(e.totalHours) : "",
-        e.liveStatus === "late" ? String(lateMinutes(e.clockIn) ?? "") : "",
-      ]),
-    ];
-    const csv = rows
-      .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(","))
-      .join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `team-attendance-${dateFilter}.csv`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   const rowPad = density === "compact" ? "py-2" : "py-3";
 
   return (
@@ -738,16 +709,6 @@ export default function TeamAttendance() {
               </button>
             </div>
 
-            {/* Export CSV */}
-            <button
-              onClick={handleExportCsv}
-              disabled={filtered.length === 0}
-              title="Export current view as CSV"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-semibold text-gray-700 transition-all hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-gray-700 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:border-indigo-500/40 dark:hover:bg-indigo-500/10 dark:hover:text-indigo-300 dark:disabled:hover:bg-gray-800 dark:disabled:hover:text-gray-300"
-            >
-              <Download className="h-3.5 w-3.5" />
-              Export
-            </button>
           </div>
         </div>
 

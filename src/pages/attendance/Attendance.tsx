@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import { LogIn, LogOut, Clock, Calendar, Timer, X, Users, AlertTriangle, CheckCircle2, UserX, Power, Loader2, Flame, Sparkles } from "lucide-react";
+import { LogIn, LogOut, Clock, Calendar, Timer, X, Users, AlertTriangle, CheckCircle2, UserX, Power, Loader2, Flame, Sparkles, Plane } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
 import { leaveApi } from "../../api/leaveApi";
 import { useAuth } from "../../context/AuthContext";
 import { useCompany } from "../../context/CompanyContext";
-import type { AttendanceRecord, Pagination, User, LiveStatusData, LiveEmployee } from "../../types";
+import type { AttendanceRecord, Pagination, User, LiveStatusData, LiveEmployee, LeaveRequest } from "../../types";
 
 function formatHHMMTo12h(hhmm: string): string {
   const m = /^(\d{1,2}):(\d{2})$/.exec(hhmm || "");
@@ -56,13 +56,14 @@ export default function Attendance() {
   const [filterDate, setFilterDate] = useState("");
   const [filterUserId, setFilterUserId] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
-  const [myStatusFilter, setMyStatusFilter] = useState<"all" | "present" | "late" | "half-day" | "absent">("all");
+  const [myStatusFilter, setMyStatusFilter] = useState<"all" | "present" | "late" | "half-day" | "absent" | "on-leave">("all");
   const [weeklyHours, setWeeklyHours] = useState(0);
   const [monthlyHours, setMonthlyHours] = useState(0);
   // Premium "My Attendance" extras
   const [weekDayStatus, setWeekDayStatus] = useState<(string | undefined)[]>([]); // Mon..Sun
   const [monthCounts, setMonthCounts] = useState({ present: 0, late: 0, halfDay: 0, absent: 0, onLeave: 0 });
   const [streak, setStreak] = useState(0);
+  const [approvedLeaves, setApprovedLeaves] = useState<LeaveRequest[]>([]);
   const [employees, setEmployees] = useState<User[]>([]);
   const [autoClockOut, setAutoClockOut] = useState(true);
   const [prefSaving, setPrefSaving] = useState(false);
@@ -137,6 +138,7 @@ export default function Attendance() {
     ]).then(([histRes, leaveRes]) => {
       const recs = histRes.data.data || [];
       const leaves = (leaveRes.data.data || []).filter((l) => l.status === "approved");
+      setApprovedLeaves(leaves);
 
       // Start of current work week (Monday 00:00 local)
       const weekStart = new Date(now);
@@ -224,8 +226,75 @@ export default function Attendance() {
     } else { setElapsed(0); }
   }, [today]);
 
+  // Approved leave covering today — drives the on-leave banner that replaces
+  // the Clock In button.
+  const todayLeave = (() => {
+    const t = new Date();
+    const tMs = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+    return approvedLeaves.find((l) => {
+      const s = new Date(l.startDate);
+      const e = new Date(l.endDate);
+      const sMs = new Date(s.getFullYear(), s.getMonth(), s.getDate()).getTime();
+      const eMs = new Date(e.getFullYear(), e.getMonth(), e.getDate()).getTime();
+      return tMs >= sMs && tMs <= eMs;
+    });
+  })();
+  const isOnLeaveToday = !!todayLeave || today?.status === "on-leave";
+  const leaveTypeLabel = todayLeave?.type ? todayLeave.type.charAt(0).toUpperCase() + todayLeave.type.slice(1) : "Leave";
+
+  // Overlay approved leaves onto the history table:
+  //  1. If today is a leave day and there's no record for today yet (the auto-mark
+  //     cron runs at 14:30), prepend a synthetic on-leave row so the user sees
+  //     today's status immediately.
+  //  2. Any absent record that overlaps an approved leave is shown as on-leave.
+  const ymdLocal = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const isLeaveDay = (d: Date) => {
+    const dMs = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    return approvedLeaves.some((l) => {
+      const s = new Date(l.startDate);
+      const e = new Date(l.endDate);
+      const sMs = new Date(s.getFullYear(), s.getMonth(), s.getDate()).getTime();
+      const eMs = new Date(e.getFullYear(), e.getMonth(), e.getDate()).getTime();
+      return dMs >= sMs && dMs <= eMs;
+    });
+  };
+  const historyWithLeave: AttendanceRecord[] = (() => {
+    const out = history.map((r) => {
+      // Read UTC parts since attendance dates are stored at UTC midnight of the business day.
+      const recDate = new Date(r.date);
+      const local = new Date(recDate.getUTCFullYear(), recDate.getUTCMonth(), recDate.getUTCDate());
+      if (r.status === "absent" && isLeaveDay(local)) {
+        return { ...r, status: "on-leave" as const, notes: r.notes || "On approved leave" };
+      }
+      return r;
+    });
+    const todayKey = ymdLocal(new Date());
+    const todayInList = out.some((r) => {
+      const recDate = new Date(r.date);
+      const local = new Date(recDate.getUTCFullYear(), recDate.getUTCMonth(), recDate.getUTCDate());
+      return ymdLocal(local) === todayKey;
+    });
+    if (isOnLeaveToday && !todayInList && page === 1) {
+      const t = new Date();
+      const synthetic: AttendanceRecord = {
+        _id: `synthetic-on-leave-${todayKey}`,
+        userId: history[0]?.userId as User,
+        date: new Date(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate())).toISOString(),
+        clockIn: null,
+        clockOut: null,
+        totalHours: null,
+        status: "on-leave",
+        notes: "On approved leave",
+        createdAt: t.toISOString(),
+      };
+      return [synthetic, ...out];
+    }
+    return out;
+  })();
+
   const records = tab === "my"
-    ? (myStatusFilter === "all" ? history : history.filter((r) => r.status === myStatusFilter))
+    ? (myStatusFilter === "all" ? historyWithLeave : historyWithLeave.filter((r) => r.status === myStatusFilter))
     : allRecords;
 
   return (
@@ -286,8 +355,23 @@ export default function Attendance() {
               </div>
             )}
 
-            {/* Clock action button — fills the column width */}
-            {!today?.clockIn ? (
+            {/* Clock action button — replaced by on-leave banner when applicable */}
+            {isOnLeaveToday && !today?.clockIn ? (
+              <div className="relative overflow-hidden rounded-2xl bg-sky-500/15 px-5 py-3.5 ring-1 ring-sky-400/30 backdrop-blur-sm">
+                <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-sky-400/30 blur-2xl" />
+                <div className="relative flex items-center gap-3">
+                  <span className="rounded-lg bg-sky-500/30 p-2 ring-1 ring-white/15">
+                    <Plane className="h-4 w-4 text-sky-50" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-sky-50">You're on leave today</p>
+                    <p className="text-[11px] text-sky-100/80">
+                      Enjoy your {leaveTypeLabel.toLowerCase()} leave — no clock-in needed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : !today?.clockIn ? (
               <button
                 onClick={handleClockIn}
                 disabled={loading}
@@ -964,7 +1048,7 @@ export default function Attendance() {
       {/* ── My Status Filter ── */}
       {tab === "my" && (
         <div className="flex flex-wrap gap-1.5">
-          {(["all", "present", "late", "half-day", "absent"] as const).map((s) => (
+          {(["all", "present", "late", "half-day", "absent", "on-leave"] as const).map((s) => (
             <button
               key={s}
               onClick={() => setMyStatusFilter(s)}

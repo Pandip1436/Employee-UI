@@ -10,11 +10,19 @@ import {
   ExternalLink,
   ListChecks,
   TrendingUp,
+  Plane,
+  PartyPopper,
+  Lock,
 } from "lucide-react";
 import Drawer from "../../components/Drawer";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
+import { leaveApi } from "../../api/leaveApi";
+import { holidayApi } from "../../api/holidayApi";
 import { fmtHours } from "../../utils/format";
-import type { WeeklyTimesheetData, TimesheetEntry, Project } from "../../types";
+import type { WeeklyTimesheetData, TimesheetEntry, Project, LeaveRequest, Holiday } from "../../types";
+
+const LEAVE_DAY_HOURS: number = 9;
+const HOLIDAY_DAY_HOURS: number = 9;
 
 interface Props {
   open: boolean;
@@ -79,6 +87,8 @@ export default function TimesheetDetailDrawer({ open, weekId, onClose }: Props) 
   const [timesheet, setTimesheet] = useState<WeeklyTimesheetData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
 
   useEffect(() => {
     if (!open || !weekId) return;
@@ -92,6 +102,15 @@ export default function TimesheetDetailDrawer({ open, weekId, onClose }: Props) 
       .finally(() => setLoading(false));
   }, [open, weekId]);
 
+  useEffect(() => {
+    if (!open) return;
+    leaveApi.getMyLeaves({ status: "approved", limit: 500 }).then((r) => setLeaves(r.data.data || [])).catch(() => {});
+    const year = new Date().getFullYear();
+    Promise.all([holidayApi.getAll(year - 1), holidayApi.getAll(year), holidayApi.getAll(year + 1)])
+      .then(([a, b, c]) => setHolidays([...(a.data.data || []), ...(b.data.data || []), ...(c.data.data || [])]))
+      .catch(() => {});
+  }, [open]);
+
   const sConfig = timesheet ? statusConfig[timesheet.status] || statusConfig.draft : statusConfig.draft;
 
   const dayTotals = timesheet
@@ -99,9 +118,63 @@ export default function TimesheetDetailDrawer({ open, weekId, onClose }: Props) 
         timesheet.entries.reduce((s, e) => s + (e.hours?.[i] || 0), 0),
       )
     : [];
-  const daysWorked = dayTotals.filter((h) => h > 0).length;
-  const peakDayIdx = dayTotals.reduce((maxIdx, h, i, arr) => (h > arr[maxIdx] ? i : maxIdx), 0);
-  const peakDay = dayTotals[peakDayIdx] > 0 ? DAY_LABELS[peakDayIdx] : "—";
+
+  // Leave + holiday overlay for the selected week.
+  const overlay = (() => {
+    if (!timesheet) {
+      return {
+        leaveDayHours: [0, 0, 0, 0, 0, 0, 0] as number[],
+        holidayDayInfo: [null, null, null, null, null, null, null] as ({ name: string } | null)[],
+        leaveDayInfo: [null, null, null, null, null, null, null] as ({ type: string } | null)[],
+        leaveTotal: 0,
+        holidayTotal: 0,
+      };
+    }
+    const start = new Date(timesheet.weekStart);
+    start.setHours(0, 0, 0, 0);
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+    const leaveDayInfo = days.map((d) => {
+      const dMs = d.getTime();
+      const match = leaves.find((l) => {
+        if (l.status !== "approved") return false;
+        const s = new Date(l.startDate);
+        const e = new Date(l.endDate);
+        const sMs = new Date(s.getFullYear(), s.getMonth(), s.getDate()).getTime();
+        const eMs = new Date(e.getFullYear(), e.getMonth(), e.getDate()).getTime();
+        return dMs >= sMs && dMs <= eMs;
+      });
+      return match ? { type: match.type } : null;
+    });
+    const holidayDayInfo = days.map((d) => {
+      const ymd = d.toLocaleDateString("en-CA");
+      const match = holidays.find((h) => new Date(h.date).toLocaleDateString("en-CA") === ymd);
+      return match ? { name: match.name } : null;
+    });
+    const leaveDayHours = leaveDayInfo.map((info) => (info ? LEAVE_DAY_HOURS : 0));
+    const holidayDayHours = holidayDayInfo.map((info) => (info ? HOLIDAY_DAY_HOURS : 0));
+    return {
+      leaveDayHours,
+      holidayDayHours,
+      leaveDayInfo,
+      holidayDayInfo,
+      leaveTotal: leaveDayHours.reduce((s, h) => s + h, 0),
+      holidayTotal: holidayDayHours.reduce((s, h) => s + h, 0),
+    };
+  })();
+  const hasLeave = overlay.leaveTotal > 0;
+  const hasHoliday = overlay.holidayTotal > 0;
+  const leaveTypes = Array.from(new Set(overlay.leaveDayInfo.flatMap((i) => (i ? [i.type] : []))));
+  const holidayNames = Array.from(new Set(overlay.holidayDayInfo.flatMap((i) => (i ? [i.name] : []))));
+  const combinedDayTotals = dayTotals.map((h, i) => h + overlay.leaveDayHours[i] + (overlay.holidayDayHours?.[i] || 0));
+  const combinedTotal = (timesheet?.totalHours || 0) + overlay.leaveTotal + overlay.holidayTotal;
+
+  const daysWorked = combinedDayTotals.filter((h) => h > 0).length;
+  const peakDayIdx = combinedDayTotals.reduce((maxIdx, h, i, arr) => (h > arr[maxIdx] ? i : maxIdx), 0);
+  const peakDay = combinedDayTotals[peakDayIdx] > 0 ? DAY_LABELS[peakDayIdx] : "—";
   const projects = timesheet
     ? Array.from(
         new Set(
@@ -186,8 +259,20 @@ export default function TimesheetDetailDrawer({ open, weekId, onClose }: Props) 
             </span>
             <span className="inline-flex items-center gap-1 rounded-md bg-indigo-50 px-2 py-0.5 text-[11px] font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-300 dark:ring-indigo-400/25">
               <Clock className="h-3 w-3" />
-              <span className="tabular-nums">{fmtHours(timesheet.totalHours)}</span>
+              <span className="tabular-nums">{fmtHours(combinedTotal)}</span>
             </span>
+            {hasLeave && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
+                <Plane className="h-3 w-3" />
+                <span className="tabular-nums">{fmtHours(overlay.leaveTotal)}</span> leave
+              </span>
+            )}
+            {hasHoliday && (
+              <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25">
+                <PartyPopper className="h-3 w-3" />
+                <span className="tabular-nums">{fmtHours(overlay.holidayTotal)}</span> holiday
+              </span>
+            )}
             <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
               <Briefcase className="h-3 w-3" />
               <span className="tabular-nums">{projects.length}</span>
@@ -206,13 +291,14 @@ export default function TimesheetDetailDrawer({ open, weekId, onClose }: Props) 
               {
                 icon: <Clock className="h-4 w-4" />,
                 label: "Total",
-                value: fmtHours(timesheet.totalHours),
+                value: fmtHours(combinedTotal),
+                hint: (hasLeave || hasHoliday) ? `${fmtHours(timesheet.totalHours)} work` : undefined,
               },
               {
                 icon: <TrendingUp className="h-4 w-4" />,
                 label: "Peak day",
                 value: peakDay,
-                hint: dayTotals[peakDayIdx] > 0 ? fmtHours(dayTotals[peakDayIdx]) : undefined,
+                hint: combinedDayTotals[peakDayIdx] > 0 ? fmtHours(combinedDayTotals[peakDayIdx]) : undefined,
               },
               {
                 icon: <ListChecks className="h-4 w-4" />,
@@ -244,31 +330,54 @@ export default function TimesheetDetailDrawer({ open, weekId, onClose }: Props) 
           </div>
 
           {/* Day-by-day distribution */}
-          {dayTotals.some((d) => d > 0) && (
+          {combinedDayTotals.some((d) => d > 0) && (
             <div>
-              <p className={`${labelCls} mb-2`}>Hours per day</p>
+              <div className="mb-2 flex items-center justify-between">
+                <p className={labelCls}>Hours per day</p>
+                <div className="flex items-center gap-1.5">
+                  {hasLeave && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[9px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
+                      <Plane className="h-2.5 w-2.5" /> Leave
+                    </span>
+                  )}
+                  {hasHoliday && (
+                    <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[9px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25">
+                      <PartyPopper className="h-2.5 w-2.5" /> Holiday
+                    </span>
+                  )}
+                </div>
+              </div>
               <div className="rounded-2xl border border-gray-200/70 bg-white/80 p-3 ring-1 ring-black/[0.02] dark:border-gray-800/80 dark:bg-gray-900/80 dark:ring-white/[0.03]">
                 <div className="flex items-end gap-1.5">
-                  {dayTotals.map((h, i) => {
-                    const max = Math.max(...dayTotals, 1);
-                    const pct = h > 0 ? Math.max(8, Math.round((h / max) * 100)) : 0;
+                  {combinedDayTotals.map((total, i) => {
+                    const w = dayTotals[i];
+                    const lv = overlay.leaveDayHours[i];
+                    const hol = overlay.holidayDayHours?.[i] || 0;
+                    const max = Math.max(...combinedDayTotals, 1);
+                    const segPct = (v: number) => (total > 0 ? Math.max(v > 0 ? 8 : 0, (v / max) * 100) : 0);
                     const weekend = i >= 5;
                     return (
                       <div key={i} className="flex flex-1 flex-col items-center gap-1">
                         <span className="text-[10px] font-semibold tabular-nums text-gray-500 dark:text-gray-400">
-                          {h > 0 ? fmtHours(h) : "—"}
+                          {total > 0 ? fmtHours(total) : "—"}
                         </span>
-                        <div className="flex h-16 w-full items-end overflow-hidden rounded-md bg-gray-100 dark:bg-gray-800">
-                          <div
-                            className={`w-full rounded-md transition-all ${
-                              h > 0
-                                ? weekend
+                        <div className="flex h-16 w-full flex-col-reverse overflow-hidden rounded-md bg-gray-100 dark:bg-gray-800">
+                          {w > 0 && (
+                            <div
+                              className={`w-full transition-all ${
+                                weekend
                                   ? "bg-gradient-to-t from-fuchsia-500 to-indigo-500"
                                   : "bg-gradient-to-t from-indigo-500 to-sky-500"
-                                : ""
-                            }`}
-                            style={{ height: `${pct}%` }}
-                          />
+                              }`}
+                              style={{ height: `${segPct(w)}%` }}
+                            />
+                          )}
+                          {lv > 0 && (
+                            <div className="w-full bg-gradient-to-t from-sky-400 to-blue-500 transition-all" style={{ height: `${segPct(lv)}%` }} />
+                          )}
+                          {hol > 0 && (
+                            <div className="w-full bg-gradient-to-t from-amber-400 to-orange-500 transition-all" style={{ height: `${segPct(hol)}%` }} />
+                          )}
                         </div>
                         <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                           {DAY_LABELS[i]}
@@ -309,7 +418,7 @@ export default function TimesheetDetailDrawer({ open, weekId, onClose }: Props) 
               </span>
             </div>
 
-            {timesheet.entries.length === 0 ? (
+            {timesheet.entries.length === 0 && !hasLeave && !hasHoliday ? (
               <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-10 text-center dark:border-gray-800 dark:bg-gray-800/30">
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   No entries recorded for this week
@@ -317,6 +426,82 @@ export default function TimesheetDetailDrawer({ open, weekId, onClose }: Props) 
               </div>
             ) : (
               <div className="space-y-2">
+                {hasLeave && (
+                  <div className="rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50/60 via-white to-blue-50/30 p-3.5 ring-1 ring-sky-500/10 dark:border-sky-500/20 dark:from-sky-500/10 dark:via-gray-900 dark:to-blue-500/5">
+                    <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 p-1.5 shadow-sm ring-1 ring-white/15">
+                          <Plane className="h-3.5 w-3.5 text-white" />
+                        </div>
+                        <p className="truncate text-sm font-semibold text-sky-700 dark:text-sky-300">
+                          Leave {leaveTypes.length > 0 && <span className="capitalize">· {leaveTypes.join(", ")}</span>}
+                        </p>
+                        <span className="rounded-md bg-sky-100/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-700 dark:bg-sky-500/15 dark:text-sky-300">
+                          Approved
+                        </span>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-sm font-bold tabular-nums text-sky-600 dark:text-sky-400">
+                        <Clock className="h-3 w-3" />
+                        {fmtHours(overlay.leaveTotal)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {DAY_LABELS.map((d, i) => {
+                        const hrs = overlay.leaveDayHours[i];
+                        return (
+                          <div key={d} className="text-center">
+                            <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wider text-sky-600/80 dark:text-sky-400/80">{d}</p>
+                            <div className={`rounded-md py-1.5 text-[11px] font-bold tabular-nums ${
+                              hrs > 0
+                                ? "bg-sky-100/80 text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-400/25"
+                                : "bg-gray-50 text-gray-300 dark:bg-gray-800/60 dark:text-gray-600"
+                            }`}>
+                              {hrs > 0 ? <span className="inline-flex items-center gap-0.5"><Lock className="h-2 w-2" />{hrs}</span> : "·"}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+                {hasHoliday && (
+                  <div className="rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/30 p-3.5 ring-1 ring-amber-500/10 dark:border-amber-500/20 dark:from-amber-500/10 dark:via-gray-900 dark:to-orange-500/5">
+                    <div className="mb-2.5 flex flex-wrap items-center justify-between gap-2">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <div className="rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 p-1.5 shadow-sm ring-1 ring-white/15">
+                          <PartyPopper className="h-3.5 w-3.5 text-white" />
+                        </div>
+                        <p className="truncate text-sm font-semibold text-amber-700 dark:text-amber-300" title={holidayNames.join(", ")}>
+                          Holiday {holidayNames.length > 0 && `· ${holidayNames.join(", ")}`}
+                        </p>
+                        <span className="rounded-md bg-amber-100/80 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 dark:bg-amber-500/15 dark:text-amber-300">
+                          Public
+                        </span>
+                      </div>
+                      <span className="inline-flex items-center gap-1 text-sm font-bold tabular-nums text-amber-600 dark:text-amber-400">
+                        <Clock className="h-3 w-3" />
+                        {fmtHours(overlay.holidayTotal)}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-7 gap-1">
+                      {DAY_LABELS.map((d, i) => {
+                        const hrs = overlay.holidayDayHours?.[i] || 0;
+                        return (
+                          <div key={d} className="text-center">
+                            <p className="mb-0.5 text-[9px] font-semibold uppercase tracking-wider text-amber-600/80 dark:text-amber-400/80">{d}</p>
+                            <div className={`rounded-md py-1.5 text-[11px] font-bold tabular-nums ${
+                              hrs > 0
+                                ? "bg-amber-100/80 text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/25"
+                                : "bg-gray-50 text-gray-300 dark:bg-gray-800/60 dark:text-gray-600"
+                            }`}>
+                              {hrs > 0 ? <span className="inline-flex items-center gap-0.5"><Lock className="h-2 w-2" />{hrs}</span> : "·"}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 {timesheet.entries.map((entry, idx) => {
                   const rowTotal = getRowTotal(entry.hours);
                   return (

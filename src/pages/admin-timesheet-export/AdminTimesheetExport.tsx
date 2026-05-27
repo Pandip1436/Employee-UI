@@ -1,13 +1,18 @@
 import { useState, useEffect } from "react";
 import {
   Download, FileSpreadsheet, FileText, Clock, Users, CheckCircle2, BarChart3,
-  Sparkles, Inbox, Building, CalendarDays, Loader2, Filter,
+  Sparkles, Inbox, Building, CalendarDays, Loader2, Filter, Plane, PartyPopper,
 } from "lucide-react";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import { userApi } from "../../api/userApi";
-import type { User, WeeklyTimesheetData } from "../../types";
+import { leaveApi } from "../../api/leaveApi";
+import { holidayApi } from "../../api/holidayApi";
+import type { User, WeeklyTimesheetData, LeaveRequest, Holiday } from "../../types";
 import toast from "react-hot-toast";
 import { fmtHours } from "../../utils/format";
+
+const LEAVE_DAY_HOURS: number = 9;
+const HOLIDAY_DAY_HOURS: number = 9;
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -93,22 +98,58 @@ function downloadBlob(blob: Blob, filename: string) {
   window.URL.revokeObjectURL(url);
 }
 
-function toCsv(data: WeeklyTimesheetData[]): string {
-  const header = "Employee,Email,Department,Week Start,Week End,Total Hours,Status,Submitted At";
+type ExportRow = WeeklyTimesheetData & { leaveHours: number; holidayHours: number; combinedHours: number };
+
+// Safely extract YYYY-MM-DD regardless of whether the API returns a string or a Date.
+function isoDay(value: string | Date | null | undefined): string {
+  if (!value) return "";
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Escape a CSV field — wraps in quotes and doubles any embedded quotes.
+function csv(value: string | number | null | undefined): string {
+  if (value === null || value === undefined) return "";
+  const s = String(value);
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
+// Force Excel to keep dates as text instead of auto-formatting them (which
+// causes the dreaded `########` when the column is too narrow). The `="..."`
+// formula prefix tells Excel "this is a text literal, don't parse it".
+function csvDate(value: string | Date | null | undefined): string {
+  const day = isoDay(value);
+  if (!day) return `""`;
+  return `="${day}"`;
+}
+
+function toCsv(data: ExportRow[]): string {
+  const header = [
+    "Employee", "Email", "Department",
+    "Week Start", "Week End",
+    "Work Hours", "Leave Hours", "Holiday Hours", "Total Hours",
+    "Status", "Submitted At",
+  ].map(csv).join(",");
   const rows = data.map((ts) => {
     const user = typeof ts.userId === "object" ? ts.userId : null;
     return [
-      `"${user?.name || ""}"`,
-      `"${user?.email || ""}"`,
-      `"${user?.department || ""}"`,
-      ts.weekStart.slice(0, 10),
-      ts.weekEnd.slice(0, 10),
-      ts.totalHours.toFixed(1),
-      ts.status,
-      ts.submittedAt ? new Date(ts.submittedAt).toLocaleDateString() : "",
+      csv(user?.name || ""),
+      csv(user?.email || ""),
+      csv(user?.department || ""),
+      csvDate(ts.weekStart),
+      csvDate(ts.weekEnd),
+      csv(ts.totalHours.toFixed(1)),
+      csv(ts.leaveHours.toFixed(1)),
+      csv(ts.holidayHours.toFixed(1)),
+      csv(ts.combinedHours.toFixed(1)),
+      csv(ts.status),
+      csvDate(ts.submittedAt),
     ].join(",");
   });
-  return [header, ...rows].join("\n");
+  // Prefix with a UTF-8 BOM so Excel opens the file in the right encoding and
+  // keeps the date columns as text.
+  return "﻿" + [header, ...rows].join("\r\n");
 }
 
 export default function AdminTimesheetExport() {
@@ -125,13 +166,59 @@ export default function AdminTimesheetExport() {
   const [data, setData] = useState<WeeklyTimesheetData[]>([]);
   const [loading, setLoading] = useState(false);
   const [exporting, setExporting] = useState<"csv" | "excel" | null>(null);
+  const [allLeaves, setAllLeaves] = useState<LeaveRequest[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
 
   useEffect(() => {
     userApi
       .getAll({ limit: 500 })
       .then((r) => setEmployees((r.data.data || []).filter((u) => u.role !== "admin")))
       .catch(() => {});
+    leaveApi.getAll({ status: "approved", limit: 2000 }).then((r) => setAllLeaves(r.data.data || [])).catch(() => {});
+    const year = new Date().getFullYear();
+    Promise.all([holidayApi.getAll(year - 1), holidayApi.getAll(year), holidayApi.getAll(year + 1)])
+      .then(([a, b, c]) => setHolidays([...(a.data.data || []), ...(b.data.data || []), ...(c.data.data || [])]))
+      .catch(() => {});
   }, []);
+
+  // Compute leave + holiday hours for a given employee's week.
+  const overlayFor = (userId: User | string, weekStart: string | Date) => {
+    const uid = typeof userId === "object" && userId !== null ? (userId as User)._id : String(userId);
+    const start = new Date(weekStart);
+    start.setHours(0, 0, 0, 0);
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+    const userLeaves = allLeaves.filter((l) => {
+      const lUid = typeof l.userId === "object" && l.userId !== null ? (l.userId as User)._id : String(l.userId);
+      return lUid === uid;
+    });
+    let leaveHours = 0;
+    let holidayHours = 0;
+    for (const d of days) {
+      const dMs = d.getTime();
+      const ymd = d.toLocaleDateString("en-CA");
+      const onLeave = userLeaves.some((l) => {
+        if (l.status !== "approved") return false;
+        const s = new Date(l.startDate);
+        const e = new Date(l.endDate);
+        const sMs = new Date(s.getFullYear(), s.getMonth(), s.getDate()).getTime();
+        const eMs = new Date(e.getFullYear(), e.getMonth(), e.getDate()).getTime();
+        return dMs >= sMs && dMs <= eMs;
+      });
+      const isHoliday = holidays.some((h) => new Date(h.date).toLocaleDateString("en-CA") === ymd);
+      if (onLeave) leaveHours += LEAVE_DAY_HOURS;
+      if (isHoliday) holidayHours += HOLIDAY_DAY_HOURS;
+    }
+    return { leaveHours, holidayHours };
+  };
+
+  const dataWithOverlay: ExportRow[] = data.map((ts) => {
+    const { leaveHours, holidayHours } = overlayFor(ts.userId, ts.weekStart);
+    return { ...ts, leaveHours, holidayHours, combinedHours: ts.totalHours + leaveHours + holidayHours };
+  });
 
   const fetchData = () => {
     setLoading(true);
@@ -152,7 +239,7 @@ export default function AdminTimesheetExport() {
     if (!data.length) return toast.error("No data to export");
     setExporting("csv");
     try {
-      const csv = toCsv(data);
+      const csv = toCsv(dataWithOverlay);
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       downloadBlob(blob, `timesheet-export-${startDate}-to-${endDate}.csv`);
       toast.success("CSV downloaded!");
@@ -183,6 +270,9 @@ export default function AdminTimesheetExport() {
   })();
 
   const totalHours = data.reduce((s, ts) => s + ts.totalHours, 0);
+  const totalLeaveHours = dataWithOverlay.reduce((s, ts) => s + ts.leaveHours, 0);
+  const totalHolidayHours = dataWithOverlay.reduce((s, ts) => s + ts.holidayHours, 0);
+  const combinedHoursTotal = totalHours + totalLeaveHours + totalHolidayHours;
   const approvedCount = data.filter((ts) => ts.status === "approved").length;
   const submittedCount = data.filter((ts) => ts.status === "submitted").length;
   const rejectedCount = data.filter((ts) => ts.status === "rejected").length;
@@ -409,8 +499,10 @@ export default function AdminTimesheetExport() {
           },
           {
             label: "Total Hours",
-            value: fmtHours(totalHours),
-            sub: uniqueEmps > 0 ? `${fmtHours(totalHours / uniqueEmps)} avg per person` : "—",
+            value: fmtHours(combinedHoursTotal),
+            sub: (totalLeaveHours > 0 || totalHolidayHours > 0)
+              ? `${fmtHours(totalHours)}w${totalLeaveHours > 0 ? ` + ${fmtHours(totalLeaveHours)} lv` : ""}${totalHolidayHours > 0 ? ` + ${fmtHours(totalHolidayHours)} hol` : ""}`
+              : uniqueEmps > 0 ? `${fmtHours(totalHours / uniqueEmps)} avg per person` : "—",
             icon: Clock,
             gradient: "from-emerald-500 to-teal-600",
             ringColor: "shadow-emerald-500/30",
@@ -519,13 +611,13 @@ export default function AdminTimesheetExport() {
               <table className="w-full text-left text-sm">
                 <thead className="border-b border-gray-200/70 bg-gray-50/40 dark:border-gray-800/80 dark:bg-gray-800/20">
                   <tr>
-                    {["Employee", "Week", "Hours", "Status"].map((h) => (
+                    {["Employee", "Week", "Work", "Leave", "Holiday", "Total", "Status"].map((h) => (
                       <th key={h} className={`px-4 py-3 ${labelCls}`}>{h}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                  {data.slice(0, 20).map((ts) => {
+                  {dataWithOverlay.slice(0, 20).map((ts) => {
                     const user = typeof ts.userId === "object" ? ts.userId : null;
                     const sCfg = statusConfig[ts.status] || statusConfig.submitted;
                     const start = new Date(ts.weekStart);
@@ -557,8 +649,29 @@ export default function AdminTimesheetExport() {
                           </div>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 font-mono text-xs font-bold tabular-nums tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
+                          <span className="font-mono text-xs tabular-nums text-gray-700 dark:text-gray-300">
                             {fmtHours(ts.totalHours)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          {ts.leaveHours > 0 ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
+                              <Plane className="h-3 w-3" />
+                              {fmtHours(ts.leaveHours)}
+                            </span>
+                          ) : <span className="text-xs text-gray-300 dark:text-gray-600">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          {ts.holidayHours > 0 ? (
+                            <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25">
+                              <PartyPopper className="h-3 w-3" />
+                              {fmtHours(ts.holidayHours)}
+                            </span>
+                          ) : <span className="text-xs text-gray-300 dark:text-gray-600">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 font-mono text-xs font-bold tabular-nums tracking-tight text-indigo-700 ring-1 ring-inset ring-indigo-500/20 dark:bg-indigo-500/10 dark:text-indigo-400 dark:ring-indigo-400/20">
+                            {fmtHours(ts.combinedHours)}
                           </span>
                         </td>
                         <td className="px-4 py-3">
@@ -583,7 +696,7 @@ export default function AdminTimesheetExport() {
 
           {/* Mobile cards */}
           <div className="space-y-3 md:hidden">
-            {data.slice(0, 20).map((ts) => {
+            {dataWithOverlay.slice(0, 20).map((ts) => {
               const user = typeof ts.userId === "object" ? ts.userId : null;
               const sCfg = statusConfig[ts.status] || statusConfig.submitted;
               const start = new Date(ts.weekStart);
@@ -609,14 +722,37 @@ export default function AdminTimesheetExport() {
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
-                      <p className={labelCls}>Hours</p>
-                      <p className="font-mono text-sm font-bold tabular-nums tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(ts.totalHours)}</p>
+                      <p className={labelCls}>Total Hours</p>
+                      <p className="font-mono text-sm font-bold tabular-nums tracking-tight text-indigo-600 dark:text-indigo-400">{fmtHours(ts.combinedHours)}</p>
+                      {(ts.leaveHours > 0 || ts.holidayHours > 0) && (
+                        <p className="mt-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                          {fmtHours(ts.totalHours)}w
+                          {ts.leaveHours > 0 ? ` · ${fmtHours(ts.leaveHours)} lv` : ""}
+                          {ts.holidayHours > 0 ? ` · ${fmtHours(ts.holidayHours)} hol` : ""}
+                        </p>
+                      )}
                     </div>
                     <div className="rounded-lg border border-gray-200/70 bg-gray-50/80 px-2.5 py-2 text-center dark:border-gray-800/80 dark:bg-gray-800/40">
                       <p className={labelCls}>Department</p>
                       <p className="truncate text-xs font-bold text-gray-900 dark:text-white">{user?.department || "—"}</p>
                     </div>
                   </div>
+                  {(ts.leaveHours > 0 || ts.holidayHours > 0) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {ts.leaveHours > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/25">
+                          <Plane className="h-2.5 w-2.5" />
+                          {fmtHours(ts.leaveHours)}
+                        </span>
+                      )}
+                      {ts.holidayHours > 0 && (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/25">
+                          <PartyPopper className="h-2.5 w-2.5" />
+                          {fmtHours(ts.holidayHours)}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

@@ -18,13 +18,20 @@ import {
   Briefcase,
   PlusCircle,
   X,
+  Plane,
+  PartyPopper,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { fmtHours } from "../../utils/format";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
-import type { WeeklyTimesheetData, Pagination, TimesheetEntry, Project } from "../../types";
+import { leaveApi } from "../../api/leaveApi";
+import { holidayApi } from "../../api/holidayApi";
+import type { WeeklyTimesheetData, Pagination, TimesheetEntry, Project, LeaveRequest, Holiday } from "../../types";
 import { useConfirm } from "../../context/ConfirmContext";
 import TimesheetDetailDrawer from "./TimesheetDetailDrawer";
+
+const LEAVE_DAY_HOURS: number = 9;
+const HOLIDAY_DAY_HOURS: number = 9;
 
 /* ── Status config ── */
 type StatusKey = "draft" | "submitted" | "approved" | "rejected";
@@ -116,28 +123,48 @@ const uniqueProjects = (entries: TimesheetEntry[]): string[] => {
 type SortKey = "recent" | "oldest" | "hours-desc" | "hours-asc";
 
 /* ── Weekday mini chart ── */
-function WeekdayBars({ entries }: { entries: TimesheetEntry[] }) {
-  const days = dayTotals(entries);
-  const max = Math.max(...days, 1);
+function WeekdayBars({
+  entries,
+  leaveDayHours = [0, 0, 0, 0, 0, 0, 0],
+  holidayDayHours = [0, 0, 0, 0, 0, 0, 0],
+}: {
+  entries: TimesheetEntry[];
+  leaveDayHours?: number[];
+  holidayDayHours?: number[];
+}) {
+  const work = dayTotals(entries);
+  const combined = work.map((h, i) => h + leaveDayHours[i] + holidayDayHours[i]);
+  const max = Math.max(...combined, 1);
   return (
     <div className="flex items-end gap-[3px]" aria-hidden>
-      {days.map((h, i) => {
-        const pct = Math.max(8, Math.round((h / max) * 100));
+      {combined.map((total, i) => {
+        const w = work[i], lv = leaveDayHours[i], hol = holidayDayHours[i];
         const isWeekend = i >= 5;
+        const segPct = (v: number) => (total > 0 ? Math.max(v > 0 ? 8 : 0, (v / max) * 100) : 0);
+        const tip = [
+          w > 0 ? `Work ${fmtHours(w)}` : null,
+          lv > 0 ? `Leave ${fmtHours(lv)}` : null,
+          hol > 0 ? `Holiday ${fmtHours(hol)}` : null,
+        ].filter(Boolean).join(" · ") || "—";
         return (
           <div key={i} className="flex w-3 flex-col items-center gap-0.5">
-            <div className="flex h-7 w-full items-end overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-800">
-              <div
-                title={`${DAY_LABELS[i]}: ${fmtHours(h)}`}
-                className={`w-full rounded-sm transition-all ${
-                  h > 0
-                    ? isWeekend
+            <div className="flex h-7 w-full flex-col-reverse overflow-hidden rounded-sm bg-gray-100 dark:bg-gray-800" title={`${DAY_LABELS[i]}: ${tip}`}>
+              {w > 0 && (
+                <div
+                  className={`w-full transition-all ${
+                    isWeekend
                       ? "bg-gradient-to-t from-fuchsia-500 to-indigo-500"
                       : "bg-gradient-to-t from-indigo-500 to-sky-500"
-                    : ""
-                }`}
-                style={{ height: h > 0 ? `${pct}%` : "0%" }}
-              />
+                  }`}
+                  style={{ height: `${segPct(w)}%` }}
+                />
+              )}
+              {lv > 0 && (
+                <div className="w-full bg-gradient-to-t from-sky-400 to-blue-500 transition-all" style={{ height: `${segPct(lv)}%` }} />
+              )}
+              {hol > 0 && (
+                <div className="w-full bg-gradient-to-t from-amber-400 to-orange-500 transition-all" style={{ height: `${segPct(hol)}%` }} />
+              )}
             </div>
             <span className="text-[8px] font-semibold leading-none text-gray-400 dark:text-gray-500">
               {DAY_LABELS[i]}
@@ -180,7 +207,44 @@ export default function TimesheetHistory() {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [drawerId, setDrawerId] = useState<string | null>(null);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
   const confirm = useConfirm();
+
+  // Compute the 7-day leave + holiday hours arrays for any given weekStart.
+  const overlayFor = (weekStart: string | Date) => {
+    const start = new Date(weekStart);
+    start.setHours(0, 0, 0, 0);
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return d;
+    });
+    const leaveDayHours = days.map((d) => {
+      const dMs = d.getTime();
+      const onLeave = leaves.some((l) => {
+        if (l.status !== "approved") return false;
+        const s = new Date(l.startDate);
+        const e = new Date(l.endDate);
+        const sMs = new Date(s.getFullYear(), s.getMonth(), s.getDate()).getTime();
+        const eMs = new Date(e.getFullYear(), e.getMonth(), e.getDate()).getTime();
+        return dMs >= sMs && dMs <= eMs;
+      });
+      return onLeave ? LEAVE_DAY_HOURS : 0;
+    });
+    const holidayDayHours = days.map((d) => {
+      const ymd = d.toLocaleDateString("en-CA");
+      return holidays.some((h) => new Date(h.date).toLocaleDateString("en-CA") === ymd)
+        ? HOLIDAY_DAY_HOURS
+        : 0;
+    });
+    return {
+      leaveDayHours,
+      holidayDayHours,
+      leaveTotal: leaveDayHours.reduce((s, h) => s + h, 0),
+      holidayTotal: holidayDayHours.reduce((s, h) => s + h, 0),
+    };
+  };
 
   const requestDelete = async (id: string, range: string) => {
     const ok = await confirm({
@@ -232,6 +296,14 @@ export default function TimesheetHistory() {
   useEffect(() => {
     fetchHistory();
   }, [page, statusFilter, pageSize]);
+
+  useEffect(() => {
+    leaveApi.getMyLeaves({ status: "approved", limit: 500 }).then((r) => setLeaves(r.data.data || [])).catch(() => {});
+    const year = new Date().getFullYear();
+    Promise.all([holidayApi.getAll(year - 1), holidayApi.getAll(year), holidayApi.getAll(year + 1)])
+      .then(([a, b, c]) => setHolidays([...(a.data.data || []), ...(b.data.data || []), ...(c.data.data || [])]))
+      .catch(() => {});
+  }, []);
 
   /* ── Derived: search + sort applied to the current page ── */
   const visible = useMemo(() => {
@@ -509,6 +581,8 @@ export default function TimesheetHistory() {
                     const sConfig = statusConfig[ts.status as StatusKey] || statusConfig.draft;
                     const start = new Date(ts.weekStart);
                     const projects = uniqueProjects(ts.entries);
+                    const overlay = overlayFor(ts.weekStart);
+                    const combinedTotal = ts.totalHours + overlay.leaveTotal + overlay.holidayTotal;
                     const metaDate =
                       ts.status === "approved" && ts.approvedAt
                         ? `Approved ${formatShortDate(ts.approvedAt)}`
@@ -545,15 +619,27 @@ export default function TimesheetHistory() {
                           <div className="flex flex-col">
                             <span className="inline-flex items-center gap-1.5 text-sm font-bold tracking-tight text-indigo-600 dark:text-indigo-400">
                               <Clock className="h-3.5 w-3.5" />
-                              {fmtHours(ts.totalHours)}
+                              {fmtHours(combinedTotal)}
                             </span>
-                            <span className="mt-0.5 text-[10px] text-gray-400 dark:text-gray-500">
-                              {ts.entries.length} {ts.entries.length === 1 ? "entry" : "entries"}
+                            <span className="mt-0.5 flex flex-wrap items-center gap-1 text-[10px] text-gray-400 dark:text-gray-500">
+                              <span>{fmtHours(ts.totalHours)} work</span>
+                              {overlay.leaveTotal > 0 && (
+                                <span className="inline-flex items-center gap-0.5 rounded bg-sky-50 px-1 py-0.5 font-semibold text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
+                                  <Plane className="h-2.5 w-2.5" />
+                                  {fmtHours(overlay.leaveTotal)}
+                                </span>
+                              )}
+                              {overlay.holidayTotal > 0 && (
+                                <span className="inline-flex items-center gap-0.5 rounded bg-amber-50 px-1 py-0.5 font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                                  <PartyPopper className="h-2.5 w-2.5" />
+                                  {fmtHours(overlay.holidayTotal)}
+                                </span>
+                              )}
                             </span>
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <WeekdayBars entries={ts.entries} />
+                          <WeekdayBars entries={ts.entries} leaveDayHours={overlay.leaveDayHours} holidayDayHours={overlay.holidayDayHours} />
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex flex-wrap items-center gap-1">
@@ -627,6 +713,8 @@ export default function TimesheetHistory() {
               const sConfig = statusConfig[ts.status as StatusKey] || statusConfig.draft;
               const start = new Date(ts.weekStart);
               const projects = uniqueProjects(ts.entries);
+              const overlay = overlayFor(ts.weekStart);
+              const combinedTotal = ts.totalHours + overlay.leaveTotal + overlay.holidayTotal;
               const metaDate =
                 ts.status === "approved" && ts.approvedAt
                   ? `Approved ${formatShortDate(ts.approvedAt)}`
@@ -658,15 +746,27 @@ export default function TimesheetHistory() {
                         <span className="rounded-md bg-gray-100 px-1.5 py-0.5 text-[10px] font-semibold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
                           {ts.entries.length} {ts.entries.length === 1 ? "entry" : "entries"}
                         </span>
+                        {overlay.leaveTotal > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-sky-50 px-1.5 py-0.5 text-[10px] font-semibold text-sky-700 dark:bg-sky-500/10 dark:text-sky-300">
+                            <Plane className="h-2.5 w-2.5" />
+                            {fmtHours(overlay.leaveTotal)}
+                          </span>
+                        )}
+                        {overlay.holidayTotal > 0 && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                            <PartyPopper className="h-2.5 w-2.5" />
+                            {fmtHours(overlay.holidayTotal)}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <span className="text-base font-bold tracking-tight text-indigo-600 dark:text-indigo-400">
-                      {fmtHours(ts.totalHours)}
+                      {fmtHours(combinedTotal)}
                     </span>
                   </div>
 
                   <div className="mb-3 flex items-end justify-between gap-3">
-                    <WeekdayBars entries={ts.entries} />
+                    <WeekdayBars entries={ts.entries} leaveDayHours={overlay.leaveDayHours} holidayDayHours={overlay.holidayDayHours} />
                     <div className="flex flex-1 flex-wrap items-center justify-end gap-1">
                       {projects.slice(0, 2).map((p) => (
                         <span

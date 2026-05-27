@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import {
   Clock, FolderKanban, CheckCircle, AlertCircle, CalendarDays, FileText, LogIn,
   ArrowRight, User, UserCheck, History, Home, PartyPopper, TrendingUp, BarChart3,
-  Heart, LogOut, Loader2, CheckCircle2,
+  Heart, LogOut, Loader2, CheckCircle2, Plane,
 } from "lucide-react";
 import { Link, Navigate } from "react-router-dom";
 import toast from "react-hot-toast";
@@ -15,7 +15,7 @@ import { reportApi } from "../../api/reportApi";
 import { leaveApi } from "../../api/leaveApi";
 import { attendanceApi } from "../../api/attendanceApi";
 import { holidayApi } from "../../api/holidayApi";
-import type { AttendanceRecord, Holiday } from "../../types";
+import type { AttendanceRecord, Holiday, LeaveRequest } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import TimerWidget from "../../components/TimerWidget";
 import type { WeeklySummary, LeaveBalance } from "../../types";
@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [leaveBalance, setLeaveBalance] = useState<LeaveBalance | null>(null);
   const [attendanceWeek, setAttendanceWeek] = useState<AttendanceRecord[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [today, setToday] = useState<AttendanceRecord | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [clocking, setClocking] = useState(false);
@@ -60,6 +61,7 @@ export default function Dashboard() {
     Promise.all([holidayApi.getAll(year), holidayApi.getAll(year + 1)])
       .then(([a, b]) => setHolidays([...(a.data.data || []), ...(b.data.data || [])]))
       .catch(() => {});
+    leaveApi.getMyLeaves({ status: "approved", limit: 200 }).then((r) => setLeaves(r.data.data || [])).catch(() => {});
   }, [isAdmin]);
 
   useEffect(() => {
@@ -131,6 +133,23 @@ export default function Dashboard() {
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 4);
   })();
+
+  // Approved leave that covers today — surfaces the on-leave banner even before
+  // the auto-mark cron has stamped today's attendance row.
+  const todayLeave = (() => {
+    const t = new Date();
+    const tMs = new Date(t.getFullYear(), t.getMonth(), t.getDate()).getTime();
+    return leaves.find((l) => {
+      if (l.status !== "approved") return false;
+      const s = new Date(l.startDate);
+      const e = new Date(l.endDate);
+      const sMs = new Date(s.getFullYear(), s.getMonth(), s.getDate()).getTime();
+      const eMs = new Date(e.getFullYear(), e.getMonth(), e.getDate()).getTime();
+      return tMs >= sMs && tMs <= eMs;
+    });
+  })();
+  const isOnLeaveToday = !!todayLeave || today?.status === "on-leave";
+  const leaveTypeLabel = todayLeave?.type ? todayLeave.type.charAt(0).toUpperCase() + todayLeave.type.slice(1) : "Leave";
 
   const leaveData = leaveBalance ? [
     { name: "Personal", used: leaveBalance.casual.used, remaining: leaveBalance.casual.remaining },
@@ -239,8 +258,23 @@ export default function Dashboard() {
               </div>
             )}
 
-            {/* Clock action button */}
-            {!today?.clockIn ? (
+            {/* Clock action button — replaced by on-leave banner when applicable */}
+            {isOnLeaveToday && !today?.clockIn ? (
+              <div className="relative overflow-hidden rounded-2xl bg-sky-500/15 px-5 py-3.5 ring-1 ring-sky-400/30 backdrop-blur-sm">
+                <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-20 w-20 rounded-full bg-sky-400/30 blur-2xl" />
+                <div className="relative flex items-center gap-3">
+                  <span className="rounded-lg bg-sky-500/30 p-2 ring-1 ring-white/15">
+                    <Plane className="h-4 w-4 text-sky-50" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-sky-50">You're on leave today</p>
+                    <p className="text-[11px] text-sky-100/80">
+                      Enjoy your {leaveTypeLabel.toLowerCase()} leave — no clock-in needed.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ) : !today?.clockIn ? (
               <button
                 type="button"
                 onClick={handleClockIn}

@@ -1,18 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
 import {
   Plus, Trash2, Save, Send, ChevronLeft, ChevronRight, Copy, Download,
-  CheckCircle2, XCircle, Lock, CalendarDays, Sparkles, AlertCircle,
+  CheckCircle2, XCircle, Lock, CalendarDays, Sparkles, AlertCircle, Plane, PartyPopper,
 } from "lucide-react";
 import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import { projectApi } from "../../api/projectApi";
 import { attendanceApi } from "../../api/attendanceApi";
 import { holidayApi } from "../../api/holidayApi";
-import type { WeeklyTimesheetData, Project, TimesheetEntry, Holiday } from "../../types";
+import { leaveApi } from "../../api/leaveApi";
+import type { WeeklyTimesheetData, Project, TimesheetEntry, Holiday, LeaveRequest } from "../../types";
 import toast from "react-hot-toast";
 import { fmtHours } from "../../utils/format";
 
 const MIN_WEEK_HOURS = 20;
 const MAX_DAY_HOURS = 24;
+const LEAVE_DAY_HOURS = 9;
+const HOLIDAY_DAY_HOURS = 9;
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -60,6 +63,7 @@ export default function TimesheetWeekly() {
   const [submitting, setSubmitting] = useState(false);
   const [activityTypes, setActivityTypes] = useState<string[]>(["Development", "Meeting", "Review", "Testing", "Design", "Other"]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [leaves, setLeaves] = useState<LeaveRequest[]>([]);
   const [copying, setCopying] = useState(false);
   const [autofilling, setAutofilling] = useState(false);
 
@@ -82,6 +86,7 @@ export default function TimesheetWeekly() {
       if (names.length > 0) setActivityTypes(names);
     }).catch(() => { /* interceptor */ });
     holidayApi.getAll(new Date().getFullYear()).then((r) => setHolidays(r.data.data || [])).catch(() => {});
+    leaveApi.getMyLeaves({ status: "approved", limit: 200 }).then((r) => setLeaves(r.data.data || [])).catch(() => {});
   }, []);
 
   const weekDates = (() => {
@@ -115,6 +120,37 @@ export default function TimesheetWeekly() {
   const dayTotal = (day: number) => entries.reduce((s, e) => s + (e.hours[day] || 0), 0);
   const weekTotal = entries.reduce((s, e) => s + rowTotal(e.hours), 0);
 
+  // Approved leave overlay — 9 hours per leave day, displayed as a separate row.
+  const leaveDayInfo = weekDates.map((d) => {
+    const dStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const match = leaves.find((l) => {
+      if (l.status !== "approved") return false;
+      const start = new Date(l.startDate);
+      const end = new Date(l.endDate);
+      const sMs = new Date(start.getFullYear(), start.getMonth(), start.getDate()).getTime();
+      const eMs = new Date(end.getFullYear(), end.getMonth(), end.getDate()).getTime();
+      return dStart >= sMs && dStart <= eMs;
+    });
+    return match ? { hours: LEAVE_DAY_HOURS, type: match.type } : null;
+  });
+  const leaveHoursTotal = leaveDayInfo.reduce((s, l) => s + (l?.hours || 0), 0);
+  const hasLeave = leaveDayInfo.some((l) => l !== null);
+  const leaveTypes = Array.from(new Set(leaveDayInfo.flatMap((l) => (l ? [l.type] : []))));
+
+  // Public holiday overlay — 9 hours per holiday day, displayed as a separate row.
+  const holidayDayInfo = weekDates.map((d) => {
+    const ymd = d.toLocaleDateString("en-CA");
+    const match = holidays.find((h) => new Date(h.date).toLocaleDateString("en-CA") === ymd);
+    return match ? { hours: HOLIDAY_DAY_HOURS, name: match.name, type: match.type } : null;
+  });
+  const holidayHoursTotal = holidayDayInfo.reduce((s, h) => s + (h?.hours || 0), 0);
+  const hasHoliday = holidayDayInfo.some((h) => h !== null);
+  const holidayNames = Array.from(new Set(holidayDayInfo.flatMap((h) => (h ? [h.name] : []))));
+
+  const dayTotalCombined = (day: number) =>
+    dayTotal(day) + (leaveDayInfo[day]?.hours || 0) + (holidayDayInfo[day]?.hours || 0);
+  const weekTotalCombined = weekTotal + leaveHoursTotal + holidayHoursTotal;
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -133,14 +169,14 @@ export default function TimesheetWeekly() {
       }
     }
     for (let d = 0; d < 7; d++) {
-      const day = dayTotal(d);
+      const day = dayTotalCombined(d);
       if (day > MAX_DAY_HOURS) return `${DAYS[d]} exceeds ${MAX_DAY_HOURS}h cap.`;
-      if (day > 0 && weekDates[d] && isFuture(weekDates[d])) {
+      if (dayTotal(d) > 0 && weekDates[d] && isFuture(weekDates[d])) {
         return `Cannot log hours on a future day (${DAYS[d]}).`;
       }
     }
-    if (weekTotal < MIN_WEEK_HOURS) {
-      return `Weekly total must be at least ${MIN_WEEK_HOURS}h (currently ${weekTotal}h).`;
+    if (weekTotalCombined < MIN_WEEK_HOURS) {
+      return `Weekly total must be at least ${MIN_WEEK_HOURS}h (currently ${weekTotalCombined}h).`;
     }
     return null;
   };
@@ -227,7 +263,7 @@ export default function TimesheetWeekly() {
 
   const inputCls = "rounded-lg border border-gray-300 bg-white text-gray-900 px-2.5 py-1.5 text-sm outline-none transition-colors focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 dark:border-gray-700 dark:bg-gray-800 dark:text-white";
 
-  const progressPct = Math.min(100, Math.round((weekTotal / 40) * 100));
+  const progressPct = Math.min(100, Math.round((weekTotalCombined / 40) * 100));
   const weekStartObj = weekDates[0];
   const s = sheet?.status ? statusStyle[sheet.status] : null;
 
@@ -302,7 +338,14 @@ export default function TimesheetWeekly() {
             </div>
             <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
               <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">This Week</p>
-              <p className="text-xl font-bold tracking-tight">{fmtHours(weekTotal)}</p>
+              <p className="text-xl font-bold tracking-tight">{fmtHours(weekTotalCombined)}</p>
+              {(hasLeave || hasHoliday) && (
+                <p className="text-[10px] text-indigo-200/70">
+                  {fmtHours(weekTotal)}w
+                  {hasLeave    ? ` · ${fmtHours(leaveHoursTotal)} leave` : ""}
+                  {hasHoliday  ? ` · ${fmtHours(holidayHoursTotal)} holiday` : ""}
+                </p>
+              )}
             </div>
           </div>
         </div>
@@ -311,7 +354,7 @@ export default function TimesheetWeekly() {
           <div className="mb-1.5 flex items-center justify-between text-[11px] text-indigo-200/70">
             <span>Weekly progress</span>
             <span>
-              <span className="font-semibold text-white">{fmtHours(weekTotal)}</span> / 40h target
+              <span className="font-semibold text-white">{fmtHours(weekTotalCombined)}</span> / 40h target
             </span>
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10 ring-1 ring-white/10">
@@ -422,6 +465,90 @@ export default function TimesheetWeekly() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {hasLeave && (
+                <tr className="bg-sky-50/40 dark:bg-sky-500/[0.05]">
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 p-1.5 shadow-sm ring-1 ring-white/15">
+                        <Plane className="h-3.5 w-3.5 text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-sky-700 dark:text-sky-300">Leave</p>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-sky-600/70 dark:text-sky-400/70">
+                          Approved
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-2 text-sm text-sky-700 dark:text-sky-300 capitalize">
+                    {leaveTypes.join(", ") || "Time off"}
+                  </td>
+                  <td className="px-2 py-2 text-sm text-sky-700 dark:text-sky-300">Time off</td>
+                  {DAYS.map((_, d) => {
+                    const info = leaveDayInfo[d];
+                    return (
+                      <td key={d} className={`px-1 py-2 text-center ${dayCellBg(d)}`}>
+                        {info ? (
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-sky-100/80 px-2 py-1 text-xs font-bold text-sky-700 ring-1 ring-sky-500/20 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-400/25">
+                            <Lock className="h-2.5 w-2.5" />
+                            {info.hours}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-300 dark:text-gray-600">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="px-2 py-2 text-center">
+                    <span className="inline-flex items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-bold tracking-tight text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/20">
+                      {fmtHours(leaveHoursTotal)}
+                    </span>
+                  </td>
+                  {editable && <td />}
+                </tr>
+              )}
+              {hasHoliday && (
+                <tr className="bg-amber-50/40 dark:bg-amber-500/[0.05]">
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <div className="rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 p-1.5 shadow-sm ring-1 ring-white/15">
+                        <PartyPopper className="h-3.5 w-3.5 text-white" />
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-amber-700 dark:text-amber-300">Holiday</p>
+                        <p className="text-[10px] font-medium uppercase tracking-wider text-amber-600/70 dark:text-amber-400/70">
+                          Public
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-2 py-2 text-sm text-amber-700 dark:text-amber-300 truncate" title={holidayNames.join(", ")}>
+                    {holidayNames.join(", ") || "Holiday"}
+                  </td>
+                  <td className="px-2 py-2 text-sm text-amber-700 dark:text-amber-300">Day off</td>
+                  {DAYS.map((_, d) => {
+                    const info = holidayDayInfo[d];
+                    return (
+                      <td key={d} className={`px-1 py-2 text-center ${dayCellBg(d)}`}>
+                        {info ? (
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-amber-100/80 px-2 py-1 text-xs font-bold text-amber-700 ring-1 ring-amber-500/20 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/25" title={info.name}>
+                            <Lock className="h-2.5 w-2.5" />
+                            {info.hours}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-gray-300 dark:text-gray-600">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                  <td className="px-2 py-2 text-center">
+                    <span className="inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-bold tracking-tight text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20">
+                      {fmtHours(holidayHoursTotal)}
+                    </span>
+                  </td>
+                  {editable && <td />}
+                </tr>
+              )}
               {entries.length === 0 ? (
                 <tr>
                   <td colSpan={12} className="px-4 py-12 text-center">
@@ -516,7 +643,7 @@ export default function TimesheetWeekly() {
               <tr className="border-t-2 border-gray-200/70 bg-gradient-to-r from-indigo-50/40 via-transparent to-transparent dark:border-gray-800/80 dark:from-indigo-500/5">
                 <td colSpan={3} className={`px-3 py-3 ${labelCls} text-gray-600 dark:text-gray-300`}>Day Totals</td>
                 {DAYS.map((_, d) => {
-                  const t = dayTotal(d);
+                  const t = dayTotalCombined(d);
                   const over = t > MAX_DAY_HOURS;
                   return (
                     <td key={d} className={`px-1 py-3 text-center text-sm font-bold ${
@@ -532,7 +659,7 @@ export default function TimesheetWeekly() {
                 })}
                 <td className="px-2 py-3 text-center">
                   <span className="inline-flex items-center rounded-md bg-gradient-to-r from-indigo-500 to-purple-600 px-2.5 py-1 text-sm font-bold tracking-tight text-white shadow-sm ring-1 ring-white/10">
-                    {fmtHours(weekTotal)}
+                    {fmtHours(weekTotalCombined)}
                   </span>
                 </td>
                 {editable && <td />}
@@ -544,6 +671,92 @@ export default function TimesheetWeekly() {
 
       {/* ── Grid — Mobile cards ── */}
       <div className="space-y-3 lg:hidden">
+        {hasLeave && (
+          <div className="relative overflow-hidden rounded-2xl border border-sky-200/70 bg-gradient-to-br from-sky-50/80 via-white to-blue-50/40 p-4 ring-1 ring-sky-500/10 dark:border-sky-500/20 dark:from-sky-500/10 dark:via-gray-900 dark:to-blue-500/5">
+            <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-sky-400/25 blur-2xl" />
+            <div className="relative space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="rounded-lg bg-gradient-to-br from-sky-500 to-blue-600 p-1.5 shadow-md ring-1 ring-white/15">
+                    <Plane className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-sky-700 dark:text-sky-300">
+                      Leave <span className="capitalize">{leaveTypes.length > 0 && `· ${leaveTypes.join(", ")}`}</span>
+                    </p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-sky-600/70 dark:text-sky-400/70">
+                      Approved time off
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex shrink-0 items-center rounded-md bg-sky-50 px-2 py-0.5 text-xs font-bold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-300 dark:ring-sky-400/20">
+                  {fmtHours(leaveHoursTotal)}
+                </span>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {DAYS.map((d, di) => {
+                  const info = leaveDayInfo[di];
+                  return (
+                    <div key={d} className="text-center">
+                      <p className="mb-1 text-[10px] font-semibold uppercase text-sky-600/80 dark:text-sky-400/80">{d}</p>
+                      {info ? (
+                        <p className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-sky-100/80 py-2 text-sm font-bold text-sky-700 ring-1 ring-sky-500/20 dark:bg-sky-500/15 dark:text-sky-300 dark:ring-sky-400/25">
+                          <Lock className="h-2.5 w-2.5" />
+                          {info.hours}
+                        </p>
+                      ) : (
+                        <p className="py-2 text-sm text-gray-300 dark:text-gray-600">—</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+        {hasHoliday && (
+          <div className="relative overflow-hidden rounded-2xl border border-amber-200/70 bg-gradient-to-br from-amber-50/80 via-white to-orange-50/40 p-4 ring-1 ring-amber-500/10 dark:border-amber-500/20 dark:from-amber-500/10 dark:via-gray-900 dark:to-orange-500/5">
+            <div aria-hidden className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-amber-400/25 blur-2xl" />
+            <div className="relative space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex min-w-0 items-center gap-2">
+                  <div className="rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 p-1.5 shadow-md ring-1 ring-white/15">
+                    <PartyPopper className="h-3.5 w-3.5 text-white" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold text-amber-700 dark:text-amber-300" title={holidayNames.join(", ")}>
+                      Holiday {holidayNames.length > 0 && `· ${holidayNames.join(", ")}`}
+                    </p>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600/70 dark:text-amber-400/70">
+                      Public holiday
+                    </p>
+                  </div>
+                </div>
+                <span className="inline-flex shrink-0 items-center rounded-md bg-amber-50 px-2 py-0.5 text-xs font-bold text-amber-700 ring-1 ring-inset ring-amber-500/20 dark:bg-amber-500/10 dark:text-amber-300 dark:ring-amber-400/20">
+                  {fmtHours(holidayHoursTotal)}
+                </span>
+              </div>
+              <div className="grid grid-cols-7 gap-1">
+                {DAYS.map((d, di) => {
+                  const info = holidayDayInfo[di];
+                  return (
+                    <div key={d} className="text-center">
+                      <p className="mb-1 text-[10px] font-semibold uppercase text-amber-600/80 dark:text-amber-400/80">{d}</p>
+                      {info ? (
+                        <p className="inline-flex w-full items-center justify-center gap-1 rounded-lg bg-amber-100/80 py-2 text-sm font-bold text-amber-700 ring-1 ring-amber-500/20 dark:bg-amber-500/15 dark:text-amber-300 dark:ring-amber-400/25" title={info.name}>
+                          <Lock className="h-2.5 w-2.5" />
+                          {info.hours}
+                        </p>
+                      ) : (
+                        <p className="py-2 text-sm text-gray-300 dark:text-gray-600">—</p>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
         {entries.length === 0 ? (
           <div className={`${cardCls} flex flex-col items-center gap-2 py-10 text-center`}>
             <div className="rounded-full bg-gradient-to-br from-gray-100 to-gray-50 p-3 ring-1 ring-gray-200/60 dark:from-gray-800 dark:to-gray-900 dark:ring-gray-700/60">
@@ -616,17 +829,26 @@ export default function TimesheetWeekly() {
         <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 p-5 text-center text-white shadow-lg shadow-indigo-500/30 ring-1 ring-white/10">
           <div aria-hidden className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/20 blur-2xl" />
           <p className="relative text-[10px] font-semibold uppercase tracking-wider text-white/80">Week Total</p>
-          <p className="relative text-4xl font-bold tracking-tight">{fmtHours(weekTotal)}</p>
-          <p className="relative mt-1 text-xs text-white/70">of 40h target</p>
+          <p className="relative text-4xl font-bold tracking-tight">{fmtHours(weekTotalCombined)}</p>
+          {(hasLeave || hasHoliday) ? (
+            <p className="relative mt-1 text-xs text-white/70">
+              {fmtHours(weekTotal)}w
+              {hasLeave   ? ` + ${fmtHours(leaveHoursTotal)} leave` : ""}
+              {hasHoliday ? ` + ${fmtHours(holidayHoursTotal)} holiday` : ""}
+              {" "}· of 40h target
+            </p>
+          ) : (
+            <p className="relative mt-1 text-xs text-white/70">of 40h target</p>
+          )}
         </div>
       </div>
 
       {/* Validation hint */}
-      {editable && weekTotal > 0 && weekTotal < MIN_WEEK_HOURS && (
+      {editable && weekTotalCombined > 0 && weekTotalCombined < MIN_WEEK_HOURS && (
         <div className="flex items-center gap-2 rounded-lg border border-amber-200/70 bg-amber-50/80 px-3 py-2 text-xs text-amber-700 dark:border-amber-500/20 dark:bg-amber-500/10 dark:text-amber-400">
           <AlertCircle className="h-3.5 w-3.5 shrink-0" />
           <span>
-            You need at least <span className="font-semibold">{MIN_WEEK_HOURS}h</span> to submit (currently <span className="font-semibold">{fmtHours(weekTotal)}</span>).
+            You need at least <span className="font-semibold">{MIN_WEEK_HOURS}h</span> to submit (currently <span className="font-semibold">{fmtHours(weekTotalCombined)}</span>).
           </span>
         </div>
       )}

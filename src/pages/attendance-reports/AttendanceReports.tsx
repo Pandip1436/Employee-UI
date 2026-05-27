@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import {
   FileSpreadsheet, FileDown, Users, Clock, AlertTriangle, CheckCircle2,
-  BarChart3, Loader2, CalendarDays, Search, X, ArrowUpDown, ArrowUp, ArrowDown,
+  BarChart3, Loader2, CalendarDays, Search, X, ArrowUpDown, ArrowUp, ArrowDown, Plane,
 } from "lucide-react";
 import { attendanceApi } from "../../api/attendanceApi";
 import { userApi } from "../../api/userApi";
@@ -57,7 +57,7 @@ const currentMonthStr = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
-type SortKey = "name" | "department" | "present" | "late" | "halfDay" | "absent" | "hours" | "attendance";
+type SortKey = "name" | "department" | "present" | "late" | "halfDay" | "absent" | "onLeave" | "hours" | "attendance";
 type SortDir = "asc" | "desc";
 
 export default function AttendanceReports() {
@@ -140,6 +140,7 @@ export default function AttendanceReports() {
         case "late":        return dir * ((a.lateDays || 0) - (b.lateDays || 0));
         case "halfDay":     return dir * ((a.halfDays || 0) - (b.halfDays || 0));
         case "absent":      return dir * ((a.absentDays || 0) - (b.absentDays || 0));
+        case "onLeave":     return dir * ((a.onLeaveDays || 0) - (b.onLeaveDays || 0));
         case "hours":       return dir * ((a.totalHours || 0) - (b.totalHours || 0));
         case "attendance":  return dir * (pctFor(a) - pctFor(b));
         default: return 0;
@@ -299,6 +300,7 @@ export default function AttendanceReports() {
       {emps.length > 0 && (() => {
         const avgPresent = avg((e) => e.presentDays);
         const avgLate = avg((e) => e.lateDays);
+        const avgLeave = avg((e) => e.onLeaveDays || 0);
         const avgHoursRaw = avg((e) => e.totalHours);
         const tiles = [
           {
@@ -336,16 +338,28 @@ export default function AttendanceReports() {
             toneLabel: avgLate > 0 ? "Watch" : "On time",
           },
           {
+            label: "Avg Leave",
+            value: String(avgLeave),
+            sub: avgLeave === 0 ? "No leaves" : "days per employee",
+            icon: Plane,
+            gradient: "from-sky-500 to-cyan-600",
+            ringColor: "shadow-sky-500/30",
+            toneChip: avgLeave > 0
+              ? "bg-sky-50 text-sky-700 ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-400/25"
+              : "bg-gray-100 text-gray-600 ring-gray-400/20 dark:bg-gray-700/50 dark:text-gray-300 dark:ring-gray-500/20",
+            toneLabel: avgLeave > 0 ? "Time off" : "—",
+          },
+          {
             label: "Avg Hours",
             value: fmtHours(avgHoursRaw),
             sub: "per employee",
             icon: Clock,
-            gradient: "from-sky-500 to-blue-600",
-            ringColor: "shadow-sky-500/30",
+            gradient: "from-indigo-500 to-blue-600",
+            ringColor: "shadow-indigo-500/30",
           },
         ];
         return (
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
             {tiles.map((c) => (
               <div
                 key={c.label}
@@ -418,6 +432,7 @@ export default function AttendanceReports() {
                       { key: "late" as SortKey,       label: "Late" },
                       { key: "halfDay" as SortKey,    label: "Half" },
                       { key: "absent" as SortKey,     label: "Absent" },
+                      { key: "onLeave" as SortKey,    label: "Leave" },
                       { key: "hours" as SortKey,      label: "Total Hours" },
                     ]).map((h) => (
                       <th
@@ -434,7 +449,7 @@ export default function AttendanceReports() {
                 <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {filteredSortedEmps.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
+                      <td colSpan={8} className="px-4 py-12 text-center text-sm text-gray-400 dark:text-gray-500">
                         No matches for "{search}"
                       </td>
                     </tr>
@@ -499,6 +514,12 @@ export default function AttendanceReports() {
                             <span className="font-mono tabular-nums">{e.absentDays}</span>
                           </span>
                         </td>
+                        <td className="px-4 py-3">
+                          <span className="inline-flex items-center gap-1.5 rounded-md bg-sky-50 px-2 py-0.5 text-[11px] font-semibold text-sky-700 ring-1 ring-inset ring-sky-500/20 dark:bg-sky-500/10 dark:text-sky-400 dark:ring-sky-400/20">
+                            <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
+                            <span className="font-mono tabular-nums">{e.onLeaveDays || 0}</span>
+                          </span>
+                        </td>
                         <td className="px-4 py-3 font-mono font-bold tabular-nums tracking-tight text-gray-900 dark:text-white">{fmtHours(e.totalHours)}</td>
                       </tr>
                     );
@@ -538,10 +559,11 @@ export default function AttendanceReports() {
                       style={{ width: `${pct}%` }}
                     />
                   </div>
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-4 gap-2">
                     <MiniTile label="Present" value={e.presentDays} color="text-emerald-600 dark:text-emerald-400" />
                     <MiniTile label="Late" value={e.lateDays} color="text-amber-600 dark:text-amber-400" />
                     <MiniTile label="Absent" value={e.absentDays} color="text-rose-600 dark:text-rose-400" />
+                    <MiniTile label="Leave" value={e.onLeaveDays || 0} color="text-sky-600 dark:text-sky-400" />
                   </div>
                   <div className="mt-2 flex items-center justify-between rounded-lg border border-gray-200/70 bg-gray-50/80 px-3 py-2 dark:border-gray-800/80 dark:bg-gray-800/40">
                     <span className={labelCls}>Total Hours</span>
