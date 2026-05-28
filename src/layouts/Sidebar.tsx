@@ -209,8 +209,17 @@ export default function Sidebar({ open, onClose }: Props) {
         <div className="relative border-t border-white/[0.06] p-3">
           <div className="flex items-center gap-3 rounded-xl border border-white/[0.06] bg-white/[0.03] p-2.5 shadow-[0_4px_20px_-8px_rgba(99,102,241,0.4)] backdrop-blur-md transition-colors hover:bg-white/[0.06] hover:border-white/10">
             <div className="relative shrink-0">
-              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-semibold text-white shadow-[0_0_15px_-2px_rgba(99,102,241,0.6)] ring-2 ring-black/40">
-                {user?.name?.charAt(0).toUpperCase()}
+              <div className="flex h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-semibold text-white shadow-[0_0_15px_-2px_rgba(99,102,241,0.6)] ring-2 ring-black/40">
+                {user?.profilePhotoUrl ? (
+                  <img
+                    src={user.profilePhotoUrl}
+                    alt={user.name}
+                    className="h-full w-full object-cover"
+                    onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                  />
+                ) : (
+                  user?.name?.charAt(0).toUpperCase()
+                )}
               </div>
               <span
                 aria-hidden

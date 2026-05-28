@@ -2,14 +2,14 @@ import { useState, useEffect, type FormEvent } from "react";
 import {
   Pencil, Trash2, X, Search, Mail, Phone, Building, ArrowLeft, Calendar,
   Shield, Activity, Plus, Eye, EyeOff, Sparkles, Users, ChevronLeft, ChevronRight,
-  Briefcase, FileText, Award, User as UserIcon, UserCheck, UserX, Filter,
+  Briefcase, FileText, Award, User as UserIcon, UserCheck, UserX, Filter, LogOut,
 } from "lucide-react";
 import { userApi } from "../../api/userApi";
 import { adminSettingsApi } from "../../api/adminSettingsApi";
 import { employeeProfileApi } from "../../api/employeeProfileApi";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmContext";
-import type { User, Pagination, UserRole, EmployeeProfile } from "../../types";
+import type { User, Pagination, UserRole, EmployeeProfile, InactiveReason } from "../../types";
 import toast from "react-hot-toast";
 import { validateStrongPassword, checkPassword, passwordStrengthScore } from "../../utils/password";
 
@@ -79,10 +79,24 @@ function validate(f: FormShape, opts: { requirePassword: boolean }): Record<stri
 function Avatar({ name, size = "md", photo }: { name: string; size?: "md" | "lg" | "xl"; photo?: string | null }) {
   const init = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
   const sz = size === "xl" ? "h-24 w-24 text-2xl" : size === "lg" ? "h-11 w-11 text-sm" : "h-10 w-10 text-[13px]";
-  if (photo) {
+  const [broken, setBroken] = useState(false);
+  // Reset the broken state when the photo URL changes so a newly-fetched signed
+  // URL is given a fresh chance to load.
+  useEffect(() => { setBroken(false); }, [photo]);
+  // Absolute URLs (https://, http://, data:) are used as-is; relative paths get
+  // a leading slash so they resolve from the public root.
+  const src = photo
+    ? (/^(https?:|data:)/i.test(photo) ? photo : `/${photo.replace(/^\/+/, "")}`)
+    : null;
+  if (src && !broken) {
     return (
-      <div className={`overflow-hidden rounded-full ring-2 ring-white shadow-sm dark:ring-gray-900 ${sz}`}>
-        <img src={`/${photo}`} alt={name} className="h-full w-full object-cover" />
+      <div className={`shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm dark:ring-gray-900 ${sz}`}>
+        <img
+          src={src}
+          alt=""
+          className="h-full w-full object-cover"
+          onError={() => setBroken(true)}
+        />
       </div>
     );
   }
@@ -162,6 +176,8 @@ export default function Employees() {
   const [formPhone, setFormPhone] = useState("");
   const [formDOJ, setFormDOJ] = useState("");
   const [formActive, setFormActive] = useState(true);
+  const [formInactiveReason, setFormInactiveReason] = useState<InactiveReason>("");
+  const [formRelievingDate, setFormRelievingDate] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -209,6 +225,7 @@ export default function Employees() {
     setFormEmpId(""); setFormAadhaar(""); setFormAddress("");
     setFormPhone(""); setFormDOJ("");
     setFormActive(true); setShowPassword(false);
+    setFormInactiveReason(""); setFormRelievingDate("");
     setEditing(null); setShowModal(false);
     setErrors({});
   };
@@ -223,7 +240,10 @@ export default function Employees() {
     setFormDesignation(""); setShowPassword(false);
     setFormEmpId(""); setFormAadhaar(""); setFormAddress("");
     setFormPhone(""); setFormDOJ("");
-    setFormActive(u.isActive); setShowModal(true);
+    setFormActive(u.isActive);
+    setFormInactiveReason((u.inactiveReason as InactiveReason) || "");
+    setFormRelievingDate(u.relievingDate || "");
+    setShowModal(true);
     setErrors({});
     employeeProfileApi.getByUserId(u._id)
       .then((r) => {
@@ -271,6 +291,13 @@ export default function Employees() {
           name: formName, email: formEmail, role: formRole,
           department: formDept, isActive: formActive,
         };
+        if (formActive) {
+          patch.inactiveReason = "";
+          patch.relievingDate = "";
+        } else {
+          patch.inactiveReason = formInactiveReason;
+          patch.relievingDate = formRelievingDate;
+        }
         if (formUserId.trim() && formUserId.trim() !== (editing.userId || "")) {
           patch.userId = formUserId.trim();
         }
@@ -669,6 +696,43 @@ export default function Employees() {
                   />
                 </span>
               </label>
+            )}
+
+            {/* Inactive metadata (edit only, when account is inactive) */}
+            {editing && !formActive && (
+              <div className="rounded-2xl border border-rose-200/70 bg-gradient-to-br from-rose-50/70 via-white to-rose-50/30 p-4 ring-1 ring-rose-500/5 dark:border-rose-500/20 dark:from-rose-500/[0.06] dark:via-gray-900 dark:to-rose-500/[0.03]">
+                <p className="mb-3 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-600/90 dark:text-rose-400/90">
+                  <LogOut className="h-3 w-3" />
+                  Exit details
+                </p>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div>
+                    <LabelText icon={LogOut} color="text-rose-500 dark:text-rose-400">Reason</LabelText>
+                    <select
+                      value={formInactiveReason}
+                      onChange={(e) => setFormInactiveReason(e.target.value as InactiveReason)}
+                      className={fieldCls()}
+                    >
+                      <option value="">— Select —</option>
+                      <option value="resigned">Resigned</option>
+                      <option value="terminated">Terminated</option>
+                      <option value="retired">Retired</option>
+                      <option value="on-long-leave">On Long Leave</option>
+                      <option value="contract-ended">Contract Ended</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+                  <div>
+                    <LabelText icon={Calendar} color="text-rose-500 dark:text-rose-400">Relieving date</LabelText>
+                    <input
+                      type="date"
+                      value={formRelievingDate}
+                      onChange={(e) => setFormRelievingDate(e.target.value)}
+                      className={fieldCls()}
+                    />
+                  </div>
+                </div>
+              </div>
             )}
           </form>
 
@@ -1255,7 +1319,7 @@ export default function Employees() {
                     <tr key={u._id} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
                       <td className="px-5 py-3">
                         <button onClick={() => openProfile(u)} className="group flex items-center gap-3 text-left">
-                          <Avatar name={u.name} />
+                          <Avatar name={u.name} photo={u.profilePhotoUrl} />
                           <div>
                             <p className="font-semibold text-gray-900 transition-colors group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">{u.name}</p>
                             <p className="text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
@@ -1324,7 +1388,7 @@ export default function Employees() {
             <div key={u._id} className={`${cardCls} p-4`}>
               <div className="flex items-center gap-3">
                 <button onClick={() => openProfile(u)} className="flex min-w-0 flex-1 items-center gap-3">
-                  <Avatar name={u.name} />
+                  <Avatar name={u.name} photo={u.profilePhotoUrl} />
                   <div className="min-w-0 text-left">
                     <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{u.name}</p>
                     <p className="truncate text-xs text-gray-500 dark:text-gray-400">{u.email}</p>

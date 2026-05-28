@@ -41,6 +41,7 @@ export default function Profile() {
   const [form, setForm] = useState<Partial<EmployeeProfile>>({});
   const [preview, setPreview] = useState<{ url: string; name: string } | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
   const photoRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -383,13 +384,28 @@ export default function Profile() {
             >
               <div className="group relative h-full w-full overflow-hidden rounded-full bg-gray-900 ring-1 ring-white/10">
                 {profile?.profilePhotoUrl ? (
-                  <img src={profile.profilePhotoUrl} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={profile.profilePhotoUrl}
+                    alt=""
+                    onClick={() => setPhotoPreviewOpen(true)}
+                    className="h-full w-full cursor-zoom-in object-cover"
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 text-3xl font-bold">
                     {user.name.charAt(0).toUpperCase()}
                   </div>
                 )}
                 <div className="absolute inset-0 flex items-center justify-center gap-2 bg-gray-950/60 opacity-0 backdrop-blur-sm transition-opacity hover:opacity-100">
+                  {profile?.profilePhotoUrl && (
+                    <button
+                      onClick={() => setPhotoPreviewOpen(true)}
+                      className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-sm transition-all hover:bg-white/25 active:scale-95"
+                      aria-label="Preview profile photo"
+                      title="Preview photo"
+                    >
+                      <Eye className="h-4 w-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => photoRef.current?.click()}
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 text-white ring-1 ring-white/25 backdrop-blur-sm transition-all hover:bg-white/25 active:scale-95"
@@ -775,6 +791,60 @@ export default function Profile() {
           onClose={() => { setPreview(null); setPreviewLoading(false); }}
         />
       )}
+
+      {/* Profile photo lightbox */}
+      {photoPreviewOpen && profile?.profilePhotoUrl && (
+        <PhotoLightbox
+          src={profile.profilePhotoUrl}
+          name={user.name}
+          onClose={() => setPhotoPreviewOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function PhotoLightbox({ src, name, onClose }: { src: string; name: string; onClose: () => void }) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Profile photo preview"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-8"
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      {/* Backdrop */}
+      <div aria-hidden className="absolute inset-0 bg-gray-950/85 backdrop-blur-md" onClick={onClose} />
+
+      {/* Close button — top right */}
+      <button
+        onClick={onClose}
+        aria-label="Close preview"
+        className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-white ring-1 ring-white/20 backdrop-blur-sm transition-all hover:bg-white/20 active:scale-95"
+      >
+        <X className="h-5 w-5" />
+      </button>
+
+      {/* Image + caption */}
+      <div className="relative flex max-h-full max-w-full flex-col items-center gap-4">
+        <img
+          src={src}
+          alt={name}
+          className="max-h-[80vh] max-w-[min(90vw,720px)] rounded-2xl object-contain shadow-2xl ring-1 ring-white/10"
+        />
+        <p className="text-sm font-semibold text-white/90">{name}</p>
+      </div>
     </div>
   );
 }

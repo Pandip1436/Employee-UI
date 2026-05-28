@@ -501,8 +501,17 @@ export default function Topbar({ onMenuClick }: Props) {
               className="flex h-10 items-center gap-2 rounded-xl px-1.5 transition-colors hover:bg-gray-100 dark:hover:bg-gray-800 sm:pr-2"
             >
               <div className="relative shrink-0">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-950">
-                  {user?.name?.charAt(0).toUpperCase()}
+                <div className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-950">
+                  {user?.profilePhotoUrl ? (
+                    <img
+                      src={user.profilePhotoUrl}
+                      alt={user.name}
+                      className="h-full w-full object-cover"
+                      onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                    />
+                  ) : (
+                    user?.name?.charAt(0).toUpperCase()
+                  )}
                 </div>
                 <span
                   aria-hidden
@@ -543,8 +552,17 @@ export default function Topbar({ onMenuClick }: Props) {
                 <div className="-mt-7 px-4 pb-3.5">
                   <div className="flex items-end gap-3">
                     <div className="relative shrink-0">
-                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-lg font-semibold text-white shadow-md ring-4 ring-white dark:ring-gray-900">
-                        {user?.name?.charAt(0).toUpperCase()}
+                      <div className="flex h-14 w-14 items-center justify-center overflow-hidden rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-lg font-semibold text-white shadow-md ring-4 ring-white dark:ring-gray-900">
+                        {user?.profilePhotoUrl ? (
+                          <img
+                            src={user.profilePhotoUrl}
+                            alt={user.name}
+                            className="h-full w-full object-cover"
+                            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+                          />
+                        ) : (
+                          user?.name?.charAt(0).toUpperCase()
+                        )}
                       </div>
                       <span
                         aria-hidden

@@ -1,5 +1,13 @@
 export type UserRole = "admin" | "manager" | "employee";
 export type UserStatus = "online" | "away" | "dnd";
+export type InactiveReason =
+  | "resigned"
+  | "terminated"
+  | "retired"
+  | "on-long-leave"
+  | "contract-ended"
+  | "other"
+  | "";
 export type TimesheetStatus = "draft" | "submitted" | "approved" | "rejected";
 export type ProjectStatus = "active" | "completed" | "on-hold";
 
@@ -11,8 +19,12 @@ export interface User {
   role: UserRole;
   department?: string;
   isActive: boolean;
+  inactiveReason?: InactiveReason;
+  relievingDate?: string;
   userStatus?: UserStatus;
   lastLoginAt?: string;
+  /** Signed R2 URL for the user's profile photo. Refreshed on each auth/me call. */
+  profilePhotoUrl?: string;
   createdAt: string;
   updatedAt: string;
 }
