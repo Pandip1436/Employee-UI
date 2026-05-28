@@ -17,6 +17,7 @@ import { attendanceApi } from "../../api/attendanceApi";
 import { holidayApi } from "../../api/holidayApi";
 import type { AttendanceRecord, Holiday, LeaveRequest } from "../../types";
 import { useAuth } from "../../context/AuthContext";
+import { useCompany } from "../../context/CompanyContext";
 import TimerWidget from "../../components/TimerWidget";
 import type { WeeklySummary, LeaveBalance } from "../../types";
 
@@ -32,6 +33,8 @@ function getGreeting(): string {
 
 export default function Dashboard() {
   const { user, isAdmin } = useAuth();
+  const { companyName, logo } = useCompany();
+  const heroLogo = logo || "/logodarkmode.png";
 
   const [kpis, setKpis] = useState<EmployeeKpis | null>(null);
   const [weekly, setWeekly] = useState<WeeklySummary | null>(null);
@@ -192,7 +195,21 @@ export default function Dashboard() {
         />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity */}
-          <div className="min-w-0 flex-1 lg:max-w-[560px]">
+          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[560px]">
+            {/* Company logo tile */}
+            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 p-2 ring-1 ring-white/15 backdrop-blur-sm sm:h-16 sm:w-16">
+              <span aria-hidden className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-br from-indigo-400/25 via-fuchsia-400/15 to-transparent blur-md" />
+              <img
+                src={heroLogo}
+                alt={companyName || "Company logo"}
+                className="relative h-full w-full object-contain"
+                onError={(e) => {
+                  // Final fallback if the configured URL 404s
+                  (e.currentTarget as HTMLImageElement).src = "/logodarkmode.png";
+                }}
+              />
+            </div>
+          <div className="min-w-0 flex-1">
             <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
               {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
@@ -242,6 +259,7 @@ export default function Dashboard() {
                 Late by {today.lateByMinutes} min today
               </div>
             )}
+          </div>
           </div>
 
           {/* RIGHT: action stack */}
