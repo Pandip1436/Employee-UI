@@ -195,9 +195,9 @@ export default function Dashboard() {
         />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity */}
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[560px]">
-            {/* Company logo tile */}
-            <div className="relative flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 p-2 ring-1 ring-white/15 backdrop-blur-sm sm:h-16 sm:w-16">
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:gap-4 lg:max-w-[560px]">
+            {/* Company logo tile — slightly raised so its center aligns with the title row, not the small eyebrow */}
+            <div className="relative mt-4 flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 p-2 ring-1 ring-white/15 backdrop-blur-sm sm:mt-5 sm:h-14 sm:w-14">
               <span aria-hidden className="pointer-events-none absolute -inset-1 rounded-2xl bg-gradient-to-br from-indigo-400/25 via-fuchsia-400/15 to-transparent blur-md" />
               <img
                 src={heroLogo}
@@ -209,57 +209,57 @@ export default function Dashboard() {
                 }}
               />
             </div>
-          <div className="min-w-0 flex-1">
-            <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-              {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
-            </p>
-            <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-              {getGreeting()},{" "}
-              <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">
-                {user?.name ?? "there"}
-              </span>
-            </h1>
-            <p className="mt-1 text-sm text-indigo-200/70">
-              Here's a snapshot of your day — log time, check leave, and stay on top of things.
-            </p>
+            <div className="min-w-0 flex-1">
+              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric", year: "numeric" })}
+              </p>
+              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                {getGreeting()},{" "}
+                <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">
+                  {user?.name ?? "there"}
+                </span>
+              </h1>
+              <p className="mt-1 text-sm text-indigo-200/70">
+                Here's a snapshot of your day — log time, check leave, and stay on top of things.
+              </p>
 
-            {/* Today snapshot chips */}
-            <div className="mt-4 flex flex-wrap gap-2">
-              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                <LogIn className="h-3.5 w-3.5 text-indigo-200" />
-                <span className="text-indigo-200/80">In</span>
-                <span className="font-mono font-semibold tabular-nums">
-                  {today?.clockIn
-                    ? new Date(today.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "—"}
-                </span>
+              {/* Today snapshot chips */}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <LogIn className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">In</span>
+                  <span className="font-mono font-semibold tabular-nums">
+                    {today?.clockIn
+                      ? new Date(today.clockIn).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "—"}
+                  </span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <LogOut className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Out</span>
+                  <span className="font-mono font-semibold tabular-nums">
+                    {today?.clockOut
+                      ? new Date(today.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "—"}
+                  </span>
+                </div>
+                <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <BarChart3 className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Month</span>
+                  <span className="font-mono font-semibold tabular-nums">
+                    {fmtHours(kpis?.totalHoursThisMonth ?? 0)}
+                  </span>
+                </div>
               </div>
-              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                <LogOut className="h-3.5 w-3.5 text-indigo-200" />
-                <span className="text-indigo-200/80">Out</span>
-                <span className="font-mono font-semibold tabular-nums">
-                  {today?.clockOut
-                    ? new Date(today.clockOut).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "—"}
-                </span>
-              </div>
-              <div className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                <BarChart3 className="h-3.5 w-3.5 text-indigo-200" />
-                <span className="text-indigo-200/80">Month</span>
-                <span className="font-mono font-semibold tabular-nums">
-                  {fmtHours(kpis?.totalHoursThisMonth ?? 0)}
-                </span>
-              </div>
+
+              {today?.status === "late" && (today.lateByMinutes ?? 0) > 0 && (
+                <div className="mt-3 flex w-fit items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
+                  Late by {today.lateByMinutes} min today
+                </div>
+              )}
             </div>
-
-            {today?.status === "late" && (today.lateByMinutes ?? 0) > 0 && (
-              <div className="mt-3 flex w-fit items-center gap-1.5 rounded-full bg-rose-500/15 px-3 py-1 text-xs font-semibold text-rose-200 ring-1 ring-rose-400/30">
-                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-rose-400" />
-                Late by {today.lateByMinutes} min today
-              </div>
-            )}
-          </div>
           </div>
 
           {/* RIGHT: action stack */}
