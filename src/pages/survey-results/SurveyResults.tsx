@@ -411,7 +411,7 @@ export default function SurveyResults() {
                   {/* Optional inline recharts for >4 options */}
                   {result.data.length > 4 && (
                     <div className="h-56 min-w-0 mt-3 rounded-xl bg-gray-50/60 dark:bg-gray-800/30 p-3 ring-1 ring-gray-200/60 dark:ring-gray-800/60">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={180} debounce={50}>
                         <BarChart data={result.data} layout="vertical" margin={{ left: 20, right: 30 }}>
                           <CartesianGrid strokeDasharray="3 3" stroke="currentColor" className="text-gray-200 dark:text-gray-800" />
                           <XAxis type="number" allowDecimals={false} tick={{ fill: "currentColor", fontSize: 11 }} className="text-gray-500" />

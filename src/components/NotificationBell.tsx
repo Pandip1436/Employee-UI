@@ -87,13 +87,16 @@ export default function NotificationBell() {
     }
   }, []);
 
-  const loadList = useCallback(async (silent = false) => {
+  // syncUnread=false lets the caller suppress overwriting the local unread
+  // count from the server response — needed when we've just optimistically
+  // zeroed it while mark-all-read is still in flight.
+  const loadList = useCallback(async (silent = false, syncUnread = true) => {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
       const res = await notificationApi.list({ page: 1, limit: 15 });
       setItems(res.data);
-      setUnread(res.unread);
+      if (syncUnread) setUnread(res.unread);
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -125,16 +128,21 @@ export default function NotificationBell() {
     const next = !open;
     setOpen(next);
     if (next) {
-      loadList();
       // Clear the unread badge as soon as the user opens the bell — they've
-      // now seen the notifications. Server-side mark-all-read is fire-and-forget
-      // so the badge stays at 0 on the next poll/refresh.
-      if (unread > 0) {
+      // now seen the notifications. We zero locally immediately, fire the
+      // server-side mark-all-read, and tell loadList NOT to overwrite the
+      // count from the server response (otherwise the race makes the badge
+      // flash back to its old value before mark-all-read finishes).
+      const hadUnread = unread > 0;
+      if (hadUnread) {
         setUnread(0);
+        // Also flip the local items so they render as read in the dropdown.
+        setItems((prev) => prev.map((x) => ({ ...x, isRead: true })));
         notificationApi.markAllRead().catch(() => {
           // If the server call fails, the next poll will resync the real count.
         });
       }
+      loadList(false, !hadUnread);
     }
   };
 

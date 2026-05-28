@@ -363,8 +363,8 @@ export default function HrDashboard() {
             </Link>
           </div>
           {leaveData.length > 0 ? (
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="h-64 min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200} debounce={50}>
                 <BarChart data={leaveData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#9ca3af" strokeOpacity={0.15} />
                   <XAxis dataKey="type" tick={{ fontSize: 12, fill: "#9ca3af" }} axisLine={false} tickLine={false} />
@@ -403,8 +403,8 @@ export default function HrDashboard() {
             </div>
           </div>
           {attendanceTotal > 0 ? (
-            <div className="relative h-56">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="relative h-56 min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={180} debounce={50}>
                 <PieChart>
                   <Pie data={attendancePie} cx="50%" cy="50%" innerRadius={55} outerRadius={85} paddingAngle={4} dataKey="value" stroke="none">
                     {attendancePie.map((slice, idx) => (
@@ -456,8 +456,8 @@ export default function HrDashboard() {
                 <p className="text-xs text-gray-500 dark:text-gray-400">Active employees ratio</p>
               </div>
             </div>
-            <div className="relative h-48">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="relative h-48 min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={160} debounce={50}>
                 <RadialBarChart
                   innerRadius="62%"
                   outerRadius="100%"

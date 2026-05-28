@@ -9,6 +9,27 @@ import { CompanyProvider } from "./context/CompanyContext";
 import App from "./App";
 import "./index.css";
 
+// Suppress a known harmless Recharts dev-only warning. StrictMode double-mounts
+// components, so the first mount happens before the parent grid lays out and
+// ResponsiveContainer measures -1, logging "The width(-1) and height(-1) of
+// chart should be greater than 0…". The warning fires synchronously inside the
+// chart render, so props like debounce/minWidth/minHeight can't stop it. The
+// chart re-measures correctly on the next paint — the warning is purely noise.
+if (import.meta.env.DEV) {
+  const originalWarn = console.warn;
+  console.warn = (...args: unknown[]) => {
+    const first = args[0];
+    if (
+      typeof first === "string" &&
+      first.includes("width(") &&
+      first.includes("of chart should be greater than 0")
+    ) {
+      return;
+    }
+    originalWarn.apply(console, args);
+  };
+}
+
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter>

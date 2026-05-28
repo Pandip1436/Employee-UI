@@ -90,7 +90,7 @@ export default function Calibration() {
           <Users className="h-4 w-4 text-indigo-500" /> Rating Distribution
         </h2>
         <div className="h-64 min-w-0">
-          <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200}>
+          <ResponsiveContainer width="100%" height="100%" minWidth={200} minHeight={200} debounce={50}>
             <BarChart data={distribution} margin={{ top: 5, right: 20, left: 0, bottom: 5 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#374151" opacity={0.3} />
               <XAxis
