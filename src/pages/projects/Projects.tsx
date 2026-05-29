@@ -174,47 +174,49 @@ export default function Projects() {
         </div>
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity + KPI chips */}
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <FolderKanban className="h-10 w-10 text-indigo-200" />
-            </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                Project portfolio
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Your <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Projects</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Manage and track all your team projects</p>
-
-              {/* Hero KPI chips */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                  <FolderKanban className="h-3.5 w-3.5 text-indigo-200" />
-                  <span className="text-indigo-200/80">Total</span>
-                  <span className="font-mono font-semibold tabular-nums">{totalProjects}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                  <span className="text-emerald-200/90">Active</span>
-                  <span className="font-mono font-semibold tabular-nums text-emerald-50">{activeProjects}</span>
-                </span>
-                {onHoldProjects > 0 && (
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
-                    <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
-                    <span className="text-amber-200/90">On hold</span>
-                    <span className="font-mono font-semibold tabular-nums text-amber-50">{onHoldProjects}</span>
-                  </span>
-                )}
-                {completedProjects > 0 && (
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
-                    <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
-                    <span className="text-sky-200/90">Completed</span>
-                    <span className="font-mono font-semibold tabular-nums text-sky-50">{completedProjects}</span>
-                  </span>
-                )}
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <FolderKanban className="h-10 w-10 text-indigo-200" />
               </div>
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Project portfolio
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Your <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Projects</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Manage and track all your team projects</p>
+              </div>
+            </div>
+
+            {/* Hero KPI chips — full hero width so they sit on one row */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                <FolderKanban className="h-3.5 w-3.5 text-indigo-200" />
+                <span className="text-indigo-200/80">Total</span>
+                <span className="font-mono font-semibold tabular-nums">{totalProjects}</span>
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                <span className="text-emerald-200/90">Active</span>
+                <span className="font-mono font-semibold tabular-nums text-emerald-50">{activeProjects}</span>
+              </span>
+              {onHoldProjects > 0 && (
+                <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+                  <span className="text-amber-200/90">On hold</span>
+                  <span className="font-mono font-semibold tabular-nums text-amber-50">{onHoldProjects}</span>
+                </span>
+              )}
+              {completedProjects > 0 && (
+                <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
+                  <span className="h-1.5 w-1.5 rounded-full bg-sky-400" />
+                  <span className="text-sky-200/90">Completed</span>
+                  <span className="font-mono font-semibold tabular-nums text-sky-50">{completedProjects}</span>
+                </span>
+              )}
             </div>
           </div>
 

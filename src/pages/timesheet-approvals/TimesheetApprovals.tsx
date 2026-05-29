@@ -283,66 +283,68 @@ export default function TimesheetApprovals() {
         </div>
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity + KPI chips */}
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <Clock className="h-10 w-10 text-indigo-200" />
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <Clock className="h-10 w-10 text-indigo-200" />
+              </div>
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Manager workspace
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Timesheet <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Approvals</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Review and manage employee timesheet submissions</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                Manager workspace
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Timesheet <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Approvals</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Review and manage employee timesheet submissions</p>
 
-              {/* KPI chips */}
-              {timesheets.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm ring-1 ${
-                    tab === "submitted" ? "bg-amber-500/15 ring-amber-400/30 text-amber-50"
-                    : tab === "approved" ? "bg-emerald-500/15 ring-emerald-400/30 text-emerald-50"
-                    : "bg-rose-500/15 ring-rose-400/30 text-rose-50"
-                  }`}>
-                    <FileText className="h-3.5 w-3.5 opacity-90" />
-                    <span className="opacity-80">{tabs.find((t) => t.key === tab)?.label}</span>
-                    <span className="font-mono font-semibold tabular-nums">{pendingTotal}</span>
+            {/* KPI chips */}
+            {timesheets.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className={`inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs backdrop-blur-sm ring-1 ${
+                  tab === "submitted" ? "bg-amber-500/15 ring-amber-400/30 text-amber-50"
+                  : tab === "approved" ? "bg-emerald-500/15 ring-emerald-400/30 text-emerald-50"
+                  : "bg-rose-500/15 ring-rose-400/30 text-rose-50"
+                }`}>
+                  <FileText className="h-3.5 w-3.5 opacity-90" />
+                  <span className="opacity-80">{tabs.find((t) => t.key === tab)?.label}</span>
+                  <span className="font-mono font-semibold tabular-nums">{pendingTotal}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm" title={`${fmtHours(visibleHours)} work + ${fmtHours(visibleLeaveHours)} leave + ${fmtHours(visibleHolidayHours)} holiday`}>
+                  <Clock className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Total hours</span>
+                  <span className="font-mono font-semibold tabular-nums">{fmtHours(visibleCombined)}</span>
+                </span>
+                {visibleLeaveHours > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
+                    <Plane className="h-3.5 w-3.5 text-sky-200" />
+                    <span className="text-sky-100/90">Leave</span>
+                    <span className="font-mono font-semibold tabular-nums text-sky-50">{fmtHours(visibleLeaveHours)}</span>
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm" title={`${fmtHours(visibleHours)} work + ${fmtHours(visibleLeaveHours)} leave + ${fmtHours(visibleHolidayHours)} holiday`}>
-                    <Clock className="h-3.5 w-3.5 text-indigo-200" />
-                    <span className="text-indigo-200/80">Total hours</span>
-                    <span className="font-mono font-semibold tabular-nums">{fmtHours(visibleCombined)}</span>
+                )}
+                {visibleHolidayHours > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
+                    <PartyPopper className="h-3.5 w-3.5 text-amber-200" />
+                    <span className="text-amber-100/90">Holiday</span>
+                    <span className="font-mono font-semibold tabular-nums text-amber-50">{fmtHours(visibleHolidayHours)}</span>
                   </span>
-                  {visibleLeaveHours > 0 && (
-                    <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
-                      <Plane className="h-3.5 w-3.5 text-sky-200" />
-                      <span className="text-sky-100/90">Leave</span>
-                      <span className="font-mono font-semibold tabular-nums text-sky-50">{fmtHours(visibleLeaveHours)}</span>
-                    </span>
-                  )}
-                  {visibleHolidayHours > 0 && (
-                    <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
-                      <PartyPopper className="h-3.5 w-3.5 text-amber-200" />
-                      <span className="text-amber-100/90">Holiday</span>
-                      <span className="font-mono font-semibold tabular-nums text-amber-50">{fmtHours(visibleHolidayHours)}</span>
-                    </span>
-                  )}
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                    <Briefcase className="h-3.5 w-3.5 text-indigo-200" />
-                    <span className="text-indigo-200/80">Entries</span>
-                    <span className="font-mono font-semibold tabular-nums">{visibleEntries}</span>
+                )}
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <Briefcase className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Entries</span>
+                  <span className="font-mono font-semibold tabular-nums">{visibleEntries}</span>
+                </span>
+                {isPending && selected.size > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-indigo-500/20 px-3 py-1.5 text-xs ring-1 ring-indigo-400/40 backdrop-blur-sm">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-indigo-100" />
+                    <span className="text-indigo-100/90">Selected</span>
+                    <span className="font-mono font-semibold tabular-nums text-indigo-50">{selected.size}</span>
                   </span>
-                  {isPending && selected.size > 0 && (
-                    <span className="inline-flex items-center gap-2 rounded-lg bg-indigo-500/20 px-3 py-1.5 text-xs ring-1 ring-indigo-400/40 backdrop-blur-sm">
-                      <CheckCircle2 className="h-3.5 w-3.5 text-indigo-100" />
-                      <span className="text-indigo-100/90">Selected</span>
-                      <span className="font-mono font-semibold tabular-nums text-indigo-50">{selected.size}</span>
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* RIGHT: action stack */}

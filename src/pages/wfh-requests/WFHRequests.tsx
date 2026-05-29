@@ -151,22 +151,25 @@ export default function WFHRequests() {
           <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-purple-500/15 blur-3xl" />
         </div>
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <Home className="h-10 w-10 text-sky-200" />
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <Home className="h-10 w-10 text-sky-200" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Remote workday requests
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  WFH <span className="bg-gradient-to-r from-sky-200 to-indigo-200 bg-clip-text text-transparent">Requests</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Work from home request management</p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                Remote workday requests
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                WFH <span className="bg-gradient-to-r from-sky-200 to-indigo-200 bg-clip-text text-transparent">Requests</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Work from home request management</p>
 
-              {/* KPI chips */}
-              <div className="mt-4 flex flex-wrap gap-2">
+            {/* KPI chips */}
+            <div className="mt-4 flex flex-wrap gap-2">
                 <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 ring-1 ring-white/15 backdrop-blur-sm">
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-sky-400/20 ring-1 ring-sky-300/30">
                     <Inbox className="h-3 w-3 text-sky-200" />
@@ -202,7 +205,6 @@ export default function WFHRequests() {
                     <span className="font-mono text-sm font-bold tabular-nums tracking-tight text-rose-100">{counts.rejected}</span>
                   </div>
                 )}
-              </div>
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">

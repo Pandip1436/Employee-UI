@@ -234,21 +234,24 @@ export default function TeamDailyUpdates() {
         />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity + KPI chips */}
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <Users className="h-10 w-10 text-indigo-200" />
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <Users className="h-10 w-10 text-indigo-200" />
+              </div>
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Manager review workspace
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Team <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Daily Updates</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Review your team's end-of-day work submissions</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                Manager review workspace
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Team <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Daily Updates</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Review your team's end-of-day work submissions</p>
 
-              {/* Hero KPI chips */}
+            {/* Hero KPI chips */}
               {!loading && updates.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
@@ -277,7 +280,6 @@ export default function TeamDailyUpdates() {
                   )}
                 </div>
               )}
-            </div>
           </div>
 
           {/* RIGHT: date navigator */}

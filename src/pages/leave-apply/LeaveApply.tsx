@@ -130,22 +130,25 @@ export default function LeaveApply() {
           <div className="absolute right-1/3 top-10 h-48 w-48 rounded-full bg-emerald-500/15 blur-3xl" />
         </div>
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <CalendarDays className="h-10 w-10 text-emerald-200" />
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <CalendarDays className="h-10 w-10 text-emerald-200" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Leave application
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Apply for <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Leave</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Fill in the details to submit your leave request</p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                Leave application
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Apply for <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Leave</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Fill in the details to submit your leave request</p>
 
-              {/* KPI chips */}
-              <div className="mt-4 flex flex-wrap gap-2">
+            {/* KPI chips */}
+            <div className="mt-4 flex flex-wrap gap-2">
                 <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 ring-1 ring-white/15 backdrop-blur-sm">
                   <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-emerald-400/20 ring-1 ring-emerald-300/30">
                     <CalendarDays className="h-3 w-3 text-emerald-200" />
@@ -179,7 +182,6 @@ export default function LeaveApply() {
                     <span className="text-[11px] font-semibold text-amber-100">Exceeds available balance</span>
                   </div>
                 )}
-              </div>
             </div>
           </div>
         </div>

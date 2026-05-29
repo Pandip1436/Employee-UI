@@ -222,23 +222,26 @@ export default function Leaves() {
           }}
         />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <CalendarDays className="h-10 w-10 text-emerald-200" />
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <CalendarDays className="h-10 w-10 text-emerald-200" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {canApprove ? "Approvals & your leaves" : "Your leave workspace"}
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Leave <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Management</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Track and manage your leave requests</p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                {canApprove ? "Approvals & your leaves" : "Your leave workspace"}
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Leave <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Management</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Track and manage your leave requests</p>
 
-              {/* KPI chips */}
-              {balance && (
-                <div className="mt-4 flex flex-wrap gap-2">
+            {/* KPI chips */}
+            {balance && (
+              <div className="mt-4 flex flex-wrap gap-2">
                   <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 ring-1 ring-white/15 backdrop-blur-sm">
                     <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-emerald-400/20 ring-1 ring-emerald-300/30">
                       <CalendarDays className="h-3 w-3 text-emerald-200" />
@@ -266,7 +269,6 @@ export default function Leaves() {
                   )}
                 </div>
               )}
-            </div>
           </div>
           <div className="flex shrink-0 items-center gap-3">
             <button

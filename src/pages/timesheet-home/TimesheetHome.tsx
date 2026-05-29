@@ -161,19 +161,22 @@ export default function TimesheetHome() {
         />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity + KPI chips + progress */}
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <Timer className="h-10 w-10 text-indigo-200" />
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <Timer className="h-10 w-10 text-indigo-200" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {currentWeekLabel}
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Time <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Tracking</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Track and manage your working hours across projects</p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                {currentWeekLabel}
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Time <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Tracking</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Track and manage your working hours across projects</p>
 
               {/* KPI chips */}
               {current && (
@@ -245,7 +248,6 @@ export default function TimesheetHome() {
                   </div>
                 );
               })()}
-            </div>
           </div>
 
           {/* RIGHT: action stack */}

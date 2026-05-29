@@ -193,62 +193,64 @@ export default function HrDashboard() {
         />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity + greeting */}
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="relative shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <img src={logoSrc} alt={`${companyName} logo`} className="h-12 w-12 object-contain" />
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="relative shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <img src={logoSrc} alt={`${companyName} logo`} className="h-12 w-12 object-contain" />
+              </div>
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+                  {hero}
+                  <span aria-hidden className="h-3 w-px bg-indigo-200/30" />
+                  <span className="font-mono tabular-nums">
+                    {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  </span>
+                </p>
+                <h1 className="mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">
+                  {getGreeting()}
+                  {user?.name ? (
+                    <>
+                      ,{" "}
+                      <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">
+                        {user.name}
+                      </span>
+                    </>
+                  ) : null}
+                </h1>
+                <p className="mt-0.5 truncate text-xs text-indigo-200/70">
+                  {companyName} · workforce overview &amp; operations
+                </p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-                {hero}
-                <span aria-hidden className="h-3 w-px bg-indigo-200/30" />
-                <span className="font-mono tabular-nums">
-                  {now.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                </span>
-              </p>
-              <h1 className="mt-1 truncate text-2xl font-bold tracking-tight sm:text-3xl">
-                {getGreeting()}
-                {user?.name ? (
-                  <>
-                    ,{" "}
-                    <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">
-                      {user.name}
-                    </span>
-                  </>
-                ) : null}
-              </h1>
-              <p className="mt-0.5 truncate text-xs text-indigo-200/70">
-                {companyName} · workforce overview &amp; operations
-              </p>
 
-              {/* Hero KPI snapshot chips */}
-              {stats && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                    <Users className="h-3.5 w-3.5 text-indigo-200" />
-                    <span className="text-indigo-200/80">Total</span>
-                    <span className="font-mono font-semibold tabular-nums">{stats.totalEmployees}</span>
+            {/* Hero KPI snapshot chips */}
+            {stats && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <Users className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Total</span>
+                  <span className="font-mono font-semibold tabular-nums">{stats.totalEmployees}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                  <UserCheck className="h-3.5 w-3.5 text-emerald-200" />
+                  <span className="text-emerald-200/90">Present</span>
+                  <span className="font-mono font-semibold tabular-nums text-emerald-50">{stats.todayPresent}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs ring-1 ring-rose-400/30 backdrop-blur-sm">
+                  <UserX className="h-3.5 w-3.5 text-rose-200" />
+                  <span className="text-rose-200/90">Absent</span>
+                  <span className="font-mono font-semibold tabular-nums text-rose-50">{stats.todayAbsent}</span>
+                </span>
+                {pendingCount > 0 && (
+                  <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
+                    <AlertCircle className="h-3.5 w-3.5 text-amber-200" />
+                    <span className="text-amber-200/90">Pending</span>
+                    <span className="font-mono font-semibold tabular-nums text-amber-50">{pendingCount}</span>
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
-                    <UserCheck className="h-3.5 w-3.5 text-emerald-200" />
-                    <span className="text-emerald-200/90">Present</span>
-                    <span className="font-mono font-semibold tabular-nums text-emerald-50">{stats.todayPresent}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs ring-1 ring-rose-400/30 backdrop-blur-sm">
-                    <UserX className="h-3.5 w-3.5 text-rose-200" />
-                    <span className="text-rose-200/90">Absent</span>
-                    <span className="font-mono font-semibold tabular-nums text-rose-50">{stats.todayAbsent}</span>
-                  </span>
-                  {pendingCount > 0 && (
-                    <span className="inline-flex items-center gap-2 rounded-lg bg-amber-500/15 px-3 py-1.5 text-xs ring-1 ring-amber-400/30 backdrop-blur-sm">
-                      <AlertCircle className="h-3.5 w-3.5 text-amber-200" />
-                      <span className="text-amber-200/90">Pending</span>
-                      <span className="font-mono font-semibold tabular-nums text-amber-50">{pendingCount}</span>
-                    </span>
-                  )}
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* RIGHT: action buttons */}

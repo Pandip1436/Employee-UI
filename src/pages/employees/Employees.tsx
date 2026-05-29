@@ -785,46 +785,48 @@ export default function Employees() {
         </div>
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity + KPI chips */}
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <Users className="h-10 w-10 text-indigo-200" />
-            </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                Workforce directory
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Your <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Employees</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Manage your team members and their roles</p>
-
-              {/* Hero KPI chips */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                  <Users className="h-3.5 w-3.5 text-indigo-200" />
-                  <span className="text-indigo-200/80">Total</span>
-                  <span className="font-mono font-semibold tabular-nums">{totalEmployees}</span>
-                </span>
-                <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
-                  <UserCheck className="h-3.5 w-3.5 text-emerald-200" />
-                  <span className="text-emerald-200/90">Active</span>
-                  <span className="font-mono font-semibold tabular-nums text-emerald-50">{activeEmployees}</span>
-                </span>
-                {totalEmployees - activeEmployees > 0 && (
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs ring-1 ring-rose-400/30 backdrop-blur-sm">
-                    <UserX className="h-3.5 w-3.5 text-rose-200" />
-                    <span className="text-rose-200/90">Inactive</span>
-                    <span className="font-mono font-semibold tabular-nums text-rose-50">{totalEmployees - activeEmployees}</span>
-                  </span>
-                )}
-                {pagination && pagination.pages > 1 && (
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                    <span className="text-indigo-200/80">Page</span>
-                    <span className="font-mono font-semibold tabular-nums">{pagination.page}<span className="text-indigo-200/60">/{pagination.pages}</span></span>
-                  </span>
-                )}
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <Users className="h-10 w-10 text-indigo-200" />
               </div>
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Workforce directory
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Your <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Employees</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Manage your team members and their roles</p>
+              </div>
+            </div>
+
+            {/* Hero KPI chips — full hero width so they sit on one row */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                <Users className="h-3.5 w-3.5 text-indigo-200" />
+                <span className="text-indigo-200/80">Total</span>
+                <span className="font-mono font-semibold tabular-nums">{totalEmployees}</span>
+              </span>
+              <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                <UserCheck className="h-3.5 w-3.5 text-emerald-200" />
+                <span className="text-emerald-200/90">Active</span>
+                <span className="font-mono font-semibold tabular-nums text-emerald-50">{activeEmployees}</span>
+              </span>
+              {totalEmployees - activeEmployees > 0 && (
+                <span className="inline-flex items-center gap-2 rounded-lg bg-rose-500/15 px-3 py-1.5 text-xs ring-1 ring-rose-400/30 backdrop-blur-sm">
+                  <UserX className="h-3.5 w-3.5 text-rose-200" />
+                  <span className="text-rose-200/90">Inactive</span>
+                  <span className="font-mono font-semibold tabular-nums text-rose-50">{totalEmployees - activeEmployees}</span>
+                </span>
+              )}
+              {pagination && pagination.pages > 1 && (
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <span className="text-indigo-200/80">Page</span>
+                  <span className="font-mono font-semibold tabular-nums">{pagination.page}<span className="text-indigo-200/60">/{pagination.pages}</span></span>
+                </span>
+              )}
             </div>
           </div>
 

@@ -130,21 +130,24 @@ export default function WFHApprovals() {
           }}
         />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
-              <Home className="h-10 w-10 text-sky-200" />
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="shrink-0 rounded-2xl bg-white/10 p-2.5 ring-1 ring-white/15 backdrop-blur-sm">
+                <Home className="h-10 w-10 text-sky-200" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Remote work approvals
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  WFH <span className="bg-gradient-to-r from-sky-200 to-indigo-200 bg-clip-text text-transparent">Approvals</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Review work-from-home requests from your team</p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                Remote work approvals
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                WFH <span className="bg-gradient-to-r from-sky-200 to-indigo-200 bg-clip-text text-transparent">Approvals</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Review work-from-home requests from your team</p>
 
-              {/* KPI chips */}
+            {/* KPI chips */}
               <div className="mt-4 flex flex-wrap gap-2">
                 <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 ring-1 ring-white/15 backdrop-blur-sm">
                   <span className={`inline-flex h-5 w-5 items-center justify-center rounded-md ring-1 ${
@@ -177,7 +180,6 @@ export default function WFHApprovals() {
                   </div>
                 )}
               </div>
-            </div>
           </div>
           {/* Search */}
           <div className="relative flex shrink-0 items-center lg:w-72">

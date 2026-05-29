@@ -176,22 +176,25 @@ function PersonalDailyView() {
         />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity + KPI chips */}
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-white ring-1 ring-white/15 backdrop-blur-sm">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">
-                {dateObj.toLocaleDateString(undefined, { month: "short" })}
-              </p>
-              <p className="font-mono text-lg font-bold tabular-nums leading-none">{dateObj.getDate()}</p>
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-white ring-1 ring-white/15 backdrop-blur-sm">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">
+                  {dateObj.toLocaleDateString(undefined, { month: "short" })}
+                </p>
+                <p className="font-mono text-lg font-bold tabular-nums leading-none">{dateObj.getDate()}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {dayLabel ? `${dayLabel} · Your log` : "Your daily log"}
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Daily <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Timesheet</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">{formatDateDisplay(selectedDate)}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Sparkles className="h-3.5 w-3.5" />
-                {dayLabel ? `${dayLabel} · Your log` : "Your daily log"}
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Daily <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Timesheet</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">{formatDateDisplay(selectedDate)}</p>
 
               {/* KPI chips */}
               {dailyEntries.length > 0 && (
@@ -240,7 +243,6 @@ function PersonalDailyView() {
                   </div>
                 );
               })()}
-            </div>
           </div>
 
           {/* RIGHT: date navigator */}
@@ -474,46 +476,48 @@ function AdminDailyView() {
         />
         <div className="relative flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
           {/* LEFT: identity + KPI chips */}
-          <div className="flex min-w-0 flex-1 items-start gap-4 lg:max-w-[640px]">
-            <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-white ring-1 ring-white/15 backdrop-blur-sm">
-              <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">
-                {dateObj.toLocaleDateString(undefined, { month: "short" })}
-              </p>
-              <p className="font-mono text-lg font-bold tabular-nums leading-none">{dateObj.getDate()}</p>
+          <div className="min-w-0 flex-1 lg:max-w-[640px]">
+            <div className="flex items-start gap-4">
+              <div className="flex h-14 w-14 shrink-0 flex-col items-center justify-center overflow-hidden rounded-2xl bg-white/10 text-white ring-1 ring-white/15 backdrop-blur-sm">
+                <p className="text-[10px] font-bold uppercase tracking-wider text-indigo-200">
+                  {dateObj.toLocaleDateString(undefined, { month: "short" })}
+                </p>
+                <p className="font-mono text-lg font-bold tabular-nums leading-none">{dateObj.getDate()}</p>
+              </div>
+              <div className="min-w-0">
+                <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
+                  <Users className="h-3.5 w-3.5" />
+                  Team activity
+                </p>
+                <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
+                  Daily <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Activity</span>
+                </h1>
+                <p className="mt-1 text-sm text-indigo-200/70">Every employee's logged hours for {formatDateDisplay(selectedDate)}</p>
+              </div>
             </div>
-            <div className="min-w-0">
-              <p className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-indigo-200/80">
-                <Users className="h-3.5 w-3.5" />
-                Team activity
-              </p>
-              <h1 className="mt-2 text-2xl font-bold tracking-tight sm:text-3xl">
-                Daily <span className="bg-gradient-to-r from-indigo-200 to-fuchsia-200 bg-clip-text text-transparent">Activity</span>
-              </h1>
-              <p className="mt-1 text-sm text-indigo-200/70">Every employee's logged hours for {formatDateDisplay(selectedDate)}</p>
 
-              {/* KPI chips */}
-              {rows.length > 0 && (
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
-                    <Users className="h-3.5 w-3.5 text-indigo-200" />
-                    <span className="text-indigo-200/80">Employees</span>
-                    <span className="font-mono font-semibold tabular-nums">{totals.employees}</span>
+            {/* KPI chips */}
+            {rows.length > 0 && (
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-2 rounded-lg bg-white/10 px-3 py-1.5 text-xs ring-1 ring-white/15 backdrop-blur-sm">
+                  <Users className="h-3.5 w-3.5 text-indigo-200" />
+                  <span className="text-indigo-200/80">Employees</span>
+                  <span className="font-mono font-semibold tabular-nums">{totals.employees}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
+                  <Clock className="h-3.5 w-3.5 text-emerald-200" />
+                  <span className="text-emerald-200/90">Total hours</span>
+                  <span className="font-mono font-semibold tabular-nums text-emerald-50">{fmtHours(totals.totalHours)}</span>
+                </span>
+                <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
+                  <Sparkles className="h-3.5 w-3.5 text-sky-200" />
+                  <span className="text-sky-200/90">Avg per emp</span>
+                  <span className="font-mono font-semibold tabular-nums text-sky-50">
+                    {fmtHours(totals.employees > 0 ? totals.totalHours / totals.employees : 0)}
                   </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-emerald-500/15 px-3 py-1.5 text-xs ring-1 ring-emerald-400/30 backdrop-blur-sm">
-                    <Clock className="h-3.5 w-3.5 text-emerald-200" />
-                    <span className="text-emerald-200/90">Total hours</span>
-                    <span className="font-mono font-semibold tabular-nums text-emerald-50">{fmtHours(totals.totalHours)}</span>
-                  </span>
-                  <span className="inline-flex items-center gap-2 rounded-lg bg-sky-500/15 px-3 py-1.5 text-xs ring-1 ring-sky-400/30 backdrop-blur-sm">
-                    <Sparkles className="h-3.5 w-3.5 text-sky-200" />
-                    <span className="text-sky-200/90">Avg per emp</span>
-                    <span className="font-mono font-semibold tabular-nums text-sky-50">
-                      {fmtHours(totals.employees > 0 ? totals.totalHours / totals.employees : 0)}
-                    </span>
-                  </span>
-                </div>
-              )}
-            </div>
+                </span>
+              </div>
+            )}
           </div>
 
           {/* RIGHT: date navigator */}
