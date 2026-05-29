@@ -5,7 +5,8 @@ import {
   Activity, UserPlus, ChevronLeft, ChevronRight, Loader2, KeyRound, AtSign,
 } from "lucide-react";
 import { userApi } from "../../api/userApi";
-import { adminSettingsApi } from "../../api/adminSettingsApi";
+import UserProfileDetail from "../../components/UserProfileDetail";
+import Avatar from "../../components/Avatar";
 import type { User, Pagination, UserRole } from "../../types";
 import toast from "react-hot-toast";
 import clsx from "clsx";
@@ -185,12 +186,13 @@ export default function Users() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"" | "active" | "inactive">("");
 
-  const [departments, setDepartments] = useState<string[]>([]);
-
   // Selection
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const allSelected = users.length > 0 && users.every((u) => selected.has(u._id));
   const someSelected = users.some((u) => selected.has(u._id));
+
+  // Profile detail view
+  const [profileUser, setProfileUser] = useState<User | null>(null);
 
   // Edit modal
   const [editing, setEditing] = useState<User | null>(null);
@@ -200,7 +202,6 @@ export default function Users() {
   const [ePassword, setEPassword] = useState("");
   const [eShowPassword, setEShowPassword] = useState(false);
   const [eRole, setERole] = useState<UserRole>("employee");
-  const [eDept, setEDept] = useState("");
   const [eActive, setEActive] = useState(true);
   const [eErrors, setEErrors] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState(false);
@@ -262,17 +263,13 @@ export default function Users() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, search, statusFilter]);
 
-  useEffect(() => {
-    adminSettingsApi.getDepartments()
-      .then((r) => setDepartments((r.data.data || []).map((d) => d.name).filter(Boolean)))
-      .catch(() => {});
-  }, []);
+  const openProfile = (u: User) => setProfileUser(u);
 
   const openEdit = (u: User) => {
     setEditing(u);
     setEName(u.name); setEEmail(u.email); setEUserId(u.userId || "");
     setEPassword(""); setEShowPassword(false);
-    setERole(u.role); setEDept(u.department || ""); setEActive(u.isActive);
+    setERole(u.role); setEActive(u.isActive);
     setEErrors({});
   };
   const closeEdit = () => { setEditing(null); setEErrors({}); };
@@ -291,17 +288,21 @@ export default function Users() {
     try {
       const patch: Partial<User> = {
         name: eName.trim(), email: eEmail.trim(), role: eRole,
-        department: eDept, isActive: eActive,
+        isActive: eActive,
       };
       if (eUserId.trim() && eUserId.trim() !== (editing.userId || "")) {
         patch.userId = eUserId.trim();
       }
-      await userApi.update(editing._id, patch);
+      const res = await userApi.update(editing._id, patch);
       if (ePassword) {
         await userApi.resetPassword(editing._id, ePassword);
         toast.success("Password reset — user must sign in again");
       }
       toast.success("User updated!");
+      // Keep the open profile view in sync with the saved changes.
+      if (profileUser && profileUser._id === editing._id) {
+        setProfileUser(res.data.data ?? profileUser);
+      }
       closeEdit();
       fetchUsers();
     } catch { /* interceptor */ } finally { setSaving(false); }
@@ -373,6 +374,16 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
+      {profileUser ? (
+        <UserProfileDetail
+          user={profileUser}
+          canEdit
+          kicker="User Profile"
+          onBack={() => setProfileUser(null)}
+          onEdit={openEdit}
+        />
+      ) : (
+        <>
       {/* ━━━ Hero ━━━ */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-gray-900 via-indigo-950 to-gray-900 p-6 text-white shadow-2xl ring-1 ring-white/10 sm:p-8 dark:from-black dark:via-indigo-950 dark:to-black">
         <div aria-hidden className="pointer-events-none absolute inset-0">
@@ -539,7 +550,7 @@ export default function Users() {
                     className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                   />
                 </th>
-                {["User", "User ID", "Role", "Department", "Status", "Last Login", "Joined", ""].map((h) => (
+                {["User", "User ID", "Role", "Status", "Last Login", "Joined", ""].map((h) => (
                   <th key={h || "actions"} className="px-4 py-3.5 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
                     {h}
                   </th>
@@ -577,12 +588,10 @@ export default function Users() {
                       />
                     </td>
                     <td className="px-4 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow-md">
-                          {initials(u.name)}
-                        </div>
+                      <button type="button" onClick={() => openProfile(u)} className="group/u flex items-center gap-3 text-left">
+                        <Avatar name={u.name} photo={u.profilePhotoUrl} className="h-10 w-10 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md" />
                         <div className="min-w-0">
-                          <p className="truncate font-bold text-gray-900 dark:text-white">
+                          <p className="truncate font-bold text-gray-900 transition-colors group-hover/u:text-indigo-600 dark:text-white dark:group-hover/u:text-indigo-400">
                             {u.name}
                             {u._id === me?._id && (
                               <span className="ml-1.5 inline-flex items-center rounded-full bg-indigo-100 dark:bg-indigo-500/20 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-indigo-700 dark:text-indigo-300">
@@ -592,7 +601,7 @@ export default function Users() {
                           </p>
                           <p className="truncate text-xs text-gray-500 dark:text-gray-400">{u.email}</p>
                         </div>
-                      </div>
+                      </button>
                     </td>
                     <td className="px-4 py-4">
                       {u.userId ? (
@@ -611,7 +620,6 @@ export default function Users() {
                         {cfg.label}
                       </span>
                     </td>
-                    <td className="px-4 py-4 text-sm text-gray-600 dark:text-gray-400">{u.department || "—"}</td>
                     <td className="px-4 py-4">
                       <span className={clsx(
                         "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1",
@@ -694,15 +702,15 @@ export default function Users() {
                     onChange={() => toggleOne(u._id)}
                     className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                   />
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow-md">
-                    {initials(u.name)}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="truncate font-bold text-gray-900 dark:text-white">{u.name}</p>
-                    <p className="truncate text-[11px] font-mono text-indigo-600 dark:text-indigo-400">
-                      {u.userId ? `@${u.userId}` : u.email}
-                    </p>
-                  </div>
+                  <button type="button" onClick={() => openProfile(u)} className="flex min-w-0 items-start gap-3 text-left">
+                    <Avatar name={u.name} photo={u.profilePhotoUrl} className="h-10 w-10 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md" />
+                    <div className="min-w-0">
+                      <p className="truncate font-bold text-gray-900 dark:text-white">{u.name}</p>
+                      <p className="truncate text-[11px] font-mono text-indigo-600 dark:text-indigo-400">
+                        {u.userId ? `@${u.userId}` : u.email}
+                      </p>
+                    </div>
+                  </button>
                 </div>
                 <span className={clsx("inline-flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ring-1", cfg.bg, cfg.text, cfg.ring)}>
                   {roleIcon(u.role)}
@@ -710,7 +718,7 @@ export default function Users() {
                 </span>
               </div>
 
-              <div className="mt-3 grid grid-cols-3 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 <div className="rounded-lg bg-gray-50 dark:bg-gray-800/40 py-2 text-center ring-1 ring-gray-200/60 dark:ring-gray-800/60">
                   <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Status</p>
                   <p className={clsx("mt-0.5 text-[11px] font-bold", u.isActive ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400")}>
@@ -720,10 +728,6 @@ export default function Users() {
                 <div className="rounded-lg bg-gray-50 dark:bg-gray-800/40 py-2 text-center ring-1 ring-gray-200/60 dark:ring-gray-800/60">
                   <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Last login</p>
                   <p className="mt-0.5 text-[11px] font-bold text-gray-700 dark:text-gray-300 tabular-nums">{relTime(u.lastLoginAt)}</p>
-                </div>
-                <div className="rounded-lg bg-gray-50 dark:bg-gray-800/40 py-2 text-center ring-1 ring-gray-200/60 dark:ring-gray-800/60">
-                  <p className="text-[10px] uppercase tracking-wider text-gray-400 dark:text-gray-500">Dept</p>
-                  <p className="mt-0.5 text-[11px] font-bold text-gray-700 dark:text-gray-300 truncate">{u.department || "—"}</p>
                 </div>
               </div>
 
@@ -773,6 +777,8 @@ export default function Users() {
           </div>
         </div>
       )}
+        </>
+      )}
 
       {/* ━━━ Edit Drawer ━━━ */}
       {editing && (() => {
@@ -805,9 +811,7 @@ export default function Users() {
                 </div>
                 <div className="relative flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white ring-2 ring-white/15 shadow-lg shadow-indigo-500/30">
-                      {initials(editing.name)}
-                    </div>
+                    <Avatar name={editing.name} photo={editing.profilePhotoUrl} className="h-11 w-11 rounded-2xl ring-2 ring-white/15 shadow-lg shadow-indigo-500/30" textClassName="text-sm font-bold" />
                     <div>
                       <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-200/80">Editing</p>
                       <h2 className="text-lg font-bold leading-tight">{editing.name}</h2>
@@ -856,14 +860,6 @@ export default function Users() {
                   </div>
                   <PasswordStrength pw={ePassword} />
                   <E msg={eErrors.password} />
-                </div>
-                <div>
-                  <L>Department</L>
-                  <select value={eDept} onChange={(e) => setEDept(e.target.value)} className={input}>
-                    <option value="">— Select —</option>
-                    {(eDept && !departments.includes(eDept)) && <option value={eDept}>{eDept}</option>}
-                    {departments.map((d) => <option key={d} value={d}>{d}</option>)}
-                  </select>
                 </div>
 
                 {/* Active toggle */}

@@ -458,9 +458,9 @@ export default function TeamAttendance() {
           </div>
 
           {/* Ring + counters */}
-          <div className="flex shrink-0 items-center gap-4">
+          <div className="flex shrink-0 items-center justify-center gap-4 lg:justify-start">
             <RingGauge value={presentCount} total={total} label="Present" />
-            <div className="flex flex-col gap-2">
+            <div className="flex gap-2 lg:flex-col">
               <div className="rounded-xl bg-white/10 px-4 py-2.5 text-center ring-1 ring-white/15 backdrop-blur-sm">
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Total</p>
                 <p className="font-mono text-xl font-bold tabular-nums tracking-tight">{total}</p>
