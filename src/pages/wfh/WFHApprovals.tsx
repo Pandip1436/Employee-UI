@@ -209,8 +209,8 @@ export default function WFHApprovals() {
                       <p className="mt-0.5 font-mono text-xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white sm:text-2xl">{val}</p>
                       <p className="mt-0.5 truncate text-[10px] text-gray-500 dark:text-gray-400">{cardMeta[t.key].sub}</p>
                     </div>
-                    <div className={`relative shrink-0 rounded-lg bg-gradient-to-br ${cfg.gradient} p-1.5 shadow-md ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}>
-                      <Icon className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
+                    <div className={`relative shrink-0 rounded-xl bg-gradient-to-br ${cfg.gradient} p-2.5 shadow-md ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}>
+                      <Icon className="h-4 w-4 text-white" strokeWidth={2.5} />
                     </div>
                   </div>
                   <div className="mt-2">
