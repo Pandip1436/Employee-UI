@@ -206,10 +206,10 @@ export default function CompOff() {
               <p className="mt-1 text-sm text-indigo-200/70">Manage comp-off earned from extra work days</p>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-3">
+          <div className="flex w-full shrink-0 items-center gap-3 lg:w-auto">
             <button
               onClick={() => setShowApply(true)}
-              className="group relative inline-flex items-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+              className="group relative inline-flex w-full items-center justify-center gap-2 overflow-hidden rounded-xl bg-white px-5 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 sm:w-auto"
             >
               <span aria-hidden className="pointer-events-none absolute inset-y-0 -left-1/2 w-1/2 -skew-x-12 bg-gradient-to-r from-transparent via-indigo-200/40 to-transparent transition-transform duration-700 ease-out group-hover:translate-x-[300%]" />
               <span className="relative inline-flex items-center gap-2">

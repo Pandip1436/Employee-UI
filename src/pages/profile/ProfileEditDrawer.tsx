@@ -41,6 +41,43 @@ const sections: { key: SectionKey; label: string; icon: typeof UserIcon; accent:
   { key: "skills", label: "Skills", icon: Award, accent: "from-emerald-500 to-teal-600" },
 ];
 
+// Defined at module scope (not inside the component) so their identity is stable
+// across renders — otherwise React remounts these subtrees on every keystroke,
+// causing flicker/jitter, especially on mobile.
+function ErrMsg({ errors, name }: { errors: Record<string, string>; name: string }) {
+  return errors[name] ? (
+    <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
+      <AlertCircle className="h-3 w-3 shrink-0" /> {errors[name]}
+    </p>
+  ) : null;
+}
+
+function SectionTitle({
+  icon: Icon,
+  color,
+  children,
+  description,
+}: {
+  icon: typeof UserIcon;
+  color: string;
+  children: React.ReactNode;
+  description?: string;
+}) {
+  return (
+    <div className="mb-4 flex items-center gap-3">
+      <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${color} text-white shadow-md ring-1 ring-white/15`}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">{children}</p>
+        {description && (
+          <p className="text-[11px] text-gray-500 dark:text-gray-400">{description}</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -95,43 +132,24 @@ export default function ProfileEditDrawer(props: Props) {
   const [activeSection, setActiveSection] = useState<SectionKey>("personal");
   const errorCount = Object.values(errors).filter(Boolean).length;
 
-  const ErrMsg = ({ name }: { name: string }) =>
-    errors[name] ? (
-      <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
-        <AlertCircle className="h-3 w-3 shrink-0" /> {errors[name]}
-      </p>
-    ) : null;
-
-  const SectionTitle = ({
-    icon: Icon,
-    color,
-    children,
-    description,
-  }: {
-    icon: typeof UserIcon;
-    color: string;
-    children: React.ReactNode;
-    description?: string;
-  }) => (
-    <div className="mb-4 flex items-center gap-3">
-      <div className={`flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br ${color} text-white shadow-md ring-1 ring-white/15`}>
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-sm font-bold tracking-tight text-gray-900 dark:text-white">{children}</p>
-        {description && (
-          <p className="text-[11px] text-gray-500 dark:text-gray-400">{description}</p>
-        )}
-      </div>
-    </div>
-  );
+  // Show the user's photo in the drawer header (falls back to the pencil icon).
+  const rawPhoto = form.profilePhotoUrl || user.profilePhotoUrl;
+  const headerPhoto = rawPhoto
+    ? (/^(https?:|data:)/i.test(rawPhoto) ? rawPhoto : `/${rawPhoto.replace(/^\/+/, "")}`)
+    : null;
 
   return (
     <Drawer
       open={open}
       onClose={onClose}
       size="xl"
-      icon={<Pencil className="h-5 w-5 text-indigo-200" />}
+      icon={
+        headerPhoto ? (
+          <img src={headerPhoto} alt={user.name} className="h-11 w-11 rounded-2xl object-cover" />
+        ) : (
+          <Pencil className="h-5 w-5 text-indigo-200" />
+        )
+      }
       subtitle={
         <span className="inline-flex items-center gap-1.5">
           <Sparkles className="h-3 w-3" />
@@ -182,18 +200,29 @@ export default function ProfileEditDrawer(props: Props) {
       }
     >
       {/* Section nav */}
-      <div className="sticky top-0 z-10 border-b border-gray-200/70 bg-white/85 px-4 py-2.5 backdrop-blur-xl dark:border-gray-800/80 dark:bg-gray-900/85">
-        <div className="flex gap-1 overflow-x-auto scrollbar-hide">
+      <div className="sticky top-0 z-10 border-b border-gray-200/70 bg-white px-4 py-2.5 dark:border-gray-800/80 dark:bg-gray-900">
+        <div className="flex gap-1 overflow-x-auto scroll-smooth scrollbar-hide">
           {sections.map((s) => {
             const active = activeSection === s.key;
             return (
               <button
                 key={s.key}
+                type="button"
                 onClick={() => {
                   setActiveSection(s.key);
-                  document.getElementById(`section-${s.key}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  const el = document.getElementById(`section-${s.key}`);
+                  const scroller = el?.closest<HTMLElement>(".sidebar-scroll");
+                  if (el && scroller) {
+                    // Scroll the drawer body itself (single axis, deterministic) instead
+                    // of scrollIntoView, which on mobile also nudges other scroll
+                    // ancestors and causes the visible jitter. 56px clears the sticky nav.
+                    const top = scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 56;
+                    scroller.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
+                  } else {
+                    el?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
                 }}
-                className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-all ${
+                className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-[11px] font-semibold transition-colors ${
                   active
                     ? `bg-gradient-to-br ${s.accent} text-white shadow-sm`
                     : "text-gray-600 hover:bg-gray-100 dark:text-gray-400 dark:hover:bg-gray-800/60"
@@ -208,7 +237,7 @@ export default function ProfileEditDrawer(props: Props) {
       </div>
 
       {/* Form body */}
-      <div className="space-y-7 p-5 sm:p-6">
+      <div className="space-y-7 p-5 sm:p-6 [&>section]:scroll-mt-20">
         {/* Personal */}
         <section id="section-personal">
           <SectionTitle icon={UserIcon} color="from-indigo-500 to-purple-600" description="Basic info — name and email come from your account">
@@ -224,7 +253,7 @@ export default function ProfileEditDrawer(props: Props) {
                 onBlur={(e) => validateField("dateOfBirth", e.target.value)}
                 className={inputClsFor("dateOfBirth")}
               />
-              <ErrMsg name="dateOfBirth" />
+              <ErrMsg errors={errors} name="dateOfBirth" />
             </div>
             <div>
               <label className={labelCls}>Gender</label>
@@ -271,7 +300,7 @@ export default function ProfileEditDrawer(props: Props) {
                 className={inputClsFor("personalEmail")}
                 placeholder="personal@email.com"
               />
-              <ErrMsg name="personalEmail" />
+              <ErrMsg errors={errors} name="personalEmail" />
             </div>
             <div>
               <label className={labelCls}>Phone</label>
@@ -283,7 +312,7 @@ export default function ProfileEditDrawer(props: Props) {
                 placeholder="+91 9876543210"
                 inputMode="tel"
               />
-              <ErrMsg name="phone" />
+              <ErrMsg errors={errors} name="phone" />
             </div>
             <div className="sm:col-span-2">
               <label className={labelCls}>Address</label>
@@ -295,7 +324,7 @@ export default function ProfileEditDrawer(props: Props) {
                 className={`${inputClsFor("address")} resize-y`}
                 placeholder="Full address"
               />
-              <ErrMsg name="address" />
+              <ErrMsg errors={errors} name="address" />
             </div>
           </div>
         </section>
@@ -315,7 +344,7 @@ export default function ProfileEditDrawer(props: Props) {
                 className={inputClsFor("employeeId")}
                 placeholder="EMP-001"
               />
-              <ErrMsg name="employeeId" />
+              <ErrMsg errors={errors} name="employeeId" />
             </div>
             <div>
               <label className={labelCls}>Department</label>
@@ -330,7 +359,7 @@ export default function ProfileEditDrawer(props: Props) {
                 className={inputClsFor("designation")}
                 placeholder="Software Engineer"
               />
-              <ErrMsg name="designation" />
+              <ErrMsg errors={errors} name="designation" />
             </div>
             <div>
               <label className={labelCls}>Joining Date</label>
@@ -341,7 +370,7 @@ export default function ProfileEditDrawer(props: Props) {
                 onBlur={(e) => validateField("joiningDate", e.target.value)}
                 className={inputClsFor("joiningDate")}
               />
-              <ErrMsg name="joiningDate" />
+              <ErrMsg errors={errors} name="joiningDate" />
             </div>
           </div>
         </section>
@@ -360,7 +389,7 @@ export default function ProfileEditDrawer(props: Props) {
                 onBlur={(e) => validateField("emergencyName", e.target.value)}
                 className={inputClsFor("emergencyName")}
               />
-              <ErrMsg name="emergencyName" />
+              <ErrMsg errors={errors} name="emergencyName" />
             </div>
             <div>
               <label className={labelCls}>Relationship</label>
@@ -371,7 +400,7 @@ export default function ProfileEditDrawer(props: Props) {
                 className={inputClsFor("emergencyRelation")}
                 placeholder="Father / Spouse"
               />
-              <ErrMsg name="emergencyRelation" />
+              <ErrMsg errors={errors} name="emergencyRelation" />
             </div>
             <div>
               <label className={labelCls}>Phone</label>
@@ -383,7 +412,7 @@ export default function ProfileEditDrawer(props: Props) {
                 placeholder="+91 9876543210"
                 inputMode="tel"
               />
-              <ErrMsg name="emergencyPhone" />
+              <ErrMsg errors={errors} name="emergencyPhone" />
             </div>
           </div>
         </section>
@@ -404,7 +433,7 @@ export default function ProfileEditDrawer(props: Props) {
                 inputMode="numeric"
                 placeholder="9–18 digits"
               />
-              <ErrMsg name="bankAccountNumber" />
+              <ErrMsg errors={errors} name="bankAccountNumber" />
             </div>
             <div>
               <label className={labelCls}>IFSC Code</label>
@@ -416,7 +445,7 @@ export default function ProfileEditDrawer(props: Props) {
                 placeholder="ABCD0XXXXXX"
                 maxLength={11}
               />
-              <ErrMsg name="bankIfsc" />
+              <ErrMsg errors={errors} name="bankIfsc" />
             </div>
             <div>
               <label className={labelCls}>Bank Name</label>
@@ -426,7 +455,7 @@ export default function ProfileEditDrawer(props: Props) {
                 onBlur={(e) => validateField("bankName", e.target.value)}
                 className={inputClsFor("bankName")}
               />
-              <ErrMsg name="bankName" />
+              <ErrMsg errors={errors} name="bankName" />
             </div>
           </div>
         </section>
@@ -448,7 +477,7 @@ export default function ProfileEditDrawer(props: Props) {
                 inputMode="numeric"
                 maxLength={14}
               />
-              <ErrMsg name="aadhaarNumber" />
+              <ErrMsg errors={errors} name="aadhaarNumber" />
             </div>
             <div>
               <label className={labelCls}>PAN Number</label>
@@ -460,7 +489,7 @@ export default function ProfileEditDrawer(props: Props) {
                 placeholder="ABCDE1234F"
                 maxLength={10}
               />
-              <ErrMsg name="panNumber" />
+              <ErrMsg errors={errors} name="panNumber" />
             </div>
             <div>
               <label className={labelCls}>Passport Number</label>
@@ -471,7 +500,7 @@ export default function ProfileEditDrawer(props: Props) {
                 className={`${inputClsFor("passportNumber")} font-mono`}
                 maxLength={9}
               />
-              <ErrMsg name="passportNumber" />
+              <ErrMsg errors={errors} name="passportNumber" />
             </div>
           </div>
         </section>
