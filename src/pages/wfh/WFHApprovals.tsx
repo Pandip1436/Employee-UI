@@ -202,18 +202,18 @@ export default function WFHApprovals() {
                 <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${cfg.gradient}`} />
                 <span aria-hidden className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${cfg.gradient} blur-2xl transition-all duration-500 ${active ? "scale-110 opacity-30" : "opacity-10 group-hover:scale-110 group-hover:opacity-30"}`} />
                 <span aria-hidden className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${cfg.gradient} opacity-[0.04] blur-2xl`} />
-                <div className="relative p-3.5 sm:p-4">
+                <div className="relative p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className={labelCls}>{t.label}</p>
-                      <p className="mt-1 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white sm:text-3xl">{val}</p>
-                      <p className="mt-0.5 truncate text-[11px] text-gray-500 dark:text-gray-400">{cardMeta[t.key].sub}</p>
+                      <p className="mt-0.5 font-mono text-xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white sm:text-2xl">{val}</p>
+                      <p className="mt-0.5 truncate text-[10px] text-gray-500 dark:text-gray-400">{cardMeta[t.key].sub}</p>
                     </div>
-                    <div className={`relative shrink-0 rounded-xl bg-gradient-to-br ${cfg.gradient} p-2 shadow-lg ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105 sm:p-2.5`}>
-                      <Icon className="h-4 w-4 text-white" strokeWidth={2.5} />
+                    <div className={`relative shrink-0 rounded-lg bg-gradient-to-br ${cfg.gradient} p-1.5 shadow-md ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105`}>
+                      <Icon className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />
                     </div>
                   </div>
-                  <div className="mt-3">
+                  <div className="mt-2">
                     <div className="flex items-center justify-between text-[9px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                       <span>Share</span>
                       <span className="font-mono tabular-nums">{pct}%</span>
