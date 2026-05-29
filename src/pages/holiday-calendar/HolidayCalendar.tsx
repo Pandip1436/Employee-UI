@@ -172,35 +172,37 @@ export default function HolidayCalendar() {
               <p className="mt-1 text-sm text-indigo-200/70">Company holidays, regional observances & restricted days</p>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <select
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              className="rounded-xl border-0 bg-white/10 px-3 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-colors hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/30"
-            >
-              {yearOptions.map((y) => <option key={y} value={y} className="bg-gray-900 text-white">{y}</option>)}
-            </select>
-            <div className="inline-flex gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/15 backdrop-blur-sm">
-              {(["list", "calendar"] as const).map((v) => (
-                <button
-                  key={v}
-                  onClick={() => setView(v)}
-                  aria-label={v === "list" ? "List view" : "Calendar view"}
-                  className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all ${
-                    view === v
-                      ? "bg-white text-gray-900 shadow-sm"
-                      : "text-indigo-100/80 hover:text-white"
-                  }`}
-                >
-                  {v === "list" ? <List className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
-                  {v === "list" ? "List" : "Calendar"}
-                </button>
-              ))}
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center">
+            <div className="flex items-center gap-2">
+              <select
+                value={year}
+                onChange={(e) => setYear(Number(e.target.value))}
+                className="flex-1 rounded-xl border-0 bg-white/10 px-3 py-2.5 text-sm font-semibold text-white ring-1 ring-white/15 backdrop-blur-sm transition-colors hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/30 sm:flex-none"
+              >
+                {yearOptions.map((y) => <option key={y} value={y} className="bg-gray-900 text-white">{y}</option>)}
+              </select>
+              <div className="inline-flex flex-1 gap-1 rounded-xl bg-white/10 p-1 ring-1 ring-white/15 backdrop-blur-sm sm:flex-none">
+                {(["list", "calendar"] as const).map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setView(v)}
+                    aria-label={v === "list" ? "List view" : "Calendar view"}
+                    className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-all sm:flex-none ${
+                      view === v
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-indigo-100/80 hover:text-white"
+                    }`}
+                  >
+                    {v === "list" ? <List className="h-3.5 w-3.5" /> : <LayoutGrid className="h-3.5 w-3.5" />}
+                    {v === "list" ? "List" : "Calendar"}
+                  </button>
+                ))}
+              </div>
             </div>
             {isAdmin && (
               <button
                 onClick={() => setShowAdd(true)}
-                className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-gray-900 shadow-lg shadow-black/20 ring-1 ring-white/20 transition-all hover:shadow-xl hover:shadow-black/30 sm:w-auto"
               >
                 <span className="rounded-md bg-gradient-to-br from-indigo-500 to-purple-600 p-1">
                   <Plus className="h-3.5 w-3.5 text-white" />

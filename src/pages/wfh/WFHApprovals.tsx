@@ -73,6 +73,7 @@ export default function WFHApprovals() {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
   const [query, setQuery] = useState("");
+  const [counts, setCounts] = useState<Record<Tab, number>>({ pending: 0, approved: 0, rejected: 0 });
 
   const fetchRequests = () => {
     wfhApi.getAll({ page, limit: 10, status: tab })
@@ -80,8 +81,18 @@ export default function WFHApprovals() {
       .catch(() => {});
   };
 
+  // Per-status totals for the overview cards — one lightweight call per status.
+  const fetchCounts = () => {
+    (["pending", "approved", "rejected"] as const).forEach((s) => {
+      wfhApi.getAll({ page: 1, limit: 1, status: s })
+        .then((r) => setCounts((c) => ({ ...c, [s]: r.data.pagination?.total ?? 0 })))
+        .catch(() => {});
+    });
+  };
+
   useEffect(() => { setPage(1); }, [tab]);
   useEffect(() => { fetchRequests(); }, [page, tab]);
+  useEffect(() => { fetchCounts(); }, []);
 
   const filteredRequests = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -97,14 +108,14 @@ export default function WFHApprovals() {
 
   const handleApprove = async (id: string) => {
     setApprovingId(id);
-    try { await wfhApi.approve(id, "approved"); toast.success("WFH request approved!"); fetchRequests(); }
+    try { await wfhApi.approve(id, "approved"); toast.success("WFH request approved!"); fetchRequests(); fetchCounts(); }
     catch { /* interceptor */ } finally { setApprovingId(null); }
   };
 
   const handleReject = async () => {
     if (!rejectId) return;
     setRejecting(true);
-    try { await wfhApi.approve(rejectId, "rejected"); toast.success("WFH request rejected."); setRejectId(null); setRejectComment(""); fetchRequests(); }
+    try { await wfhApi.approve(rejectId, "rejected"); toast.success("WFH request rejected."); setRejectId(null); setRejectComment(""); fetchRequests(); fetchCounts(); }
     catch { /* interceptor */ } finally { setRejecting(false); }
   };
 
@@ -146,40 +157,6 @@ export default function WFHApprovals() {
                 <p className="mt-1 text-sm text-indigo-200/70">Review work-from-home requests from your team</p>
               </div>
             </div>
-
-            {/* KPI chips */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 ring-1 ring-white/15 backdrop-blur-sm">
-                  <span className={`inline-flex h-5 w-5 items-center justify-center rounded-md ring-1 ${
-                    tab === "pending" ? "bg-amber-400/20 ring-amber-300/30"
-                    : tab === "approved" ? "bg-emerald-400/20 ring-emerald-300/30"
-                    : "bg-rose-400/20 ring-rose-300/30"
-                  }`}>
-                    {tab === "pending" ? (
-                      <span className="relative inline-flex h-2 w-2">
-                        <span className="absolute inset-0 animate-ping rounded-full bg-amber-300/60" />
-                        <span className="relative inline-flex h-2 w-2 rounded-full bg-amber-300" />
-                      </span>
-                    ) : tab === "approved" ? (
-                      <CheckCircle className="h-3 w-3 text-emerald-200" />
-                    ) : (
-                      <XCircle className="h-3 w-3 text-rose-200" />
-                    )}
-                  </span>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">{tabs.find((t) => t.key === tab)?.label}</span>
-                  <span className="font-mono text-sm font-bold tabular-nums tracking-tight">{pagination?.total ?? requests.length}</span>
-                </div>
-                {pagination && pagination.pages > 1 && (
-                  <div className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-1.5 ring-1 ring-white/15 backdrop-blur-sm">
-                    <span className="inline-flex h-5 w-5 items-center justify-center rounded-md bg-indigo-400/20 ring-1 ring-indigo-300/30">
-                      <Inbox className="h-3 w-3 text-indigo-200" />
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-indigo-200/80">Page</span>
-                    <span className="font-mono text-sm font-bold tabular-nums tracking-tight">{pagination.page}</span>
-                    <span className="font-mono text-[11px] tabular-nums text-indigo-200/60">/ {pagination.pages}</span>
-                  </div>
-                )}
-              </div>
           </div>
           {/* Search */}
           <div className="relative flex shrink-0 items-center lg:w-72">
@@ -193,6 +170,63 @@ export default function WFHApprovals() {
             />
           </div>
         </div>
+      </div>
+
+      {/* ── Status overview ── */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        {(() => {
+          const total = counts.pending + counts.approved + counts.rejected;
+          const cardMeta: Record<Tab, { icon: typeof CheckCircle; sub: string }> = {
+            pending: { icon: Inbox, sub: "Awaiting" },
+            approved: { icon: CheckCircle, sub: "Granted" },
+            rejected: { icon: XCircle, sub: "Declined" },
+          };
+          return tabs.map((t) => {
+            const cfg = statusConfig[t.key];
+            const Icon = cardMeta[t.key].icon;
+            const val = counts[t.key];
+            const pct = total > 0 ? Math.round((val / total) * 100) : 0;
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => setTab(t.key)}
+                aria-pressed={active}
+                className={`group relative overflow-hidden rounded-2xl border bg-white/80 text-left shadow-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.99] focus:outline-none dark:bg-gray-900/80 ${
+                  active
+                    ? "border-indigo-300 ring-2 ring-indigo-500/40 dark:border-indigo-500/40 dark:ring-indigo-400/40"
+                    : "border-gray-200/70 ring-1 ring-black/[0.02] hover:ring-black/[0.04] dark:border-gray-800/80 dark:ring-white/[0.03] dark:hover:ring-white/[0.06]"
+                }`}
+              >
+                <span aria-hidden className={`absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r ${cfg.gradient}`} />
+                <span aria-hidden className={`pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br ${cfg.gradient} blur-2xl transition-all duration-500 ${active ? "scale-110 opacity-30" : "opacity-10 group-hover:scale-110 group-hover:opacity-30"}`} />
+                <span aria-hidden className={`pointer-events-none absolute -bottom-12 -left-10 h-28 w-28 rounded-full bg-gradient-to-br ${cfg.gradient} opacity-[0.04] blur-2xl`} />
+                <div className="relative p-3.5 sm:p-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className={labelCls}>{t.label}</p>
+                      <p className="mt-1 font-mono text-2xl font-bold tabular-nums tracking-tight text-gray-900 dark:text-white sm:text-3xl">{val}</p>
+                      <p className="mt-0.5 truncate text-[11px] text-gray-500 dark:text-gray-400">{cardMeta[t.key].sub}</p>
+                    </div>
+                    <div className={`relative shrink-0 rounded-xl bg-gradient-to-br ${cfg.gradient} p-2 shadow-lg ring-1 ring-white/15 transition-transform duration-300 group-hover:scale-105 sm:p-2.5`}>
+                      <Icon className="h-4 w-4 text-white" strokeWidth={2.5} />
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className="flex items-center justify-between text-[9px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                      <span>Share</span>
+                      <span className="font-mono tabular-nums">{pct}%</span>
+                    </div>
+                    <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-gray-100 dark:bg-gray-800">
+                      <div className={`h-full rounded-full bg-gradient-to-r ${cfg.gradient} transition-[width] duration-700`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          });
+        })()}
       </div>
 
       {/* ── Tabs ── */}
