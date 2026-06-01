@@ -24,7 +24,7 @@ export interface HrStats {
   totalEmployees: number;
   activeEmployees: number;
   inactiveEmployees: number;
-  newJoinersThisMonth: { _id: string; name: string; email: string; department?: string; createdAt: string }[];
+  newJoinersThisMonth: { _id: string; name: string; email: string; department?: string; createdAt: string; profilePhotoUrl?: string | null }[];
   leaveStats: { _id: string; totalDays: number; count: number }[];
   todayPresent: number;
   todayAbsent: number;
@@ -36,7 +36,7 @@ export interface HrStats {
 export interface PendingApprovalItem {
   _id: string;
   type: "leave" | "timesheet";
-  employee: { name: string; email: string };
+  employee: { _id?: string; name: string; email: string; profilePhotoUrl?: string | null };
   leaveType?: string;
   days?: number;
   startDate?: string;
@@ -66,7 +66,7 @@ export const dashboardApi = {
     api.get<ApiResponse<HrStats>>("/dashboard/hr-stats"),
 
   getUpcomingEvents: () =>
-    api.get<ApiResponse<{ anniversaries: { _id: string; name: string; email: string; department?: string; years: number; eventDate: string }[] }>>("/dashboard/upcoming-events"),
+    api.get<ApiResponse<{ anniversaries: { _id: string; name: string; email: string; department?: string; years: number; eventDate: string; profilePhotoUrl?: string | null }[] }>>("/dashboard/upcoming-events"),
 
   getPendingApprovals: () =>
     api.get<ApiResponse<{ leaves: PendingApprovalItem[]; timesheets: PendingApprovalItem[] }>>("/dashboard/pending-approvals"),

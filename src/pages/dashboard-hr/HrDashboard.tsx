@@ -13,6 +13,7 @@ import { dashboardApi, type HrStats, type PendingApprovalItem } from "../../api/
 import { useCompany } from "../../context/CompanyContext";
 import { useAuth } from "../../context/AuthContext";
 import { fmtHours } from "../../utils/format";
+import Avatar from "../../components/Avatar";
 
 function getGreeting(): string {
   const h = new Date().getHours();
@@ -22,7 +23,7 @@ function getGreeting(): string {
   return "Working late";
 }
 
-type Anniversary = { _id: string; name: string; email: string; department?: string; years: number; eventDate: string };
+type Anniversary = { _id: string; name: string; email: string; department?: string; years: number; eventDate: string; profilePhotoUrl?: string | null };
 
 const ATTENDANCE_COLOR_BY_NAME: Record<string, string> = {
   Present: "#10b981",
@@ -42,26 +43,20 @@ const LEAVE_TYPE_LABELS: Record<string, string> = {
   casual: "Personal",
 };
 
-function Initials({ name }: { name: string }) {
-  const init = name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-  // Deterministic gradient per name for visual distinction across lists.
-  const palettes = [
-    "from-indigo-500 to-purple-600",
-    "from-sky-500 to-indigo-600",
-    "from-emerald-500 to-teal-600",
-    "from-amber-500 to-orange-600",
-    "from-rose-500 to-pink-600",
-    "from-fuchsia-500 to-purple-600",
-  ];
+// Deterministic gradient per name for visual distinction across lists.
+const PALETTES = [
+  "from-indigo-500 to-purple-600",
+  "from-sky-500 to-indigo-600",
+  "from-emerald-500 to-teal-600",
+  "from-amber-500 to-orange-600",
+  "from-rose-500 to-pink-600",
+  "from-fuchsia-500 to-purple-600",
+];
+const paletteFor = (name: string): string => {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  const palette = palettes[Math.abs(hash) % palettes.length];
-  return (
-    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${palette} text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-      {init}
-    </div>
-  );
-}
+  return PALETTES[Math.abs(hash) % PALETTES.length];
+};
 
 export default function HrDashboard() {
   const { companyName, logo } = useCompany();
@@ -507,7 +502,13 @@ export default function HrDashboard() {
                 {pending.leaves.slice(0, 5).map((l) => (
                   <div key={l._id} className="group flex items-center justify-between gap-3 rounded-xl border border-transparent bg-gray-50/70 px-3 py-2.5 transition-all hover:border-gray-200 hover:bg-white hover:shadow-sm dark:bg-gray-800/40 dark:hover:border-gray-700 dark:hover:bg-gray-800">
                     <div className="flex min-w-0 items-center gap-3">
-                      <Initials name={l.employee.name} />
+                      <Avatar
+                        name={l.employee.name}
+                        photo={l.employee.profilePhotoUrl}
+                        gradient={paletteFor(l.employee.name)}
+                        className="h-9 w-9 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                        textClassName="text-[11px] font-semibold"
+                      />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{l.employee.name}</p>
                         <p className="truncate text-xs capitalize text-gray-500 dark:text-gray-400">{(l.leaveType && LEAVE_TYPE_LABELS[l.leaveType]) ?? l.leaveType} leave · {l.days} day{(l.days ?? 0) > 1 ? "s" : ""}</p>
@@ -521,7 +522,13 @@ export default function HrDashboard() {
                 {pending.timesheets.slice(0, 5).map((t) => (
                   <div key={t._id} className="group flex items-center justify-between gap-3 rounded-xl border border-transparent bg-gray-50/70 px-3 py-2.5 transition-all hover:border-gray-200 hover:bg-white hover:shadow-sm dark:bg-gray-800/40 dark:hover:border-gray-700 dark:hover:bg-gray-800">
                     <div className="flex min-w-0 items-center gap-3">
-                      <Initials name={t.employee.name} />
+                      <Avatar
+                        name={t.employee.name}
+                        photo={t.employee.profilePhotoUrl}
+                        gradient={paletteFor(t.employee.name)}
+                        className="h-9 w-9 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                        textClassName="text-[11px] font-semibold"
+                      />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{t.employee.name}</p>
                         <p className="truncate text-xs text-gray-500 dark:text-gray-400">Timesheet · {fmtHours(t.totalHours ?? 0)}</p>
@@ -558,7 +565,13 @@ export default function HrDashboard() {
             <div className="relative space-y-1.5">
               {anniversaries.slice(0, 5).map((a) => (
                 <div key={a._id} className="flex items-center gap-3 rounded-xl border border-amber-100/60 bg-gradient-to-r from-amber-50/50 to-white p-2.5 transition-all hover:from-amber-50 hover:shadow-sm dark:border-amber-500/10 dark:from-amber-500/5 dark:to-gray-900 dark:hover:from-amber-500/10">
-                  <Initials name={a.name} />
+                  <Avatar
+                    name={a.name}
+                    photo={a.profilePhotoUrl}
+                    gradient={paletteFor(a.name)}
+                    className="h-9 w-9 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                    textClassName="text-[11px] font-semibold"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{a.name}</p>
                     <p className="truncate text-xs text-gray-500 dark:text-gray-400">{a.department || "—"}</p>
@@ -595,7 +608,13 @@ export default function HrDashboard() {
             <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
               {stats!.newJoinersThisMonth.map((emp) => (
                 <div key={emp._id} className="group flex items-center gap-3 rounded-xl border border-transparent bg-gray-50/70 px-3 py-2.5 transition-all hover:border-gray-200 hover:bg-white hover:shadow-sm dark:bg-gray-800/40 dark:hover:border-gray-700 dark:hover:bg-gray-800">
-                  <Initials name={emp.name} />
+                  <Avatar
+                    name={emp.name}
+                    photo={emp.profilePhotoUrl}
+                    gradient={paletteFor(emp.name)}
+                    className="h-9 w-9 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                    textClassName="text-[11px] font-semibold"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{emp.name}</p>
                     <p className="flex items-center gap-1 truncate text-xs text-gray-500 dark:text-gray-400">
