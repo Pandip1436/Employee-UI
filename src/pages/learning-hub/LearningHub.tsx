@@ -8,6 +8,7 @@ import {
 import toast from "react-hot-toast";
 import { learningApi, type CourseData, type LearnerData } from "../../api/learningApi";
 import { useAuth } from "../../context/AuthContext";
+import Avatar from "../../components/Avatar";
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -491,16 +492,19 @@ export default function LearningHub() {
               <div className="space-y-3">
                 {filtered.map((l) => {
                   const isExpanded = expandedLearner === l._id;
-                  const init = l.name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
                   return (
                     <div key={l._id} className={`${cardCls} overflow-hidden p-0`}>
                       <button
                         onClick={() => setExpandedLearner(isExpanded ? null : l._id)}
                         className="flex w-full items-center gap-4 p-4 text-left transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40"
                       >
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(l.name)} text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-                          {init}
-                        </div>
+                        <Avatar
+                          name={l.name}
+                          photo={l.profilePhotoUrl}
+                          gradient={paletteFor(l.name)}
+                          className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                          textClassName="text-[11px] font-semibold"
+                        />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{l.name}</p>
                           <p className="truncate text-xs text-gray-500 dark:text-gray-400">

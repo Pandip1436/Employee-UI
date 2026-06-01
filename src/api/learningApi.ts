@@ -1,7 +1,7 @@
 import api from "./axios";
 import type { ApiResponse } from "../types";
 
-export interface CourseUser { _id: string; name: string; email: string; department?: string; }
+export interface CourseUser { _id: string; name: string; email: string; department?: string; profilePhotoUrl?: string | null; }
 export interface CourseData { _id: string; title: string; description?: string; category?: string; skill?: string; duration?: string; instructor?: string; thumbnail?: string; link?: string; isActive: boolean; createdBy?: { name: string }; enrolledUsers: string[]; completedUsers: string[]; createdAt: string; }
 export interface CourseDetailData { _id: string; title: string; description?: string; category?: string; skill?: string; duration?: string; instructor?: string; thumbnail?: string; link?: string; isActive: boolean; createdBy?: { name: string }; enrolledUsers: CourseUser[]; completedUsers: CourseUser[]; createdAt: string; }
 export interface CertData { _id: string; userId: string; courseId?: { title: string }; name: string; issuer?: string; completedDate?: string; certificatePath?: string; expiryDate?: string; createdAt: string; }
@@ -29,6 +29,7 @@ export const learningApi = {
 export interface LearnerCourse { _id: string; title: string; category: string; skill: string; duration: string; }
 export interface LearnerData {
   _id: string; name: string; email: string; department: string; userId: string;
+  profilePhotoUrl?: string | null;
   enrolledCount: number; completedCount: number; inProgressCount: number;
   enrolled: LearnerCourse[]; completed: LearnerCourse[]; inProgress: LearnerCourse[];
 }

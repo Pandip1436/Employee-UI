@@ -19,6 +19,7 @@ import { useAuth } from "../../context/AuthContext";
 import type { User } from "../../types";
 import toast from "react-hot-toast";
 import Drawer from "../../components/Drawer";
+import Avatar from "../../components/Avatar";
 
 // ── Type config ──
 const TYPE_CFG: Record<
@@ -109,15 +110,6 @@ function StatCard({
       </div>
     </div>
   );
-}
-
-function initials(name?: string) {
-  return (name || "?")
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
 }
 
 // ── Page ──
@@ -461,9 +453,13 @@ export default function FeedbackPage() {
                         <EyeOff className="h-4 w-4 text-gray-400" />
                       </div>
                     ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow-md">
-                        {initials(user?.name)}
-                      </div>
+                      <Avatar
+                        name={user?.name || "?"}
+                        photo={user?.profilePhotoUrl}
+                        gradient="from-indigo-500 to-purple-600"
+                        className="h-10 w-10 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md"
+                        textClassName="text-xs font-bold"
+                      />
                     )}
                     <div>
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
@@ -612,9 +608,13 @@ export default function FeedbackPage() {
                                 <EyeOff className="h-4 w-4 text-gray-400" />
                               </div>
                             ) : (
-                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow-md">
-                                {initials(fb.fromUser?.name)}
-                              </div>
+                              <Avatar
+                                name={fb.fromUser?.name || "?"}
+                                photo={fb.fromUser?.profilePhotoUrl}
+                                gradient="from-indigo-500 to-purple-600"
+                                className="h-10 w-10 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md"
+                                textClassName="text-xs font-bold"
+                              />
                             )}
                             <div className="min-w-0">
                               <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
@@ -719,9 +719,13 @@ export default function FeedbackPage() {
                     <EyeOff className="h-6 w-6 text-white" />
                   </div>
                 ) : (
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-base font-bold text-white ring-2 ring-white shadow-md dark:ring-gray-900">
-                    {initials(selectedFeedback.fromUser?.name)}
-                  </div>
+                  <Avatar
+                    name={selectedFeedback.fromUser?.name || "?"}
+                    photo={selectedFeedback.fromUser?.profilePhotoUrl}
+                    gradient="from-indigo-500 to-purple-600"
+                    className="h-14 w-14 shrink-0 rounded-full ring-2 ring-white shadow-md dark:ring-gray-900"
+                    textClassName="text-base font-bold"
+                  />
                 )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-base font-bold text-gray-900 dark:text-white">

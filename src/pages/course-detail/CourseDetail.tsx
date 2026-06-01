@@ -8,6 +8,7 @@ import {
 import toast from "react-hot-toast";
 import { learningApi, type CourseDetailData } from "../../api/learningApi";
 import { useAuth } from "../../context/AuthContext";
+import Avatar from "../../components/Avatar";
 
 const CATEGORIES = ["Technical", "Soft Skills", "Management", "Design", "Data", "Security", "Other"];
 
@@ -451,12 +452,15 @@ export default function CourseDetail() {
           <div className="divide-y divide-gray-100 dark:divide-gray-800">
             {course.enrolledUsers.map((u) => {
               const completed = course.completedUsers.some((c) => c._id === u._id);
-              const init = (u.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
               return (
                 <div key={u._id} className="flex items-center gap-3 py-3 transition-colors hover:bg-gray-50/60 dark:hover:bg-gray-800/40">
-                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(u.name || "?")} text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-                    {init}
-                  </div>
+                  <Avatar
+                    name={u.name}
+                    photo={u.profilePhotoUrl}
+                    gradient={paletteFor(u.name || "?")}
+                    className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                    textClassName="text-[11px] font-semibold"
+                  />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{u.name}</p>
                     <p className="truncate text-xs text-gray-500 dark:text-gray-400">
