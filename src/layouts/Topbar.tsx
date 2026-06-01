@@ -603,7 +603,7 @@ export default function Topbar({ onMenuClick }: Props) {
                           <span className="relative flex h-5 w-5 items-center justify-center">
                             <Icon className={`h-4 w-4 ${active ? cfg.text : ""}`} fill={key === "online" && active ? "currentColor" : "none"} strokeWidth={2} />
                           </span>
-                          <span>{cfg.label.split(" ")[0]}</span>
+                          <span>{key === "dnd" ? "DND" : cfg.label.split(" ")[0]}</span>
                         </button>
                       );
                     })}
