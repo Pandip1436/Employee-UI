@@ -167,6 +167,7 @@ export default function Sidebar({ open, onClose }: Props) {
                     <NavLink
                       key={link.to}
                       to={link.to}
+                      end
                       onClick={onClose}
                       className={({ isActive }) =>
                         clsx(
