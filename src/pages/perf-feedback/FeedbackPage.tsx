@@ -120,6 +120,7 @@ export default function FeedbackPage() {
   // Give Feedback state
   const [users, setUsers] = useState<User[]>([]);
   const [toUser, setToUser] = useState("");
+  const [employeeQuery, setEmployeeQuery] = useState("");
   const [type, setType] = useState("manager");
   const [rating, setRating] = useState(0);
   const [strengths, setStrengths] = useState("");
@@ -137,7 +138,7 @@ export default function FeedbackPage() {
   useEffect(() => {
     if (!canGiveFeedback) return;
     userApi
-      .getAll({ limit: 500 })
+      .getAll({ limit: 500, isActive: "true" })
       .then((r) => {
         const all = r.data.data ?? [];
         setUsers(all.filter((u) => u._id !== user?._id && u.role !== "admin"));
@@ -213,6 +214,17 @@ export default function FeedbackPage() {
   };
 
   const selectedUser = users.find((u) => u._id === toUser);
+
+  const filteredEmployees = useMemo(() => {
+    const q = employeeQuery.trim().toLowerCase();
+    if (!q) return users;
+    return users.filter((u) => {
+      const name = (u.name || "").toLowerCase();
+      const email = (u.email || "").toLowerCase();
+      const dept = (u.department || "").toLowerCase();
+      return name.includes(q) || email.includes(q) || dept.includes(q);
+    });
+  }, [users, employeeQuery]);
 
   // Styles
   const input =
@@ -317,14 +329,59 @@ export default function FeedbackPage() {
                 <label className="block text-xs font-medium text-gray-600 dark:text-gray-400 mb-1.5">
                   Employee
                 </label>
-                <select className={input} value={toUser} onChange={(e) => setToUser(e.target.value)}>
-                  <option value="">Select employee…</option>
-                  {users.map((u) => (
-                    <option key={u._id} value={u._id}>
-                      {u.name} — {u.department || u.email}
-                    </option>
-                  ))}
-                </select>
+                <div className="relative">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                  <input
+                    type="text"
+                    value={employeeQuery}
+                    onChange={(e) => setEmployeeQuery(e.target.value)}
+                    placeholder="Search by name, email, or department…"
+                    className={`${input} pl-10`}
+                  />
+                </div>
+                <div className="mt-3 max-h-64 space-y-1 overflow-y-auto rounded-xl border border-gray-200/70 bg-gray-50/60 p-1.5 dark:border-gray-800/80 dark:bg-gray-800/30">
+                  {filteredEmployees.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-gray-500 dark:text-gray-400">
+                      No teammates match your search.
+                    </div>
+                  ) : (
+                    filteredEmployees.map((u) => {
+                      const active = toUser === u._id;
+                      return (
+                        <button
+                          key={u._id}
+                          type="button"
+                          onClick={() => setToUser(u._id)}
+                          className={`group flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left transition-all ${
+                            active
+                              ? "bg-white shadow-sm ring-2 ring-indigo-500/40 dark:bg-gray-900"
+                              : "hover:bg-white dark:hover:bg-gray-900/60"
+                          }`}
+                        >
+                          <Avatar
+                            name={u.name}
+                            photo={u.profilePhotoUrl}
+                            gradient="from-indigo-500 to-purple-600"
+                            className="h-9 w-9 shrink-0 rounded-full shadow ring-2 ring-white dark:ring-gray-900"
+                            textClassName="text-xs font-bold"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
+                              {u.name}
+                            </p>
+                            <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">
+                              {u.department ? `${u.department} · ` : ""}
+                              {u.email}
+                            </p>
+                          </div>
+                          {active && (
+                            <CheckCircle2 className="h-5 w-5 shrink-0 fill-indigo-100 text-indigo-500 dark:fill-indigo-500/30" />
+                          )}
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
               </div>
             </div>
 

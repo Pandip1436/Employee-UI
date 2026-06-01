@@ -99,7 +99,7 @@ export default function SendRecognition() {
 
   useEffect(() => {
     userApi
-      .getAll({ limit: 500 })
+      .getAll({ limit: 500, isActive: "true" })
       .then((r) => {
         const all = r.data.data ?? [];
         setEmployees(all.filter((u) => u.role === "employee" && u._id !== user?._id));
