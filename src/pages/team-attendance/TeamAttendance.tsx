@@ -137,7 +137,7 @@ function paletteFor(name: string): string {
   return PALETTES[Math.abs(hash) % PALETTES.length];
 }
 
-function Avatar({ name, size = "md", presence }: { name: string; size?: "sm" | "md" | "lg"; presence?: ActiveStatus }) {
+function Avatar({ name, size = "md", presence, photo }: { name: string; size?: "sm" | "md" | "lg"; presence?: ActiveStatus; photo?: string | null }) {
   const init = (name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
   const sz =
     size === "lg" ? "h-10 w-10 text-sm"
@@ -145,11 +145,20 @@ function Avatar({ name, size = "md", presence }: { name: string; size?: "sm" | "
     : "h-9 w-9 text-[11px]";
   const dotSz = size === "lg" ? "h-3 w-3" : size === "sm" ? "h-2 w-2" : "h-2.5 w-2.5";
   const cfg = presence ? activeStatusConfig[presence] : null;
+  const src = photo
+    ? (/^(https?:|data:)/i.test(photo) ? photo : `/${photo.replace(/^\/+/, "")}`)
+    : null;
   return (
     <div className="relative shrink-0">
-      <div className={`flex items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900 ${sz} ${paletteFor(name || "?")}`}>
-        {init}
-      </div>
+      {src ? (
+        <div className={`overflow-hidden rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900 ${sz}`}>
+          <img src={src} alt="" className="h-full w-full object-cover" />
+        </div>
+      ) : (
+        <div className={`flex items-center justify-center rounded-full bg-gradient-to-br font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900 ${sz} ${paletteFor(name || "?")}`}>
+          {init}
+        </div>
+      )}
       {cfg && (
         <span
           aria-label={cfg.label}
@@ -840,7 +849,7 @@ export default function TeamAttendance() {
                   <tr key={emp._id} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
                     <td className={`px-4 ${rowPad}`}>
                       <div className="flex items-center gap-3">
-                        <Avatar name={emp.name} size={density === "compact" ? "sm" : "md"} presence={active} />
+                        <Avatar name={emp.name} size={density === "compact" ? "sm" : "md"} presence={active} photo={emp.profilePhotoUrl} />
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-gray-900 dark:text-white">{emp.name}</p>
                           {density === "comfy" && (
@@ -921,7 +930,7 @@ export default function TeamAttendance() {
             <div key={emp._id} className={`${cardCls} p-4`}>
               <div className="flex items-center justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <Avatar name={emp.name} size="lg" presence={active} />
+                  <Avatar name={emp.name} size="lg" presence={active} photo={emp.profilePhotoUrl} />
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-gray-900 dark:text-white">{emp.name}</p>
                     {emp.userId && (

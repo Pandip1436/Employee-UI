@@ -12,6 +12,7 @@ import { leaveApi } from "../../api/leaveApi";
 import { holidayApi } from "../../api/holidayApi";
 import type { WeeklyTimesheetData, Pagination, User, Project, LeaveRequest, Holiday } from "../../types";
 import { fmtHours } from "../../utils/format";
+import Avatar from "../../components/Avatar";
 
 const LEAVE_DAY_HOURS: number = 9;
 const HOLIDAY_DAY_HOURS: number = 9;
@@ -35,15 +36,6 @@ const paletteFor = (name: string): string => {
   return PALETTES[Math.abs(hash) % PALETTES.length];
 };
 
-function Avatar({ name }: { name: string }) {
-  const init = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  return (
-    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(name || "?")} text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-      {init}
-    </div>
-  );
-}
-
 /* ── Helpers ── */
 const formatDate = (iso: string | Date) =>
   new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
@@ -61,6 +53,10 @@ const getUserName = (userId: User | string): string => {
 const getUserEmail = (userId: User | string): string => {
   if (typeof userId === "object" && userId !== null) return (userId as User).email;
   return "";
+};
+const getUserPhoto = (userId: User | string): string | null | undefined => {
+  if (typeof userId === "object" && userId !== null) return (userId as User).profilePhotoUrl;
+  return undefined;
 };
 const getProjectName = (p: Project | string): string => {
   if (typeof p === "object" && p !== null) return (p as Project).name;
@@ -463,7 +459,13 @@ export default function TimesheetApprovals() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-3">
-                        <Avatar name={userName} />
+                        <Avatar
+                          name={userName}
+                          photo={getUserPhoto(ts.userId)}
+                          gradient={paletteFor(userName || "?")}
+                          className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                          textClassName="text-[11px] font-semibold"
+                        />
                         <div className="min-w-0">
                           <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>
                           <p className="truncate text-xs text-gray-500 dark:text-gray-400">{userEmail}</p>
@@ -675,9 +677,13 @@ export default function TimesheetApprovals() {
               <div className="relative flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-start gap-3.5">
                   {previewSheet ? (
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${paletteFor(userName)} text-base font-semibold text-white shadow-lg shadow-black/[0.08] ring-1 ring-white/15`}>
-                      {userName.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                    </div>
+                    <Avatar
+                      name={userName}
+                      photo={getUserPhoto(previewSheet.userId)}
+                      gradient={paletteFor(userName)}
+                      className="h-12 w-12 shrink-0 rounded-2xl shadow-lg shadow-black/[0.08] ring-1 ring-white/15"
+                      textClassName="text-base font-semibold"
+                    />
                   ) : (
                     <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30 ring-1 ring-white/15">
                       <FileText className="h-5 w-5 text-white" />
@@ -1018,9 +1024,13 @@ export default function TimesheetApprovals() {
                               key={user._id}
                               className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200/70 bg-gray-50/60 px-2.5 py-1 text-xs font-medium text-gray-700 dark:border-gray-800/80 dark:bg-gray-800/40 dark:text-gray-300"
                             >
-                              <div className={`flex h-5 w-5 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(user.name || "?")} text-[9px] font-semibold text-white`}>
-                                {(user.name || "?").charAt(0).toUpperCase()}
-                              </div>
+                              <Avatar
+                                name={user.name || "?"}
+                                photo={user.profilePhotoUrl}
+                                gradient={paletteFor(user.name || "?")}
+                                className="h-5 w-5 rounded-full"
+                                textClassName="text-[9px] font-semibold"
+                              />
                               {user.name}
                             </span>
                           );

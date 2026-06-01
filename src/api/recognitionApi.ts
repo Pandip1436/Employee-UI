@@ -3,8 +3,8 @@ import type { ApiResponse, PaginatedResponse } from "../types";
 
 export interface RecognitionData {
   _id: string;
-  fromUser: { _id: string; name: string; email: string; department?: string };
-  toUser: { _id: string; name: string; email: string; department?: string };
+  fromUser: { _id: string; name: string; email: string; department?: string; profilePhotoUrl?: string | null };
+  toUser: { _id: string; name: string; email: string; department?: string; profilePhotoUrl?: string | null };
   message: string;
   badge: string;
   reactions: { like: string[] };

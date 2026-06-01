@@ -7,6 +7,7 @@ import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import { userApi } from "../../api/userApi";
 import type { User } from "../../types";
 import toast from "react-hot-toast";
+import Avatar from "../../components/Avatar";
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -28,15 +29,6 @@ const paletteFor = (name: string): string => {
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return PALETTES[Math.abs(hash) % PALETTES.length];
 };
-
-function Avatar({ name }: { name: string }) {
-  const init = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  return (
-    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(name || "?")} text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-      {init}
-    </div>
-  );
-}
 
 function getMondayOfWeek(dateStr: string): string {
   const d = new Date(dateStr);
@@ -441,7 +433,13 @@ export default function AdminMissingTimesheet() {
                     <tr key={u._id} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <Avatar name={u.name} />
+                          <Avatar
+                            name={u.name}
+                            photo={u.profilePhotoUrl}
+                            gradient={paletteFor(u.name || "?")}
+                            className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                            textClassName="text-[11px] font-semibold"
+                          />
                           <span className="font-semibold text-gray-900 dark:text-white">{u.name}</span>
                         </div>
                       </td>
@@ -475,7 +473,13 @@ export default function AdminMissingTimesheet() {
             {filteredMissing.map((u) => (
               <div key={u._id} className={`${cardCls} p-4`}>
                 <div className="mb-3 flex items-center gap-3">
-                  <Avatar name={u.name} />
+                  <Avatar
+                    name={u.name}
+                    photo={u.profilePhotoUrl}
+                    gradient={paletteFor(u.name || "?")}
+                    className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                    textClassName="text-[11px] font-semibold"
+                  />
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{u.name}</p>
                     <p className="truncate text-xs text-gray-500 dark:text-gray-400">{u.email}</p>

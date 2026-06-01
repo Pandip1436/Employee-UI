@@ -7,6 +7,7 @@ import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { OvertimeEntry } from "../../types";
 import toast from "react-hot-toast";
 import { fmtHours } from "../../utils/format";
+import Avatar from "../../components/Avatar";
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -28,15 +29,6 @@ const paletteFor = (name: string): string => {
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return PALETTES[Math.abs(hash) % PALETTES.length];
 };
-
-function Avatar({ name }: { name: string }) {
-  const init = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  return (
-    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(name || "?")} text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-      {init}
-    </div>
-  );
-}
 
 function fmt(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -403,7 +395,13 @@ export default function AdminOvertimeReport() {
                       >
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <Avatar name={e.employee.name} />
+                            <Avatar
+                              name={e.employee.name}
+                              photo={e.employee.profilePhotoUrl}
+                              gradient={paletteFor(e.employee.name || "?")}
+                              className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                              textClassName="text-[11px] font-semibold"
+                            />
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-gray-900 dark:text-white">{e.employee.name}</p>
                               <p className="flex items-center gap-1 truncate text-xs text-gray-500 dark:text-gray-400">
@@ -451,7 +449,13 @@ export default function AdminOvertimeReport() {
                 <div key={`${e.employee._id}-${e.weekStart}-${i}`} className={`${cardCls} p-4`}>
                   <div className="mb-3 flex items-start justify-between gap-3">
                     <div className="flex min-w-0 items-center gap-3">
-                      <Avatar name={e.employee.name} />
+                      <Avatar
+                        name={e.employee.name}
+                        photo={e.employee.profilePhotoUrl}
+                        gradient={paletteFor(e.employee.name || "?")}
+                        className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                        textClassName="text-[11px] font-semibold"
+                      />
                       <div className="min-w-0">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{e.employee.name}</p>
                         <p className="truncate text-xs text-gray-500 dark:text-gray-400">{e.employee.department || "No dept"}</p>

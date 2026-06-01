@@ -8,6 +8,7 @@ import { userApi } from "../../api/userApi";
 import type { User } from "../../types";
 import toast from "react-hot-toast";
 import { fmtHours } from "../../utils/format";
+import Avatar from "../../components/Avatar";
 
 type Period = "daily" | "weekly" | "monthly";
 
@@ -28,15 +29,6 @@ function paletteFor(name: string): string {
   let hash = 0;
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return PALETTES[Math.abs(hash) % PALETTES.length];
-}
-
-function Avatar({ name }: { name: string }) {
-  const init = (name || "?").split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
-  return (
-    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900 ${paletteFor(name || "?")}`}>
-      {init}
-    </div>
-  );
 }
 
 function MiniTile({ label, value, color }: { label: string; value: string | number; color: string }) {
@@ -466,7 +458,13 @@ export default function AttendanceReports() {
                       <tr key={e.email} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <Avatar name={e.name} />
+                            <Avatar
+                              name={e.name}
+                              photo={e.profilePhotoUrl}
+                              gradient={paletteFor(e.name || "?")}
+                              className="h-9 w-9 shrink-0 rounded-full ring-2 ring-white shadow-sm dark:ring-gray-900"
+                              textClassName="text-[11px] font-semibold"
+                            />
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-gray-900 dark:text-white">{e.name}</p>
                               <p className="truncate text-xs text-gray-500 dark:text-gray-400">
@@ -544,7 +542,13 @@ export default function AttendanceReports() {
               return (
                 <div key={e.email} className={`${cardCls} p-4`}>
                   <div className="mb-3 flex items-center gap-3">
-                    <Avatar name={e.name} />
+                    <Avatar
+                      name={e.name}
+                      photo={e.profilePhotoUrl}
+                      gradient={paletteFor(e.name || "?")}
+                      className="h-9 w-9 shrink-0 rounded-full ring-2 ring-white shadow-sm dark:ring-gray-900"
+                      textClassName="text-[11px] font-semibold"
+                    />
                     <div className="min-w-0 flex-1">
                       <p className="truncate font-semibold text-gray-900 dark:text-white">{e.name}</p>
                       <p className="truncate text-xs text-gray-500 dark:text-gray-400">{e.department || "No department"}</p>

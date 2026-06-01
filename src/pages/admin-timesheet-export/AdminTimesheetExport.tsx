@@ -10,6 +10,7 @@ import { holidayApi } from "../../api/holidayApi";
 import type { User, WeeklyTimesheetData, LeaveRequest, Holiday } from "../../types";
 import toast from "react-hot-toast";
 import { fmtHours } from "../../utils/format";
+import Avatar from "../../components/Avatar";
 
 const LEAVE_DAY_HOURS: number = 9;
 const HOLIDAY_DAY_HOURS: number = 9;
@@ -34,15 +35,6 @@ const paletteFor = (name: string): string => {
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return PALETTES[Math.abs(hash) % PALETTES.length];
 };
-
-function Avatar({ name }: { name: string }) {
-  const init = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  return (
-    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(name || "?")} text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-      {init}
-    </div>
-  );
-}
 
 const statusConfig: Record<string, { dot: string; badge: string; label: string }> = {
   draft: {
@@ -625,7 +617,13 @@ export default function AdminTimesheetExport() {
                       <tr key={ts._id} className="transition-colors hover:bg-gray-50/80 dark:hover:bg-gray-800/40">
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <Avatar name={user?.name || "—"} />
+                            <Avatar
+                              name={user?.name || "—"}
+                              photo={user?.profilePhotoUrl}
+                              gradient={paletteFor(user?.name || "?")}
+                              className="h-9 w-9 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                              textClassName="text-[11px] font-semibold"
+                            />
                             <div className="min-w-0">
                               <p className="truncate font-semibold text-gray-900 dark:text-white">{user?.name || "—"}</p>
                               <p className="flex items-center gap-1 truncate text-xs text-gray-500 dark:text-gray-400">

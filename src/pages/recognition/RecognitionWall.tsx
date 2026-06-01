@@ -27,6 +27,7 @@ import { recognitionApi, type RecognitionData } from "../../api/recognitionApi";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmContext";
 import Drawer from "../../components/Drawer";
+import Avatar from "../../components/Avatar";
 
 const BADGES: Record<
   string,
@@ -464,15 +465,21 @@ export default function RecognitionWall() {
                 <div className="relative">
                   {/* From → To row */}
                   <div className="flex items-center gap-2.5">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow-md">
-                      {initials(post.fromUser.name)}
-                    </div>
+                    <Avatar
+                      name={post.fromUser.name}
+                      photo={post.fromUser.profilePhotoUrl}
+                      gradient="from-indigo-500 to-purple-600"
+                      className="h-11 w-11 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md"
+                      textClassName="text-sm font-bold"
+                    />
                     <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
-                    <div
-                      className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br ${badge.gradient} text-sm font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow-md`}
-                    >
-                      {initials(post.toUser.name)}
-                    </div>
+                    <Avatar
+                      name={post.toUser.name}
+                      photo={post.toUser.profilePhotoUrl}
+                      gradient={badge.gradient}
+                      className="h-11 w-11 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md"
+                      textClassName="text-sm font-bold"
+                    />
                     <div className="ml-1 min-w-0 flex-1">
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
                         <span className="text-indigo-600 dark:text-indigo-400">{post.fromUser.name}</span>
@@ -633,9 +640,13 @@ export default function RecognitionWall() {
             {/* From → To header */}
             <div className="flex items-center gap-3">
               <div className="flex flex-col items-center gap-1">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-base font-bold text-white shadow-md ring-2 ring-white dark:ring-gray-900">
-                  {initials(selectedPost.fromUser.name)}
-                </div>
+                <Avatar
+                  name={selectedPost.fromUser.name}
+                  photo={selectedPost.fromUser.profilePhotoUrl}
+                  gradient="from-indigo-500 to-purple-600"
+                  className="h-14 w-14 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md"
+                  textClassName="text-base font-bold"
+                />
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   From
                 </p>
@@ -645,11 +656,13 @@ export default function RecognitionWall() {
               </div>
               <ArrowRight className="h-5 w-5 shrink-0 text-gray-300 dark:text-gray-600" />
               <div className="flex flex-col items-center gap-1">
-                <div
-                  className={`flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-br ${selectedBadge.gradient} text-base font-bold text-white shadow-md ring-2 ring-white dark:ring-gray-900`}
-                >
-                  {initials(selectedPost.toUser.name)}
-                </div>
+                <Avatar
+                  name={selectedPost.toUser.name}
+                  photo={selectedPost.toUser.profilePhotoUrl}
+                  gradient={selectedBadge.gradient}
+                  className="h-14 w-14 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md"
+                  textClassName="text-base font-bold"
+                />
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
                   To
                 </p>

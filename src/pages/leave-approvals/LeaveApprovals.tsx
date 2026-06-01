@@ -7,6 +7,7 @@ import {
 import { leaveApi } from "../../api/leaveApi";
 import type { LeaveRequest, Pagination } from "../../types";
 import toast from "react-hot-toast";
+import Avatar from "../../components/Avatar";
 
 /* ── Shared tokens ── */
 const cardCls =
@@ -26,16 +27,6 @@ const paletteFor = (name: string): string => {
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return PALETTES[Math.abs(hash) % PALETTES.length];
 };
-
-function Avatar({ name, size = "md" }: { name: string; size?: "md" | "lg" }) {
-  const init = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  const sz = size === "lg" ? "h-11 w-11 text-sm" : "h-10 w-10 text-[11px]";
-  return (
-    <div className={`flex shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(name || "?")} font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900 ${sz}`}>
-      {init}
-    </div>
-  );
-}
 
 const statusConfig: Record<string, { dot: string; badge: string; label: string; gradient: string; icon: typeof Clock }> = {
   pending: {
@@ -434,7 +425,13 @@ export default function LeaveApprovals() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-3">
-                        <Avatar name={userName} />
+                        <Avatar
+                          name={userName}
+                          photo={user?.profilePhotoUrl}
+                          gradient={paletteFor(userName || "?")}
+                          className="h-10 w-10 shrink-0 rounded-full ring-2 ring-white shadow-sm dark:ring-gray-900"
+                          textClassName="text-[11px] font-semibold"
+                        />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{userName}</p>

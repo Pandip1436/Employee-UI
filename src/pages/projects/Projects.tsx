@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { projectApi } from "../../api/projectApi";
 import { userApi } from "../../api/userApi";
+import Avatar from "../../components/Avatar";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmContext";
 import type { Project, User, Pagination } from "../../types";
@@ -357,13 +358,14 @@ export default function Projects() {
                       <>
                         <div className="flex -space-x-2">
                           {members.slice(0, 4).map((u) => (
-                            <div
+                            <Avatar
                               key={u._id}
-                              title={u.name}
-                              className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(u.name || "?")} text-[10px] font-semibold text-white ring-2 ring-white dark:ring-gray-900`}
-                            >
-                              {(u.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                            </div>
+                              name={u.name}
+                              photo={u.profilePhotoUrl}
+                              gradient={paletteFor(u.name || "?")}
+                              className="h-7 w-7 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900"
+                              textClassName="text-[10px] font-semibold"
+                            />
                           ))}
                           {members.length > 4 && (
                             <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gray-100 text-[10px] font-semibold text-gray-600 ring-2 ring-white dark:bg-gray-800 dark:text-gray-300 dark:ring-gray-900">
@@ -561,9 +563,13 @@ export default function Projects() {
                                 key={user._id}
                                 className="group flex items-center gap-3 rounded-xl border border-gray-200/70 bg-white px-3 py-2 transition-all hover:-translate-y-0.5 hover:border-indigo-300/60 hover:shadow-md dark:border-gray-800/80 dark:bg-gray-800/40 dark:hover:border-indigo-500/40"
                               >
-                                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(user.name || "?")} text-xs font-bold text-white shadow-sm ring-2 ring-white transition-transform group-hover:scale-110 dark:ring-gray-900`}>
-                                  {(user.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                                </div>
+                                <Avatar
+                                  name={user.name}
+                                  photo={user.profilePhotoUrl}
+                                  gradient={paletteFor(user.name || "?")}
+                                  className="h-9 w-9 shrink-0 rounded-full shadow-sm ring-2 ring-white transition-transform group-hover:scale-110 dark:ring-gray-900"
+                                  textClassName="text-xs font-bold"
+                                />
                                 <div className="min-w-0">
                                   <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{user.name}</p>
                                   <p className="truncate text-[11px] text-gray-500 dark:text-gray-400">{user.email}</p>
@@ -717,13 +723,14 @@ export default function Projects() {
                         <div className="mt-2 flex items-center gap-2 border-t border-gray-200/70 pt-2 dark:border-gray-800/80">
                           <div className="flex -space-x-1.5">
                             {selectedMembers.slice(0, 4).map((u) => (
-                              <div
+                              <Avatar
                                 key={u._id}
-                                title={u.name}
-                                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(u.name || "?")} text-[8px] font-semibold text-white ring-2 ring-white dark:ring-gray-900`}
-                              >
-                                {(u.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                              </div>
+                                name={u.name}
+                                photo={u.profilePhotoUrl}
+                                gradient={paletteFor(u.name || "?")}
+                                className="h-5 w-5 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900"
+                                textClassName="text-[8px] font-semibold"
+                              />
                             ))}
                             {selectedMembers.length > 4 && (
                               <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-gray-200 text-[8px] font-semibold text-gray-600 ring-2 ring-white dark:bg-gray-700 dark:text-gray-300 dark:ring-gray-900">
@@ -853,9 +860,13 @@ export default function Projects() {
                             onChange={() => toggleUser(u._id)}
                             className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700"
                           />
-                          <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(u.name || "?")} text-[10px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-                            {(u.name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase()}
-                          </div>
+                          <Avatar
+                            name={u.name}
+                            photo={u.profilePhotoUrl}
+                            gradient={paletteFor(u.name || "?")}
+                            className="h-7 w-7 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                            textClassName="text-[10px] font-semibold"
+                          />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium text-gray-700 dark:text-gray-300">{u.name}</p>
                             <p className="truncate text-[10px] text-gray-500 dark:text-gray-400">{u.email}</p>

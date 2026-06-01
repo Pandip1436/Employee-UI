@@ -24,7 +24,7 @@ export interface User {
   userStatus?: UserStatus;
   lastLoginAt?: string;
   /** Signed R2 URL for the user's profile photo. Refreshed on each auth/me call. */
-  profilePhotoUrl?: string;
+  profilePhotoUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -160,6 +160,7 @@ export interface LiveEmployee {
   clockOut: string | null;
   totalHours: number | null;
   status: AttendanceStatus | null;
+  profilePhotoUrl?: string | null;
 }
 
 export interface LiveStatusData {
@@ -401,7 +402,7 @@ export interface AdminDailyEntry {
 }
 
 export interface AdminDailyRow {
-  user: { _id: string; name: string; email: string; department: string | null };
+  user: { _id: string; name: string; email: string; department: string | null; profilePhotoUrl?: string | null };
   status: "draft" | "submitted" | "approved" | "rejected";
   totalHours: number;
   entries: AdminDailyEntry[];

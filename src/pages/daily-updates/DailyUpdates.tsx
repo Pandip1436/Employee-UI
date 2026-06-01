@@ -28,6 +28,7 @@ import type { DailyUpdateData } from "../../api/dailyUpdateApi";
 import type { Pagination } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmContext";
+import Avatar from "../../components/Avatar";
 
 /* ── Status config ── */
 const statusConfig: Record<string, { dot: string; badge: string; icon: typeof CheckCircle2; label: string }> = {
@@ -68,9 +69,6 @@ const todayISO = () => {
 const getUserName = (u: DailyUpdateData["userId"]): string =>
   typeof u === "object" ? u.name : String(u);
 
-
-const getInitials = (name: string) =>
-  name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
 const PALETTES = [
   "from-indigo-500 to-purple-600",
@@ -414,9 +412,13 @@ export default function DailyUpdates() {
                 {/* Top row */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(userName)} text-sm font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-                      {getInitials(userName)}
-                    </div>
+                    <Avatar
+                      name={userName}
+                      photo={user?.profilePhotoUrl}
+                      gradient={paletteFor(userName)}
+                      className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                      textClassName="text-sm font-semibold"
+                    />
                     <div className="min-w-0">
                       <p className="font-semibold text-gray-900 dark:text-white">
                         {formatDate(u.date)}
@@ -550,9 +552,13 @@ export default function DailyUpdates() {
                 <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-purple-400/15 blur-3xl" />
                 <div className="relative flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3.5">
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${paletteFor(getUserName(detailUpdate.userId))} text-base font-semibold text-white shadow-lg shadow-black/[0.08] ring-1 ring-white/15`}>
-                      {getInitials(getUserName(detailUpdate.userId))}
-                    </div>
+                    <Avatar
+                      name={getUserName(detailUpdate.userId)}
+                      photo={user?.profilePhotoUrl}
+                      gradient={paletteFor(getUserName(detailUpdate.userId))}
+                      className="h-12 w-12 shrink-0 rounded-2xl shadow-lg shadow-black/[0.08] ring-1 ring-white/15"
+                      textClassName="text-base font-semibold"
+                    />
                     <div className="min-w-0">
                       <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
                         <Sparkles className="h-3 w-3" />
@@ -813,9 +819,13 @@ export default function DailyUpdates() {
                     Live preview
                   </p>
                   <div className="flex items-start gap-3">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(user?.name || "?")} text-sm font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-                      {getInitials(user?.name || "?")}
-                    </div>
+                    <Avatar
+                      name={user?.name || "?"}
+                      photo={user?.profilePhotoUrl}
+                      gradient={paletteFor(user?.name || "?")}
+                      className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                      textClassName="text-sm font-semibold"
+                    />
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-1.5">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">

@@ -3,7 +3,7 @@ import type { ApiResponse, PaginatedResponse } from "../types";
 
 export interface DailyUpdateData {
   _id: string;
-  userId: { _id: string; name: string; email: string; department?: string } | string;
+  userId: { _id: string; name: string; email: string; department?: string; profilePhotoUrl?: string | null } | string;
   date: string;
   tasks: string;
   links: string;

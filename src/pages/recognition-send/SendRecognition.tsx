@@ -18,6 +18,7 @@ import {
 import { recognitionApi } from "../../api/recognitionApi";
 import { userApi } from "../../api/userApi";
 import { useAuth } from "../../context/AuthContext";
+import Avatar from "../../components/Avatar";
 import type { User } from "../../types";
 
 const BADGES = [
@@ -84,15 +85,6 @@ const BADGES = [
 ];
 
 const MESSAGE_MAX = 500;
-
-function initials(name?: string) {
-  return (name || "?")
-    .split(" ")
-    .map((w) => w[0])
-    .join("")
-    .slice(0, 2)
-    .toUpperCase();
-}
 
 export default function SendRecognition() {
   const navigate = useNavigate();
@@ -240,9 +232,13 @@ export default function SendRecognition() {
                           : "hover:bg-white dark:hover:bg-gray-900/60"
                       }`}
                     >
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow">
-                        {initials(emp.name)}
-                      </div>
+                      <Avatar
+                        name={emp.name}
+                        photo={emp.profilePhotoUrl}
+                        gradient="from-indigo-500 to-purple-600"
+                        className="h-9 w-9 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow"
+                        textClassName="text-xs font-bold"
+                      />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
                           {emp.name}
@@ -373,17 +369,21 @@ export default function SendRecognition() {
               <div className="relative">
                 {/* From → To row */}
                 <div className="flex items-center gap-2.5">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-sm font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow-md">
-                    {initials(user?.name)}
-                  </div>
+                  <Avatar
+                    name={user?.name || "?"}
+                    photo={user?.profilePhotoUrl}
+                    gradient="from-indigo-500 to-purple-600"
+                    className="h-11 w-11 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md"
+                    textClassName="text-sm font-bold"
+                  />
                   <ArrowRight className="h-4 w-4 text-gray-300 dark:text-gray-600" />
-                  <div
-                    className={`flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br ${
-                      selectedBadge?.gradient || "from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800"
-                    } text-sm font-bold text-white ring-2 ring-white dark:ring-gray-900 shadow-md`}
-                  >
-                    {selected ? initials(selected.name) : "?"}
-                  </div>
+                  <Avatar
+                    name={selected?.name || "?"}
+                    photo={selected?.profilePhotoUrl}
+                    gradient={selectedBadge?.gradient || "from-gray-300 to-gray-400 dark:from-gray-700 dark:to-gray-800"}
+                    className="h-11 w-11 shrink-0 rounded-full ring-2 ring-white dark:ring-gray-900 shadow-md"
+                    textClassName="text-sm font-bold"
+                  />
                   <div className="ml-1 min-w-0 flex-1">
                     <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">
                       <span className="text-indigo-600 dark:text-indigo-400">{user?.name || "You"}</span>

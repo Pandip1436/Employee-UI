@@ -23,6 +23,7 @@ import toast from "react-hot-toast";
 import { dailyUpdateApi } from "../../api/dailyUpdateApi";
 import type { DailyUpdateData } from "../../api/dailyUpdateApi";
 import type { Pagination } from "../../types";
+import Avatar from "../../components/Avatar";
 
 /* ── Status config ── */
 const statusConfig: Record<string, { dot: string; badge: string; icon: typeof CheckCircle2; label: string }> = {
@@ -76,13 +77,13 @@ const getUserName = (u: DailyUpdateData["userId"]): string =>
 const getUserEmail = (u: DailyUpdateData["userId"]): string =>
   typeof u === "object" ? u.email : "";
 
+const getUserPhoto = (u: DailyUpdateData["userId"]): string | undefined =>
+  typeof u === "object" ? u.profilePhotoUrl ?? undefined : undefined;
+
 const getReviewerName = (u: DailyUpdateData["reviewedBy"]): string => {
   if (!u) return "";
   return typeof u === "object" ? u.name : String(u);
 };
-
-const getInitials = (name: string) =>
-  name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
 
 const parseLinks = (text: string) => {
   if (!text.trim()) return [];
@@ -553,9 +554,13 @@ export default function TeamDailyUpdates() {
                 {/* Top */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                   <div className="flex items-center gap-3">
-                    <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(userName)} text-sm font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-                      {getInitials(userName)}
-                    </div>
+                    <Avatar
+                      name={userName}
+                      photo={getUserPhoto(u.userId)}
+                      gradient={paletteFor(userName)}
+                      className="h-10 w-10 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                      textClassName="text-sm font-semibold"
+                    />
                     <div>
                       <p className="font-semibold text-gray-900 dark:text-white">
                         {getUserName(u.userId)}
@@ -691,9 +696,13 @@ export default function TeamDailyUpdates() {
                 <div aria-hidden className="pointer-events-none absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-purple-400/15 blur-3xl" />
                 <div className="relative flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3.5">
-                    <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br ${paletteFor(getUserName(detailUpdate.userId))} text-base font-semibold text-white shadow-lg shadow-black/[0.08] ring-1 ring-white/15`}>
-                      {getInitials(getUserName(detailUpdate.userId))}
-                    </div>
+                    <Avatar
+                      name={getUserName(detailUpdate.userId)}
+                      photo={getUserPhoto(detailUpdate.userId)}
+                      gradient={paletteFor(getUserName(detailUpdate.userId))}
+                      className="h-12 w-12 shrink-0 rounded-2xl shadow-lg shadow-black/[0.08] ring-1 ring-white/15"
+                      textClassName="text-base font-semibold"
+                    />
                     <div className="min-w-0">
                       <p className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-indigo-600/80 dark:text-indigo-400/80">
                         <Sparkles className="h-3 w-3" />

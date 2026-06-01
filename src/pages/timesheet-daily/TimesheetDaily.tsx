@@ -21,6 +21,7 @@ import { weeklyTimesheetApi } from "../../api/weeklyTimesheetApi";
 import type { WeeklyTimesheetData, TimesheetEntry, Project, AdminDailyRow } from "../../types";
 import { useAuth } from "../../context/AuthContext";
 import { fmtHours } from "../../utils/format";
+import Avatar from "../../components/Avatar";
 
 const DAY_LABELS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
@@ -92,15 +93,6 @@ const paletteFor = (name: string): string => {
   for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return PALETTES[Math.abs(hash) % PALETTES.length];
 };
-
-function Avatar({ name }: { name: string }) {
-  const init = (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
-  return (
-    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br ${paletteFor(name || "?")} text-[11px] font-semibold text-white shadow-sm ring-2 ring-white dark:ring-gray-900`}>
-      {init}
-    </div>
-  );
-}
 
 /* ─── Top component ─── */
 export default function TimesheetDaily() {
@@ -721,7 +713,13 @@ function AdminDailyView() {
                         <ChevronRight className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400" />
                       )}
                     </div>
-                    <Avatar name={row.user.name} />
+                    <Avatar
+                      name={row.user.name}
+                      photo={row.user.profilePhotoUrl}
+                      gradient={paletteFor(row.user.name || "?")}
+                      className="h-9 w-9 shrink-0 rounded-full shadow-sm ring-2 ring-white dark:ring-gray-900"
+                      textClassName="text-[11px] font-semibold"
+                    />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{row.user.name}</p>
                       <p className="flex items-center gap-1 truncate text-xs text-gray-500 dark:text-gray-400">
